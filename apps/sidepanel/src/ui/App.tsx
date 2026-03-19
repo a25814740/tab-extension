@@ -8,6 +8,7 @@ export function App() {
   const collections = useAppStore((state) => state.collections);
   const tabs = useAppStore((state) => state.tabs);
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
+  const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
   const recentCollections = collections.slice(0, 3);
 
   const tabCountByCollection = useMemo(() => {
@@ -38,6 +39,9 @@ export function App() {
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <header className="border-b border-slate-800 px-4 py-3">
         <h1 className="text-base font-semibold">Quick Actions</h1>
+        <p className="text-xs text-slate-400">
+          {lastSyncAt ? `Last sync ${new Date(lastSyncAt).toLocaleTimeString()}` : "Sync pending"}
+        </p>
       </header>
       <main className="space-y-4 px-4 py-4">
         <div className="space-y-2">

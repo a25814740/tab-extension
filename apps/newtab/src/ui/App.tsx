@@ -35,6 +35,7 @@ export function App() {
   const toggleFolderExpanded = useAppStore((state) => state.toggleFolderExpanded);
   const expandFolder = useAppStore((state) => state.expandFolder);
   const tabs = useAppStore((state) => state.tabs);
+  const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
   const [overId, setOverId] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
@@ -151,7 +152,10 @@ export function App() {
       <header className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
         <div>
           <h1 className="text-xl font-semibold">Toby-like Dashboard</h1>
-          <p className="text-sm text-slate-400">Workspace: {workspace?.name ?? "Loading"}</p>
+          <p className="text-sm text-slate-400">
+            Workspace: {workspace?.name ?? "Loading"}{" "}
+            {lastSyncAt ? `• Last sync ${new Date(lastSyncAt).toLocaleTimeString()}` : ""}
+          </p>
         </div>
         <div className="flex gap-2">
           <button

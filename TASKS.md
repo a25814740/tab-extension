@@ -21,6 +21,7 @@
 - Add API client stubs for auth and sharing
 - Add AI provider abstraction (rule-based)
 - Surface AI summary in collection cards
+- Add sync status indicator in UI
 
 ## In Progress
 
