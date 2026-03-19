@@ -39,6 +39,7 @@
 - Add conflict resolver stub
 - Add duplicate tab cleanup
 - Add initial RLS policies
+- Extend RLS for workspace members
 
 ## In Progress
 
