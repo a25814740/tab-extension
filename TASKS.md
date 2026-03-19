@@ -48,6 +48,7 @@
 - Add extension e2e config
 - Add extension e2e for new tab load
 - Add auth config clear action
+- Add auth QA steps
 
 ## In Progress
 

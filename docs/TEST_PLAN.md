@@ -27,6 +27,12 @@ pnpm --filter @toby/tests test:e2e
 pnpm --filter @toby/tests test:e2e:extension
 ```
 
+### Auth QA
+
+1. Open New Tab, set Supabase URL + anon key.
+2. Click Google Sign In and verify user email is shown.
+3. Click Sign Out and verify status updates.
+
 ## Manual QA Steps
 
 1. Open New Tab and create a collection by saving the current window.
