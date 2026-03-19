@@ -51,6 +51,7 @@
 - Add auth QA steps
 - Add selected collection state and share defaults
 - Add open all in side panel
+- Add collection picker in share panel
 
 ## In Progress
 

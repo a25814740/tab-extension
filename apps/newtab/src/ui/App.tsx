@@ -238,7 +238,10 @@ export function App() {
               overId={overId}
             />
           <AuthPanel />
-          <SharePanel defaultResourceId={selectedCollectionId} />
+          <SharePanel
+            defaultResourceId={selectedCollectionId}
+            collections={collections.map((collection) => ({ id: collection.id, name: collection.name }))}
+          />
           <CollabPanel defaultWorkspaceId={workspace?.id ?? null} />
         </aside>
           <section className="col-span-9 space-y-4">

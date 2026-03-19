@@ -17,7 +17,13 @@ type ShareState = {
 
 const CONFIG_KEY = "toby_auth_config_v1";
 
-export function SharePanel({ defaultResourceId }: { defaultResourceId?: string | null }) {
+export function SharePanel({
+  defaultResourceId,
+  collections,
+}: {
+  defaultResourceId?: string | null;
+  collections?: Array<{ id: string; name: string }>;
+}) {
   const [config, setConfig] = useState<ShareConfig | null>(null);
   const [state, setState] = useState<ShareState>({
     resourceType: "collection",
@@ -113,6 +119,23 @@ export function SharePanel({ defaultResourceId }: { defaultResourceId?: string |
             onChange={(event) => setState({ ...state, resourceId: event.target.value })}
           />
         </label>
+        {state.resourceType === "collection" && collections && collections.length > 0 ? (
+          <label className="block">
+            <span className="text-slate-400">Select collection</span>
+            <select
+              className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1"
+              value={state.resourceId}
+              onChange={(event) => setState({ ...state, resourceId: event.target.value })}
+            >
+              <option value="">Choose collection</option>
+              {collections.map((collection) => (
+                <option key={collection.id} value={collection.id}>
+                  {collection.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label className="block">
           <span className="text-slate-400">Permission</span>
           <select
