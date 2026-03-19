@@ -592,7 +592,12 @@ export function createAppStore() {
         return;
       }
 
-      const result = await syncPendingOps(ops, client);
+      let result;
+      try {
+        result = await syncPendingOps(ops, client);
+      } catch {
+        return;
+      }
       let remaining = ops;
       if (result.syncedIds.length > 0) {
         result.syncedIds.forEach((id) => {

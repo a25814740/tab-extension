@@ -7,6 +7,9 @@ import { CollectionCard } from "./CollectionCard";
 import { TabRow } from "./TabRow";
 import { createRuleBasedProvider } from "@toby/ai";
 import { AuthPanel } from "./AuthPanel";
+import { createHttpSyncClient, createMockSyncClient } from "@toby/api-client";
+import { getSync } from "@toby/chrome-adapters";
+import { appStore } from "../store/appStore";
 import {
   DndContext,
   PointerSensor,
@@ -90,6 +93,17 @@ export function App() {
     saveCollectionFromTabs(`Window ${new Date().toLocaleTimeString()}`, tabs);
   };
 
+  const handleSync = async () => {
+    // Force a flush; the store already chooses the correct client.
+    const config = await getSync<{ supabaseUrl?: string } | null>("toby_auth_config_v1", null);
+    if (config?.supabaseUrl) {
+      const endpoint = `${config.supabaseUrl}/functions/v1/sync_ops`;
+      await appStore.getState().flushPendingOps(createHttpSyncClient(endpoint));
+      return;
+    }
+    await appStore.getState().flushPendingOps(createMockSyncClient());
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -161,6 +175,9 @@ export function App() {
         <div className="flex gap-2">
           <button className="rounded border border-slate-700 px-3 py-2 text-sm">
             Sign In
+          </button>
+          <button className="rounded border border-slate-700 px-3 py-2 text-sm" onClick={handleSync}>
+            Sync Now
           </button>
           <button
             className="rounded bg-slate-200 px-3 py-2 text-sm font-medium text-slate-900"
