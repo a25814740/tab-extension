@@ -7,6 +7,7 @@ import { CollectionCard } from "./CollectionCard";
 import { TabRow } from "./TabRow";
 import { createRuleBasedProvider } from "@toby/ai";
 import { AuthPanel } from "./AuthPanel";
+import { SharePanel } from "./SharePanel";
 import { createHttpSyncClient, createMockSyncClient } from "@toby/api-client";
 import { getSync } from "@toby/chrome-adapters";
 import { appStore } from "../store/appStore";
@@ -207,6 +208,7 @@ export function App() {
             overId={overId}
           />
           <AuthPanel />
+          <SharePanel />
         </aside>
         <section className="col-span-9 space-y-4">
           <SectionTitle title="Collections" />

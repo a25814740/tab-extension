@@ -29,6 +29,7 @@
 - Add manual sync button
 - Use chrome.identity auth flow
 - Rollback pending ops on sync failures
+- Add share panel for create/revoke links
 
 ## In Progress
 
