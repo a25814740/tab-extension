@@ -55,6 +55,7 @@
 - Show pending sync count
 - Add collection sorting controls
 - Restrict RLS writes by role
+- Implement sync_ops server apply logic
 
 ## In Progress
 

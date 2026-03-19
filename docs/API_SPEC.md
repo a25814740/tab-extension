@@ -24,3 +24,8 @@ Response:
 ```json
 { "syncedIds": ["op_123"], "failedIds": [] }
 ```
+
+### Required Env
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
