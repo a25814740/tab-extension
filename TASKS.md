@@ -33,6 +33,7 @@
 - Add collaboration invite panel
 - Add search filters in new tab and side panel
 - Add integration and e2e test scaffolds
+- Add AI organize panel in side panel
 
 ## In Progress
 

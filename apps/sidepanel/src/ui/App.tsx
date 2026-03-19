@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, SectionTitle } from "@toby/shared-ui";
 import { getActiveTab, getCurrentWindowTabs } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
+import { AiPanel } from "./AiPanel";
 
 export function App() {
   useLocalCacheSync();
@@ -98,6 +99,7 @@ export function App() {
             onChange={(event) => setSearchQuery(event.target.value)}
           />
         </div>
+        <AiPanel />
       </main>
     </div>
   );
