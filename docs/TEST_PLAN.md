@@ -18,6 +18,14 @@
 - Open collection tabs
 - Share link revoke
 
+### Playwright
+
+Run:
+
+```bash
+pnpm --filter @toby/tests test:e2e
+```
+
 ## Manual QA Steps
 
 1. Open New Tab and create a collection by saving the current window.

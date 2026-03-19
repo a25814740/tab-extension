@@ -1,7 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { test, expect } from "@playwright/test";
 
-describe("e2e smoke", () => {
-  it("placeholder e2e test", () => {
-    expect(true).toBe(true);
-  });
+test("basic e2e placeholder", async ({ page }) => {
+  await page.goto("https://example.com");
+  await expect(page).toHaveTitle(/Example Domain/);
 });
