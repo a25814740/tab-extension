@@ -34,6 +34,10 @@ Deploy `backend/functions/sync_ops.ts` with env vars:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+## Supabase Full Setup
+
+See [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
+
 ## Tests
 
 ```bash

@@ -60,7 +60,6 @@
 
 ## In Progress
 
-- Define Supabase schema and policies
-- Implement sync and conflict handling
-- Add drag-and-drop for folders and collections
-- Add tests and CI
+- Deploy Supabase schema + RLS + edge function
+- Verify sync end-to-end with Supabase
+- Run extension e2e tests locally
