@@ -37,6 +37,7 @@
 - Add save active tab into existing collection
 - Generate share tokens for links
 - Add conflict resolver stub
+- Add duplicate tab cleanup
 
 ## In Progress
 

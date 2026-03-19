@@ -46,6 +46,7 @@ export function App() {
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
+  const dedupeTabs = useAppStore((state) => state.dedupeTabs);
 
   const tabCountByCollection = useMemo(() => {
     const map = new Map<string, number>();
@@ -211,6 +212,9 @@ export function App() {
           </button>
           <button className="rounded border border-slate-700 px-3 py-2 text-sm">
             Share
+          </button>
+          <button className="rounded border border-slate-700 px-3 py-2 text-sm" onClick={dedupeTabs}>
+            Remove Duplicates
           </button>
         </div>
       </header>

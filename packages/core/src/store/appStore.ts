@@ -33,6 +33,7 @@ export type AppActions = {
   rollbackLastOp: () => void;
   flushPendingOps: (client: SyncClient) => Promise<void>;
   addTabToCollection: (collectionId: string, tab: TabInput) => void;
+  dedupeTabs: () => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -652,6 +653,39 @@ export function createAppStore() {
       set({
         rollbackStack: pushRollback(state),
         tabs: [...state.tabs, newTab],
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
+    dedupeTabs: () => {
+      const state = get();
+      const seen = new Set<string>();
+      const deduped = state.tabs.filter((tab) => {
+        const key = `${tab.collectionId}:${tab.url}`;
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+
+      if (deduped.length === state.tabs.length) {
+        return;
+      }
+
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "delete",
+        entity: "tab",
+        payload: { reason: "dedupe" },
+        createdAt: new Date().toISOString(),
+      });
+
+      set({
+        rollbackStack: pushRollback(state),
+        tabs: deduped,
         cache: {
           ...state.cache,
           pendingOps,
