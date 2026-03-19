@@ -95,6 +95,12 @@ export function AuthPanel() {
     setStatus("Signed out");
   };
 
+  const handleClearConfig = async () => {
+    await setSync(CONFIG_KEY, { supabaseUrl: "", supabaseAnonKey: "", email: "" });
+    setConfig({ supabaseUrl: "", supabaseAnonKey: "", email: "" });
+    setStatus("Config cleared");
+  };
+
   return (
     <Card className="p-4">
       <SectionTitle title="Auth & Sync" />
@@ -135,6 +141,9 @@ export function AuthPanel() {
           </button>
           <button className="rounded border border-slate-700 px-2 py-1" onClick={handleSignOut}>
             Sign Out
+          </button>
+          <button className="rounded border border-slate-700 px-2 py-1" onClick={handleClearConfig}>
+            Clear
           </button>
         </div>
         <div className="text-slate-400">{status}</div>
