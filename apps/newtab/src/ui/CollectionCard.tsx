@@ -7,10 +7,11 @@ type Props = {
   name: string;
   tabCount: number;
   onOpenAll: () => void;
+  summary?: string;
   children?: React.ReactNode;
 };
 
-export function CollectionCard({ id, name, tabCount, onOpenAll, children }: Props) {
+export function CollectionCard({ id, name, tabCount, onOpenAll, summary, children }: Props) {
   const sortable = useSortable({
     id,
     data: {
@@ -36,6 +37,7 @@ export function CollectionCard({ id, name, tabCount, onOpenAll, children }: Prop
     >
       <div className="text-base font-semibold">{name}</div>
       <div className="mt-2 text-xs text-slate-400">{tabCount} tabs</div>
+      {summary ? <div className="mt-2 text-xs text-slate-300">{summary}</div> : null}
       {children}
       <div className="mt-3 flex items-center gap-2">
         <div

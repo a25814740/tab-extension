@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SectionTitle } from "@toby/shared-ui";
 import { getCurrentWindowTabs, openTabs } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
 import { Tree } from "./Tree";
 import { CollectionCard } from "./CollectionCard";
 import { TabRow } from "./TabRow";
+import { createRuleBasedProvider } from "@toby/ai";
 import {
   DndContext,
   PointerSensor,
@@ -35,6 +36,7 @@ export function App() {
   const expandFolder = useAppStore((state) => state.expandFolder);
   const tabs = useAppStore((state) => state.tabs);
   const [overId, setOverId] = useState<string | null>(null);
+  const [summaries, setSummaries] = useState<Record<string, string>>({});
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
 
   const tabCountByCollection = useMemo(() => {
@@ -62,6 +64,20 @@ export function App() {
     map.forEach((list) => list.sort((a, b) => a.position - b.position));
     return map;
   }, [tabs]);
+
+  useEffect(() => {
+    const provider = createRuleBasedProvider();
+    const run = async () => {
+      const next: Record<string, string> = {};
+      for (const collection of collections) {
+        const list = tabsByCollection.get(collection.id) ?? [];
+        const result = await provider.summarize(list.map((tab) => ({ title: tab.title, url: tab.url })));
+        next[collection.id] = result.summary;
+      }
+      setSummaries(next);
+    };
+    void run();
+  }, [collections, tabsByCollection]);
 
   const handleSaveCurrentWindow = async () => {
     const tabs = await getCurrentWindowTabs();
@@ -168,13 +184,14 @@ export function App() {
           <SortableContext items={collections.map((collection) => collection.id)} strategy={verticalListSortingStrategy}>
             <div className="grid grid-cols-3 gap-4">
               {collections.map((collection) => (
-                <CollectionCard
-                  key={collection.id}
-                  id={collection.id}
-                  name={collection.name}
-                  tabCount={tabCountByCollection.get(collection.id) ?? 0}
-                  onOpenAll={() => handleOpenAll(collection.id)}
-                >
+                  <CollectionCard
+                    key={collection.id}
+                    id={collection.id}
+                    name={collection.name}
+                    tabCount={tabCountByCollection.get(collection.id) ?? 0}
+                    summary={summaries[collection.id]}
+                    onOpenAll={() => handleOpenAll(collection.id)}
+                  >
                   <SortableContext
                     items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
                     strategy={verticalListSortingStrategy}

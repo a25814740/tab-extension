@@ -20,6 +20,7 @@
 - Add Supabase schema and RLS placeholders
 - Add API client stubs for auth and sharing
 - Add AI provider abstraction (rule-based)
+- Surface AI summary in collection cards
 
 ## In Progress
 
