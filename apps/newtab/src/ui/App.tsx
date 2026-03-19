@@ -13,6 +13,7 @@ import {
   useSensor,
   useSensors,
   useDndMonitor,
+  DragEndEvent,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
@@ -25,8 +26,10 @@ export function App() {
   const setSelectedSpaceId = useAppStore((state) => state.setSelectedSpaceId);
   const reorderSpaces = useAppStore((state) => state.reorderSpaces);
   const reorderCollections = useAppStore((state) => state.reorderCollections);
+  const reorderCollectionsWithIndex = useAppStore((state) => state.reorderCollectionsWithIndex);
   const reorderFolders = useAppStore((state) => state.reorderFolders);
   const reorderTabs = useAppStore((state) => state.reorderTabs);
+  const reorderTabsWithIndex = useAppStore((state) => state.reorderTabsWithIndex);
   const expandedFolderIds = useAppStore((state) => state.cache.expandedFolderIds);
   const toggleFolderExpanded = useAppStore((state) => state.toggleFolderExpanded);
   const expandFolder = useAppStore((state) => state.expandFolder);
@@ -84,6 +87,49 @@ export function App() {
     onDragCancel: () => setOverId(null),
   });
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (!event.over || event.active.id === event.over.id) {
+      return;
+    }
+
+    const activeId = String(event.active.id);
+    const overId = String(event.over.id);
+
+    const isSpace = spaces.some((space) => space.id === activeId);
+    const isFolder = folders.some((folder) => folder.id === activeId);
+    const isCollection = collections.some((collection) => collection.id === activeId);
+    const isTab = tabs.some((tab) => tab.id === activeId);
+
+    if (isSpace) {
+      reorderSpaces(activeId, overId);
+      return;
+    }
+
+    if (isFolder) {
+      reorderFolders(activeId, overId);
+      return;
+    }
+
+    if (isCollection) {
+      const placeAfter = Boolean(event.active.data.current?.placeAfter);
+      if (event.active.data.current?.placeAfter !== undefined) {
+        reorderCollectionsWithIndex(activeId, overId, placeAfter);
+      } else {
+        reorderCollections(activeId, overId);
+      }
+      return;
+    }
+
+    if (isTab) {
+      const placeAfter = Boolean(event.active.data.current?.placeAfter);
+      if (event.active.data.current?.placeAfter !== undefined) {
+        reorderTabsWithIndex(activeId, overId, placeAfter);
+      } else {
+        reorderTabs(activeId, overId);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
@@ -103,42 +149,7 @@ export function App() {
           </button>
         </div>
       </header>
-      <DndContext
-        collisionDetection={closestCenter}
-        sensors={sensors}
-        onDragEnd={(event) => {
-          if (!event.over || event.active.id === event.over.id) {
-            return;
-          }
-
-          const activeId = String(event.active.id);
-          const overId = String(event.over.id);
-
-          const isSpace = spaces.some((space) => space.id === activeId);
-          const isFolder = folders.some((folder) => folder.id === activeId);
-          const isCollection = collections.some((collection) => collection.id === activeId);
-          const isTab = tabs.some((tab) => tab.id === activeId);
-
-          if (isSpace) {
-            reorderSpaces(activeId, overId);
-            return;
-          }
-
-          if (isFolder) {
-            reorderFolders(activeId, overId);
-            return;
-          }
-
-          if (isCollection) {
-            reorderCollections(activeId, overId);
-            return;
-          }
-
-          if (isTab) {
-            reorderTabs(activeId, overId);
-          }
-        }}
-      >
+      <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
         <main className="grid grid-cols-12 gap-6 px-6 py-6">
         <aside className="col-span-3 space-y-4">
           <SectionTitle title="Spaces" />

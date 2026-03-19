@@ -9,15 +9,22 @@ type Props = {
 };
 
 export function TabRow({ id, title, url }: Props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
+  const sortable = useSortable({
     id,
+    data: { type: "tab", placeAfter: true },
+  });
+  const sortableBefore = useSortable({
+    id,
+    data: { type: "tab", placeAfter: false },
   });
 
   return (
     <Card
-      ref={setNodeRef}
-      className={isDragging ? "p-2 opacity-70" : isOver ? "p-2 ring-1 ring-slate-500" : "p-2"}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      ref={sortable.setNodeRef}
+      className={
+        sortable.isDragging ? "p-2 opacity-70" : sortable.isOver ? "p-2 ring-1 ring-slate-500" : "p-2"
+      }
+      style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}
     >
       <div className="flex items-center justify-between gap-2 text-left text-xs">
         <div className="flex flex-col">
@@ -27,11 +34,20 @@ export function TabRow({ id, title, url }: Props) {
         <button
           className="rounded border border-slate-700 px-2 py-1 text-[10px]"
           aria-label="Drag tab"
-          {...attributes}
-          {...listeners}
+          {...sortable.attributes}
+          {...sortable.listeners}
         >
           ::
         </button>
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <div
+          className={`h-1 flex-1 rounded ${sortableBefore.isOver ? "bg-slate-400" : "bg-slate-800"}`}
+          ref={sortableBefore.setNodeRef}
+          {...sortableBefore.attributes}
+          {...sortableBefore.listeners}
+        />
+        <div className={`h-1 flex-1 rounded ${sortable.isOver ? "bg-slate-400" : "bg-slate-800"}`} />
       </div>
     </Card>
   );
