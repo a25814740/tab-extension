@@ -56,6 +56,7 @@
 - Add collection sorting controls
 - Restrict RLS writes by role
 - Implement sync_ops server apply logic
+- Document sync_ops deployment
 
 ## In Progress
 

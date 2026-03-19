@@ -27,6 +27,13 @@ pnpm build
 
 If you want auth and sync to work, add your Supabase project URL and anon key in the New Tab sidebar under "Auth & Sync".
 
+## Supabase Edge Function
+
+Deploy `backend/functions/sync_ops.ts` with env vars:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
 ## Tests
 
 ```bash
