@@ -1,4 +1,5 @@
 import type { Collection, Folder, LocalAppCache, Space, TabItem, Workspace } from "../domain/models";
+import type { LocalStoreSnapshot } from "../schemas/appSchemas";
 
 export type AppState = {
   workspace: Workspace | null;
@@ -7,6 +8,7 @@ export type AppState = {
   collections: Collection[];
   tabs: TabItem[];
   cache: LocalAppCache;
+  rollbackStack: LocalStoreSnapshot[];
 };
 
 export const defaultCache: LocalAppCache = {
@@ -32,4 +34,5 @@ export const defaultAppState: AppState = {
   collections: [],
   tabs: [],
   cache: defaultCache,
+  rollbackStack: [],
 };

@@ -111,8 +111,8 @@ export function App() {
     }
 
     if (isCollection) {
-      const placeAfter = Boolean(event.active.data.current?.placeAfter);
-      if (event.active.data.current?.placeAfter !== undefined) {
+      const placeAfter = Boolean(event.over?.data.current?.placeAfter);
+      if (event.over?.data.current?.placeAfter !== undefined) {
         reorderCollectionsWithIndex(activeId, overId, placeAfter);
       } else {
         reorderCollections(activeId, overId);
@@ -121,8 +121,8 @@ export function App() {
     }
 
     if (isTab) {
-      const placeAfter = Boolean(event.active.data.current?.placeAfter);
-      if (event.active.data.current?.placeAfter !== undefined) {
+      const placeAfter = Boolean(event.over?.data.current?.placeAfter);
+      if (event.over?.data.current?.placeAfter !== undefined) {
         reorderTabsWithIndex(activeId, overId, placeAfter);
       } else {
         reorderTabs(activeId, overId);

@@ -6,6 +6,7 @@ import type { LocalStoreSnapshot } from "../schemas/appSchemas";
 import type { TabItem } from "../domain/models";
 import { sampleWorkspace } from "../utils/sampleData";
 import { enqueueOp } from "../sync/pendingOps";
+import { toSnapshot } from "./snapshot";
 
 export type TabInput = {
   title: string;
@@ -27,6 +28,7 @@ export type AppActions = {
   expandFolder: (folderId: string) => void;
   reorderCollectionsWithIndex: (activeId: string, overId: string, placeAfter: boolean) => void;
   reorderTabsWithIndex: (activeId: string, overId: string, placeAfter: boolean) => void;
+  rollbackLastOp: () => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -50,6 +52,15 @@ function buildInitialState(): AppState {
   };
 }
 
+function pushRollback(state: AppState) {
+  const snapshot = toSnapshot(state);
+  const nextStack = [snapshot, ...state.rollbackStack];
+  if (nextStack.length > 10) {
+    nextStack.pop();
+  }
+  return nextStack;
+}
+
 // Central store used by New Tab and Side Panel apps.
 export function createAppStore() {
   return createStore<AppStore>((set, get) => ({
@@ -62,6 +73,7 @@ export function createAppStore() {
         collections: snapshot.collections,
         tabs: snapshot.tabs,
         cache: snapshot.cache,
+        rollbackStack: [],
       });
     },
     setViewMode: (mode) => {
@@ -100,7 +112,22 @@ export function createAppStore() {
         position: (index + 1) * 1000,
       }));
 
-      set({ spaces: updated });
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "space",
+        payload: { order: updated.map((space) => ({ id: space.id, position: space.position })) },
+        createdAt: new Date().toISOString(),
+      });
+
+      set({
+        rollbackStack: pushRollback(state),
+        spaces: updated,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
     },
     reorderCollections: (activeId, overId) => {
       const state = get();
@@ -119,7 +146,22 @@ export function createAppStore() {
         position: (index + 1) * 1000,
       }));
 
-      set({ collections: updated });
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "collection",
+        payload: { order: updated.map((collection) => ({ id: collection.id, position: collection.position })) },
+        createdAt: new Date().toISOString(),
+      });
+
+      set({
+        rollbackStack: pushRollback(state),
+        collections: updated,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
     },
     reorderCollectionsWithIndex: (activeId, overId, placeAfter) => {
       const state = get();
@@ -139,7 +181,22 @@ export function createAppStore() {
         position: (index + 1) * 1000,
       }));
 
-      set({ collections: updated });
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "collection",
+        payload: { order: updated.map((collection) => ({ id: collection.id, position: collection.position })) },
+        createdAt: new Date().toISOString(),
+      });
+
+      set({
+        rollbackStack: pushRollback(state),
+        collections: updated,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
     },
     reorderFolders: (activeId, overId) => {
       const state = get();
@@ -162,7 +219,21 @@ export function createAppStore() {
             ? { ...folder, spaceId: overSpace.id, parentFolderId: null, position: nextPosition }
             : folder
         );
-        set({ folders: updatedFolders });
+        const pendingOps = enqueueOp(state.cache.pendingOps, {
+          id: nanoid(),
+          type: "update",
+          entity: "folder",
+          payload: { id: activeId, spaceId: overSpace.id, parentFolderId: null, position: nextPosition },
+          createdAt: new Date().toISOString(),
+        });
+        set({
+          rollbackStack: pushRollback(state),
+          folders: updatedFolders,
+          cache: {
+            ...state.cache,
+            pendingOps,
+          },
+        });
         return;
       }
 
@@ -197,7 +268,21 @@ export function createAppStore() {
           }
           return { ...folder, position: (index + 1) * 1000 };
         });
-        set({ folders: updatedFolders });
+        const pendingOps = enqueueOp(state.cache.pendingOps, {
+          id: nanoid(),
+          type: "update",
+          entity: "folder",
+          payload: { order: updatedFolders.map((folder) => ({ id: folder.id, position: folder.position })) },
+          createdAt: new Date().toISOString(),
+        });
+        set({
+          rollbackStack: pushRollback(state),
+          folders: updatedFolders,
+          cache: {
+            ...state.cache,
+            pendingOps,
+          },
+        });
         return;
       }
 
@@ -219,7 +304,26 @@ export function createAppStore() {
             }
           : folder
       );
-      set({ folders: updatedFolders });
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "folder",
+        payload: {
+          id: activeId,
+          spaceId: overFolder.spaceId,
+          parentFolderId: overFolder.id,
+          position: nextPosition,
+        },
+        createdAt: new Date().toISOString(),
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        folders: updatedFolders,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
     },
     reorderTabs: (activeId, overId) => {
       const state = get();
@@ -242,7 +346,21 @@ export function createAppStore() {
             ? { ...tab, collectionId: overCollection.id, position: nextPosition }
             : tab
         );
-        set({ tabs: updatedTabs });
+        const pendingOps = enqueueOp(state.cache.pendingOps, {
+          id: nanoid(),
+          type: "update",
+          entity: "tab",
+          payload: { id: activeId, collectionId: overCollection.id, position: nextPosition },
+          createdAt: new Date().toISOString(),
+        });
+        set({
+          rollbackStack: pushRollback(state),
+          tabs: updatedTabs,
+          cache: {
+            ...state.cache,
+            pendingOps,
+          },
+        });
         return;
       }
 
@@ -272,7 +390,21 @@ export function createAppStore() {
           return { ...tab, position: (index + 1) * 1000 };
         });
 
-        set({ tabs: updatedTabs });
+        const pendingOps = enqueueOp(state.cache.pendingOps, {
+          id: nanoid(),
+          type: "update",
+          entity: "tab",
+          payload: { order: updatedTabs.map((tab) => ({ id: tab.id, position: tab.position })) },
+          createdAt: new Date().toISOString(),
+        });
+        set({
+          rollbackStack: pushRollback(state),
+          tabs: updatedTabs,
+          cache: {
+            ...state.cache,
+            pendingOps,
+          },
+        });
         return;
       }
 
@@ -286,7 +418,21 @@ export function createAppStore() {
           ? { ...tab, collectionId: overTab.collectionId, position: nextPosition }
           : tab
       );
-      set({ tabs: updatedTabs });
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "tab",
+        payload: { id: activeId, collectionId: overTab.collectionId, position: nextPosition },
+        createdAt: new Date().toISOString(),
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        tabs: updatedTabs,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
     },
     reorderTabsWithIndex: (activeId, overId, placeAfter) => {
       const state = get();
@@ -318,7 +464,21 @@ export function createAppStore() {
         return { ...tab, position: (index + 1) * 1000 };
       });
 
-      set({ tabs: updatedTabs });
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "tab",
+        payload: { order: updatedTabs.map((tab) => ({ id: tab.id, position: tab.position })) },
+        createdAt: new Date().toISOString(),
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        tabs: updatedTabs,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
     },
     saveCollectionFromTabs: (name, tabs) => {
       const state = get();
@@ -367,6 +527,7 @@ export function createAppStore() {
       });
 
       set({
+        rollbackStack: pushRollback(state),
         collections: [...state.collections, newCollection],
         tabs: [...state.tabs, ...newTabs],
         cache: {
@@ -403,6 +564,22 @@ export function createAppStore() {
             expandedFolderIds: [...state.cache.expandedFolderIds, folderId],
           },
         };
+      });
+    },
+    rollbackLastOp: () => {
+      const state = get();
+      const [latest, ...rest] = state.rollbackStack;
+      if (!latest) {
+        return;
+      }
+      set({
+        workspace: latest.workspace,
+        spaces: latest.spaces,
+        folders: latest.folders,
+        collections: latest.collections,
+        tabs: latest.tabs,
+        cache: latest.cache,
+        rollbackStack: rest,
       });
     },
   }));
