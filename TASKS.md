@@ -36,6 +36,7 @@
 - Add AI organize panel in side panel
 - Add save active tab into existing collection
 - Generate share tokens for links
+- Add conflict resolver stub
 
 ## In Progress
 

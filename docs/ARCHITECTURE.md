@@ -18,3 +18,7 @@ Supabase is assumed for auth, data, and realtime collaboration. The extension on
 ## Sync
 
 Local-first pending ops are queued in `chrome.storage.local`, flushed periodically via a sync client, and acknowledged by the server.
+
+## Conflict Handling
+
+For now we resolve non-structural conflicts with last-write-wins based on `updatedAt`. Ordering conflicts are normalized by server canonical order.
