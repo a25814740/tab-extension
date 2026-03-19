@@ -17,3 +17,4 @@ export function createSupabaseClient(config: SupabaseConfig) {
 export { createMockSyncClient, createHttpSyncClient } from "./syncClient";
 export * from "./authClient";
 export * from "./shareClient";
+export * from "./collabClient";

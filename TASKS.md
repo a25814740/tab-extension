@@ -30,6 +30,7 @@
 - Use chrome.identity auth flow
 - Rollback pending ops on sync failures
 - Add share panel for create/revoke links
+- Add collaboration invite panel
 
 ## In Progress
 
