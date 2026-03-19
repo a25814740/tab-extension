@@ -9,6 +9,7 @@
 - Add documentation skeleton
 - Wire local cache hydration and persistence
 - Add quick-save actions (active tab / current window)
+- Add DnD ordering for spaces and collections
 
 ## In Progress
 

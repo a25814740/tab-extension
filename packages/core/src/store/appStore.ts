@@ -19,6 +19,8 @@ export type AppActions = {
   setViewMode: (mode: AppState["cache"]["ui"]["viewMode"]) => void;
   setSelectedSpaceId: (spaceId: string | null) => void;
   saveCollectionFromTabs: (name: string, tabs: TabInput[]) => void;
+  reorderSpaces: (activeId: string, overId: string) => void;
+  reorderCollections: (activeId: string, overId: string) => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -74,6 +76,44 @@ export function createAppStore() {
           selectedSpaceId: spaceId,
         },
       }));
+    },
+    reorderSpaces: (activeId, overId) => {
+      const state = get();
+      const activeIndex = state.spaces.findIndex((space) => space.id === activeId);
+      const overIndex = state.spaces.findIndex((space) => space.id === overId);
+      if (activeIndex < 0 || overIndex < 0 || activeIndex === overIndex) {
+        return;
+      }
+
+      const reordered = [...state.spaces];
+      const [moved] = reordered.splice(activeIndex, 1);
+      reordered.splice(overIndex, 0, moved);
+
+      const updated = reordered.map((space, index) => ({
+        ...space,
+        position: (index + 1) * 1000,
+      }));
+
+      set({ spaces: updated });
+    },
+    reorderCollections: (activeId, overId) => {
+      const state = get();
+      const activeIndex = state.collections.findIndex((collection) => collection.id === activeId);
+      const overIndex = state.collections.findIndex((collection) => collection.id === overId);
+      if (activeIndex < 0 || overIndex < 0 || activeIndex === overIndex) {
+        return;
+      }
+
+      const reordered = [...state.collections];
+      const [moved] = reordered.splice(activeIndex, 1);
+      reordered.splice(overIndex, 0, moved);
+
+      const updated = reordered.map((collection, index) => ({
+        ...collection,
+        position: (index + 1) * 1000,
+      }));
+
+      set({ collections: updated });
     },
     saveCollectionFromTabs: (name, tabs) => {
       const state = get();
