@@ -22,6 +22,7 @@
 - Add AI provider abstraction (rule-based)
 - Surface AI summary in collection cards
 - Add sync status indicator in UI
+- Add sync engine unit test
 
 ## In Progress
 
