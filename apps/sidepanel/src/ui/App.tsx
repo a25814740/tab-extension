@@ -11,6 +11,7 @@ export function App() {
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
   const addTabToCollection = useAppStore((state) => state.addTabToCollection);
   const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
+  const lastSyncError = useAppStore((state) => state.cache.lastSyncError);
   const recentCollections = collections.slice(0, 3);
   const [searchQuery, setSearchQuery] = useState("");
   const [targetCollectionId, setTargetCollectionId] = useState("");
@@ -66,6 +67,7 @@ export function App() {
         <h1 className="text-base font-semibold">Quick Actions</h1>
         <p className="text-xs text-slate-400">
           {lastSyncAt ? `Last sync ${new Date(lastSyncAt).toLocaleTimeString()}` : "Sync pending"}
+          {lastSyncError ? ` • Error (${lastSyncError})` : ""}
         </p>
       </header>
       <main className="space-y-4 px-4 py-4">

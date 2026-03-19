@@ -25,6 +25,7 @@ export const defaultCache: LocalAppCache = {
   },
   pendingOps: [],
   lastSyncAt: null,
+  lastSyncError: null,
 };
 
 export const defaultAppState: AppState = {

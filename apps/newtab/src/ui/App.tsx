@@ -42,6 +42,7 @@ export function App() {
   const expandFolder = useAppStore((state) => state.expandFolder);
   const tabs = useAppStore((state) => state.tabs);
   const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
+  const lastSyncError = useAppStore((state) => state.cache.lastSyncError);
   const [overId, setOverId] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -192,6 +193,7 @@ export function App() {
           <p className="text-sm text-slate-400">
             Workspace: {workspace?.name ?? "Loading"}{" "}
             {lastSyncAt ? `• Last sync ${new Date(lastSyncAt).toLocaleTimeString()}` : ""}
+            {lastSyncError ? ` • Sync error (${lastSyncError})` : ""}
           </p>
         </div>
         <div className="flex gap-2">

@@ -141,4 +141,5 @@ export type LocalAppCache = {
   };
   pendingOps: PendingOp[];
   lastSyncAt: string | null;
+  lastSyncError?: string | null;
 };

@@ -598,6 +598,12 @@ export function createAppStore() {
       try {
         result = await syncPendingOps(ops, client);
       } catch {
+        set({
+          cache: {
+            ...state.cache,
+            lastSyncError: "network_error",
+          },
+        });
         return;
       }
       let remaining = ops;
@@ -616,6 +622,7 @@ export function createAppStore() {
           ...state.cache,
           pendingOps: remaining,
           lastSyncAt: result.syncedIds.length > 0 ? now : state.cache.lastSyncAt,
+          lastSyncError: result.failedIds.length > 0 ? "sync_failed" : null,
         },
       });
     },
