@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, SectionTitle } from "@toby/shared-ui";
-import { createSupabaseClient, signInWithGoogle, signInWithMagicLink, signOut } from "@toby/api-client";
-import { getSync, setSync } from "@toby/chrome-adapters";
+import { createSupabaseClient, signInWithMagicLink, signOut } from "@toby/api-client";
+import { getRedirectUrl, getSync, launchWebAuthFlow, setSync } from "@toby/chrome-adapters";
 
 type AuthConfig = {
   supabaseUrl: string;
@@ -48,8 +48,28 @@ export function AuthPanel() {
       setStatus("Missing Supabase config");
       return;
     }
-    // TODO: Replace with chrome.identity.launchWebAuthFlow for MV3.
-    await signInWithGoogle(client);
+
+    const redirectUrl = getRedirectUrl("supabase");
+    const authUrl = `${config.supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(
+      redirectUrl
+    )}`;
+
+    const responseUrl = await launchWebAuthFlow(authUrl, true);
+    if (!responseUrl) {
+      setStatus("Auth flow cancelled");
+      return;
+    }
+
+    const tokens = extractTokens(responseUrl);
+    if (!tokens.accessToken || !tokens.refreshToken) {
+      setStatus("Missing tokens from auth response");
+      return;
+    }
+
+    await client.auth.setSession({
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
+    });
     const user = await client.auth.getUser();
     setStatus(user.data.user?.email ?? "Signed in");
   };
@@ -121,4 +141,13 @@ export function AuthPanel() {
       </div>
     </Card>
   );
+}
+
+function extractTokens(url: string) {
+  const fragment = url.split("#")[1] ?? "";
+  const params = new URLSearchParams(fragment);
+  return {
+    accessToken: params.get("access_token"),
+    refreshToken: params.get("refresh_token"),
+  };
 }

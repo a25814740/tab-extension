@@ -27,6 +27,8 @@
 - Add HTTP sync client for Supabase edge function
 - Add edge function stub for sync ops
 - Add manual sync button
+- Use chrome.identity auth flow
+- Rollback pending ops on sync failures
 
 ## In Progress
 

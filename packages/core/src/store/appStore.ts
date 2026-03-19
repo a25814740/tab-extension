@@ -604,6 +604,9 @@ export function createAppStore() {
           remaining = markSynced(remaining, id);
         });
       }
+      if (result.failedIds.length > 0) {
+        get().rollbackLastOp();
+      }
 
       const now = new Date().toISOString();
       set({
