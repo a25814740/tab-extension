@@ -23,6 +23,7 @@ export function App() {
   const setSelectedSpaceId = useAppStore((state) => state.setSelectedSpaceId);
   const reorderSpaces = useAppStore((state) => state.reorderSpaces);
   const reorderCollections = useAppStore((state) => state.reorderCollections);
+  const reorderFolders = useAppStore((state) => state.reorderFolders);
   const tabs = useAppStore((state) => state.tabs);
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
 
@@ -83,14 +84,26 @@ export function App() {
             collisionDetection={closestCenter}
             sensors={sensors}
             onDragEnd={(event) => {
-              if (event.over && event.active.id !== event.over.id) {
-                reorderSpaces(String(event.active.id), String(event.over.id));
+              if (!event.over || event.active.id === event.over.id) {
+                return;
+              }
+
+              const activeId = String(event.active.id);
+              const overId = String(event.over.id);
+              const isSpace = spaces.some((space) => space.id === activeId);
+              const isFolder = folders.some((folder) => folder.id === activeId);
+
+              if (isSpace) {
+                reorderSpaces(activeId, overId);
+                return;
+              }
+
+              if (isFolder) {
+                reorderFolders(activeId, overId);
               }
             }}
           >
-            <SortableContext items={spaces.map((space) => space.id)} strategy={verticalListSortingStrategy}>
-              <Tree spaces={spaces} folders={folders} onSelectSpace={setSelectedSpaceId} />
-            </SortableContext>
+            <Tree spaces={spaces} folders={folders} onSelectSpace={setSelectedSpaceId} />
           </DndContext>
         </aside>
         <section className="col-span-9 space-y-4">

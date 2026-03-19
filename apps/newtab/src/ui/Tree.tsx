@@ -3,6 +3,7 @@ import type { Folder, Space } from "@toby/core";
 import { Card } from "@toby/shared-ui";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 type TreeItem = {
   id: string;
@@ -21,11 +22,13 @@ export function Tree({ spaces, folders, onSelectSpace }: Props) {
   const items = useMemo(() => buildTree(spaces, folders), [spaces, folders]);
 
   return (
-    <div className="space-y-2">
-      {items.map((item) => (
-        <TreeRow key={item.id} item={item} onSelectSpace={onSelectSpace} />
-      ))}
-    </div>
+    <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+      <div className="space-y-2">
+        {items.map((item) => (
+          <TreeRow key={item.id} item={item} onSelectSpace={onSelectSpace} />
+        ))}
+      </div>
+    </SortableContext>
   );
 }
 
@@ -40,13 +43,7 @@ function TreeRow({
     return <SortableSpaceRow item={item} onSelectSpace={onSelectSpace} />;
   }
 
-  return (
-    <Card className="p-3">
-      <div className="flex w-full items-center gap-2 text-left text-sm">
-        <span style={{ paddingLeft: `${item.depth * 12}px` }}>{item.name}</span>
-      </div>
-    </Card>
-  );
+  return <SortableFolderRow item={item} />;
 }
 
 function SortableSpaceRow({
@@ -77,6 +74,27 @@ function SortableSpaceRow({
       >
         <span style={{ paddingLeft: `${item.depth * 12}px` }}>{item.name}</span>
       </button>
+    </Card>
+  );
+}
+
+function SortableFolderRow({ item }: { item: TreeItem }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+
+  return (
+    <Card
+      className={isDragging ? "p-3 opacity-70" : "p-3"}
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+    >
+      <div className="flex w-full items-center gap-2 text-left text-sm" {...attributes} {...listeners}>
+        <span style={{ paddingLeft: `${item.depth * 12}px` }}>{item.name}</span>
+      </div>
     </Card>
   );
 }

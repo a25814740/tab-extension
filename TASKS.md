@@ -10,6 +10,7 @@
 - Wire local cache hydration and persistence
 - Add quick-save actions (active tab / current window)
 - Add DnD ordering for spaces and collections
+- Add DnD ordering for folders (nested)
 
 ## In Progress
 

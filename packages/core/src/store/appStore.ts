@@ -21,6 +21,7 @@ export type AppActions = {
   saveCollectionFromTabs: (name: string, tabs: TabInput[]) => void;
   reorderSpaces: (activeId: string, overId: string) => void;
   reorderCollections: (activeId: string, overId: string) => void;
+  reorderFolders: (activeId: string, overId: string) => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -114,6 +115,86 @@ export function createAppStore() {
       }));
 
       set({ collections: updated });
+    },
+    reorderFolders: (activeId, overId) => {
+      const state = get();
+      const active = state.folders.find((folder) => folder.id === activeId);
+      if (!active) {
+        return;
+      }
+
+      const overSpace = state.spaces.find((space) => space.id === overId);
+      const overFolder = state.folders.find((folder) => folder.id === overId);
+
+      if (overSpace) {
+        const siblings = state.folders
+          .filter((folder) => folder.spaceId === overSpace.id && folder.parentFolderId === null)
+          .sort((a, b) => a.position - b.position);
+        const nextPosition = (siblings.length + 1) * 1000;
+
+        const updatedFolders = state.folders.map((folder) =>
+          folder.id === activeId
+            ? { ...folder, spaceId: overSpace.id, parentFolderId: null, position: nextPosition }
+            : folder
+        );
+        set({ folders: updatedFolders });
+        return;
+      }
+
+      if (!overFolder) {
+        return;
+      }
+
+      if (
+        active.spaceId === overFolder.spaceId &&
+        active.parentFolderId === overFolder.parentFolderId
+      ) {
+        const siblings = state.folders
+          .filter(
+            (folder) =>
+              folder.spaceId === active.spaceId && folder.parentFolderId === active.parentFolderId
+          )
+          .sort((a, b) => a.position - b.position);
+        const fromIndex = siblings.findIndex((folder) => folder.id === activeId);
+        const toIndex = siblings.findIndex((folder) => folder.id === overId);
+        if (fromIndex < 0 || toIndex < 0) {
+          return;
+        }
+
+        const reordered = [...siblings];
+        const [moved] = reordered.splice(fromIndex, 1);
+        reordered.splice(toIndex, 0, moved);
+
+        const updatedFolders = state.folders.map((folder) => {
+          const index = reordered.findIndex((item) => item.id === folder.id);
+          if (index === -1) {
+            return folder;
+          }
+          return { ...folder, position: (index + 1) * 1000 };
+        });
+        set({ folders: updatedFolders });
+        return;
+      }
+
+      const children = state.folders
+        .filter(
+          (folder) =>
+            folder.spaceId === overFolder.spaceId && folder.parentFolderId === overFolder.id
+        )
+        .sort((a, b) => a.position - b.position);
+      const nextPosition = (children.length + 1) * 1000;
+
+      const updatedFolders = state.folders.map((folder) =>
+        folder.id === activeId
+          ? {
+              ...folder,
+              spaceId: overFolder.spaceId,
+              parentFolderId: overFolder.id,
+              position: nextPosition,
+            }
+          : folder
+      );
+      set({ folders: updatedFolders });
     },
     saveCollectionFromTabs: (name, tabs) => {
       const state = get();
