@@ -80,3 +80,14 @@ export const localCacheSchema = z.object({
 });
 
 export type LocalCacheInput = z.infer<typeof localCacheSchema>;
+
+export const localSnapshotSchema = z.object({
+  workspace: workspaceSchema.nullable(),
+  spaces: spaceSchema.array(),
+  folders: folderSchema.array(),
+  collections: collectionSchema.array(),
+  tabs: tabItemSchema.array(),
+  cache: localCacheSchema,
+});
+
+export type LocalStoreSnapshot = z.infer<typeof localSnapshotSchema>;

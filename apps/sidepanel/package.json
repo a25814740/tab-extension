@@ -13,6 +13,7 @@
   "dependencies": {
     "@toby/core": "workspace:*",
     "@toby/shared-ui": "workspace:*",
+    "@toby/chrome-adapters": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^4.5.4",
