@@ -8,8 +8,8 @@ type PendingOp = {
   payload: Record<string, unknown>;
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SUPABASE_URL = Deno.env.get("FUNCTION_SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("FUNCTION_SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 serve(async (req) => {
   if (req.method !== "POST") {

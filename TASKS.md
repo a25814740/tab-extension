@@ -57,6 +57,7 @@
 - Restrict RLS writes by role
 - Implement sync_ops server apply logic
 - Document sync_ops deployment
+- Update edge function env naming
 
 ## In Progress
 

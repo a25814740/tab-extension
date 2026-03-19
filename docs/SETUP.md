@@ -31,8 +31,8 @@ If you want auth and sync to work, add your Supabase project URL and anon key in
 
 Deploy `backend/functions/sync_ops.ts` with env vars:
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `FUNCTION_SUPABASE_URL`
+- `FUNCTION_SUPABASE_SERVICE_ROLE_KEY`
 
 ## Supabase Full Setup
 
