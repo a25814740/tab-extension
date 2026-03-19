@@ -9,3 +9,4 @@ Planned capabilities:
 - Sharing: create/revoke share links
 - Collaboration: members and roles
 - AI: classify tabs and summarize collections
+- Sync: push pending ops and receive ack

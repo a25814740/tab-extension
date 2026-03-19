@@ -14,3 +14,7 @@ Manifest V3 extension with a service worker and shared messaging types. New tab 
 ## Backend
 
 Supabase is assumed for auth, data, and realtime collaboration. The extension only stores cached data locally.
+
+## Sync
+
+Local-first pending ops are queued in `chrome.storage.local`, flushed periodically via a sync client, and acknowledged by the server.

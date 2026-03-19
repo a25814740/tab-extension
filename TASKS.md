@@ -17,6 +17,9 @@
 - Add insertion indicators for collection and tab drag
 - Add pending ops for drag actions with rollback stack
 - Add sync engine stub and periodic flush
+- Add Supabase schema and RLS placeholders
+- Add API client stubs for auth and sharing
+- Add AI provider abstraction (rule-based)
 
 ## In Progress
 
