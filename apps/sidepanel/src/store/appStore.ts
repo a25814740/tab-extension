@@ -46,6 +46,10 @@ export function useLocalCacheSync() {
       }
     })();
     const syncInterval = window.setInterval(() => {
+      const nextRetry = appStore.getState().cache.nextSyncRetryAt;
+      if (nextRetry && new Date(nextRetry).getTime() > Date.now()) {
+        return;
+      }
       void appStore.getState().flushPendingOps(syncClient);
     }, 10000);
 

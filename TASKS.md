@@ -41,6 +41,7 @@
 - Add initial RLS policies
 - Extend RLS for workspace members
 - Add sync error status and rollback test
+- Add sync retry/backoff indicator
 
 ## In Progress
 

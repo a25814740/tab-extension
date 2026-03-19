@@ -43,6 +43,7 @@ export function App() {
   const tabs = useAppStore((state) => state.tabs);
   const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
   const lastSyncError = useAppStore((state) => state.cache.lastSyncError);
+  const nextSyncRetryAt = useAppStore((state) => state.cache.nextSyncRetryAt);
   const [overId, setOverId] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -194,6 +195,7 @@ export function App() {
             Workspace: {workspace?.name ?? "Loading"}{" "}
             {lastSyncAt ? `• Last sync ${new Date(lastSyncAt).toLocaleTimeString()}` : ""}
             {lastSyncError ? ` • Sync error (${lastSyncError})` : ""}
+            {nextSyncRetryAt ? ` • Retry ${new Date(nextSyncRetryAt).toLocaleTimeString()}` : ""}
           </p>
         </div>
         <div className="flex gap-2">

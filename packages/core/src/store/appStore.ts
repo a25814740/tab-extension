@@ -34,6 +34,7 @@ export type AppActions = {
   flushPendingOps: (client: SyncClient) => Promise<void>;
   addTabToCollection: (collectionId: string, tab: TabInput) => void;
   dedupeTabs: () => void;
+  setSyncRetryAt: (isoTime: string | null) => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -587,6 +588,14 @@ export function createAppStore() {
         rollbackStack: rest,
       });
     },
+    setSyncRetryAt: (isoTime) => {
+      set((state) => ({
+        cache: {
+          ...state.cache,
+          nextSyncRetryAt: isoTime,
+        },
+      }));
+    },
     flushPendingOps: async (client) => {
       const state = get();
       const ops = state.cache.pendingOps;
@@ -598,10 +607,12 @@ export function createAppStore() {
       try {
         result = await syncPendingOps(ops, client);
       } catch {
+        const retryAt = new Date(Date.now() + 30_000).toISOString();
         set({
           cache: {
             ...state.cache,
             lastSyncError: "network_error",
+            nextSyncRetryAt: retryAt,
           },
         });
         return;
@@ -623,6 +634,7 @@ export function createAppStore() {
           pendingOps: remaining,
           lastSyncAt: result.syncedIds.length > 0 ? now : state.cache.lastSyncAt,
           lastSyncError: result.failedIds.length > 0 ? "sync_failed" : null,
+          nextSyncRetryAt: result.failedIds.length > 0 ? new Date(Date.now() + 30_000).toISOString() : null,
         },
       });
     },

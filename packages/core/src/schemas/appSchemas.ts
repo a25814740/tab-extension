@@ -78,6 +78,7 @@ export const localCacheSchema = z.object({
     .array(),
   lastSyncAt: z.string().nullable(),
   lastSyncError: z.string().nullable().optional(),
+  nextSyncRetryAt: z.string().nullable().optional(),
 });
 
 export type LocalCacheInput = z.infer<typeof localCacheSchema>;
