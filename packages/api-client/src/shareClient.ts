@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { nanoid } from "nanoid";
 
 export type SharePayload = {
   resourceType: "collection" | "folder" | "space";
@@ -8,7 +9,8 @@ export type SharePayload = {
 };
 
 export async function createShareLink(client: SupabaseClient, payload: SharePayload) {
-  return client.from("share_links").insert(payload).select().single();
+  const token = nanoid();
+  return client.from("share_links").insert({ ...payload, token }).select().single();
 }
 
 export async function revokeShareLink(client: SupabaseClient, linkId: string) {

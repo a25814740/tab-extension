@@ -27,6 +27,7 @@ export function SharePanel() {
   });
   const [status, setStatus] = useState<string>("");
   const [shareId, setShareId] = useState<string>("");
+  const [shareToken, setShareToken] = useState<string>("");
 
   useEffect(() => {
     void (async () => {
@@ -59,6 +60,7 @@ export function SharePanel() {
       return;
     }
     setShareId(result.data?.id ?? "");
+    setShareToken(result.data?.token ?? "");
     setStatus("Share link created");
   };
 
@@ -135,6 +137,9 @@ export function SharePanel() {
             onChange={(event) => setShareId(event.target.value)}
           />
         </label>
+        {shareToken ? (
+          <div className="text-slate-400">Token: {shareToken}</div>
+        ) : null}
         <div className="flex flex-wrap gap-2 pt-2">
           <button className="rounded border border-slate-700 px-2 py-1" onClick={handleCreate}>
             Create Link

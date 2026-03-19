@@ -35,6 +35,7 @@
 - Add integration and e2e test scaffolds
 - Add AI organize panel in side panel
 - Add save active tab into existing collection
+- Generate share tokens for links
 
 ## In Progress
 
