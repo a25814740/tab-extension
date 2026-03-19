@@ -6,6 +6,7 @@ import { Tree } from "./Tree";
 import { CollectionCard } from "./CollectionCard";
 import { TabRow } from "./TabRow";
 import { createRuleBasedProvider } from "@toby/ai";
+import { AuthPanel } from "./AuthPanel";
 import {
   DndContext,
   PointerSensor,
@@ -188,6 +189,7 @@ export function App() {
             onExpandFolder={expandFolder}
             overId={overId}
           />
+          <AuthPanel />
         </aside>
         <section className="col-span-9 space-y-4">
           <SectionTitle title="Collections" />

@@ -23,6 +23,7 @@
 - Surface AI summary in collection cards
 - Add sync status indicator in UI
 - Add sync engine unit test
+- Add auth panel to capture Supabase config
 
 ## In Progress
 
