@@ -23,6 +23,8 @@ export type AppActions = {
   reorderCollections: (activeId: string, overId: string) => void;
   reorderFolders: (activeId: string, overId: string) => void;
   reorderTabs: (activeId: string, overId: string) => void;
+  toggleFolderExpanded: (folderId: string) => void;
+  expandFolder: (folderId: string) => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -318,6 +320,35 @@ export function createAppStore() {
           pendingOps,
           lastSyncAt: now,
         },
+      });
+    },
+    toggleFolderExpanded: (folderId) => {
+      set((state) => {
+        const expanded = new Set(state.cache.expandedFolderIds);
+        if (expanded.has(folderId)) {
+          expanded.delete(folderId);
+        } else {
+          expanded.add(folderId);
+        }
+        return {
+          cache: {
+            ...state.cache,
+            expandedFolderIds: Array.from(expanded),
+          },
+        };
+      });
+    },
+    expandFolder: (folderId) => {
+      set((state) => {
+        if (state.cache.expandedFolderIds.includes(folderId)) {
+          return state;
+        }
+        return {
+          cache: {
+            ...state.cache,
+            expandedFolderIds: [...state.cache.expandedFolderIds, folderId],
+          },
+        };
       });
     },
   }));

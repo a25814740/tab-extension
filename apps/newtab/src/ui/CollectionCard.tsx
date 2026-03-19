@@ -11,14 +11,14 @@ type Props = {
 };
 
 export function CollectionCard({ id, name, tabCount, onOpenAll, children }: Props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
     id,
   });
 
   return (
     <Card
       ref={setNodeRef}
-      className={isDragging ? "p-4 opacity-70" : "p-4"}
+      className={isDragging ? "p-4 opacity-70" : isOver ? "p-4 ring-1 ring-slate-500" : "p-4"}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       <div className="text-base font-semibold">{name}</div>

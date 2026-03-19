@@ -9,14 +9,14 @@ type Props = {
 };
 
 export function TabRow({ id, title, url }: Props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
     id,
   });
 
   return (
     <Card
       ref={setNodeRef}
-      className={isDragging ? "p-2 opacity-70" : "p-2"}
+      className={isDragging ? "p-2 opacity-70" : isOver ? "p-2 ring-1 ring-slate-500" : "p-2"}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       <div className="flex items-center justify-between gap-2 text-left text-xs">

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { SectionTitle } from "@toby/shared-ui";
 import { getCurrentWindowTabs, openTabs } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
@@ -12,6 +12,7 @@ import {
   closestCenter,
   useSensor,
   useSensors,
+  useDndMonitor,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
@@ -26,7 +27,11 @@ export function App() {
   const reorderCollections = useAppStore((state) => state.reorderCollections);
   const reorderFolders = useAppStore((state) => state.reorderFolders);
   const reorderTabs = useAppStore((state) => state.reorderTabs);
+  const expandedFolderIds = useAppStore((state) => state.cache.expandedFolderIds);
+  const toggleFolderExpanded = useAppStore((state) => state.toggleFolderExpanded);
+  const expandFolder = useAppStore((state) => state.expandFolder);
   const tabs = useAppStore((state) => state.tabs);
+  const [overId, setOverId] = useState<string | null>(null);
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
 
   const tabCountByCollection = useMemo(() => {
@@ -70,6 +75,14 @@ export function App() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  useDndMonitor({
+    onDragOver: (event) => {
+      setOverId(event.over ? String(event.over.id) : null);
+    },
+    onDragEnd: () => setOverId(null),
+    onDragCancel: () => setOverId(null),
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -129,7 +142,15 @@ export function App() {
         <main className="grid grid-cols-12 gap-6 px-6 py-6">
         <aside className="col-span-3 space-y-4">
           <SectionTitle title="Spaces" />
-          <Tree spaces={spaces} folders={folders} onSelectSpace={setSelectedSpaceId} />
+          <Tree
+            spaces={spaces}
+            folders={folders}
+            onSelectSpace={setSelectedSpaceId}
+            expandedFolderIds={expandedFolderIds}
+            onToggleFolder={toggleFolderExpanded}
+            onExpandFolder={expandFolder}
+            overId={overId}
+          />
         </aside>
         <section className="col-span-9 space-y-4">
           <SectionTitle title="Collections" />
