@@ -38,6 +38,7 @@
 - Generate share tokens for links
 - Add conflict resolver stub
 - Add duplicate tab cleanup
+- Add initial RLS policies
 
 ## In Progress
 
