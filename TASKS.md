@@ -45,6 +45,7 @@
 - Add Playwright e2e scaffold
 - Run e2e in CI
 - Document test commands
+- Add extension e2e config
 
 ## In Progress
 

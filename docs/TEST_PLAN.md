@@ -24,6 +24,7 @@ Run:
 
 ```bash
 pnpm --filter @toby/tests test:e2e
+pnpm --filter @toby/tests test:e2e:extension
 ```
 
 ## Manual QA Steps

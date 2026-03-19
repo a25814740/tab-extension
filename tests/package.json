@@ -6,6 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:extension": "playwright test --config playwright.extension.config.ts",
     "lint": "eslint ."
   },
   "devDependencies": {
