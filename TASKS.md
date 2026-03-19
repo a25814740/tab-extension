@@ -16,6 +16,7 @@
 - Add drop indicators and hover-expand for folder tree
 - Add insertion indicators for collection and tab drag
 - Add pending ops for drag actions with rollback stack
+- Add sync engine stub and periodic flush
 
 ## In Progress
 

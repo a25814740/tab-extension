@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useStore } from "zustand";
 import { createAppStore, localSnapshotSchema, toSnapshot } from "@toby/core";
 import { getLocal, setLocal } from "@toby/chrome-adapters";
+import { createMockSyncClient } from "@toby/api-client";
 
 const LOCAL_SNAPSHOT_KEY = "toby_snapshot_v1";
 
@@ -34,12 +35,18 @@ export function useLocalCacheSync() {
       }, 250);
     });
 
+    const syncClient = createMockSyncClient();
+    const syncInterval = window.setInterval(() => {
+      void appStore.getState().flushPendingOps(syncClient);
+    }, 10000);
+
     return () => {
       isMounted = false;
       unsubscribe();
       if (timeout) {
         window.clearTimeout(timeout);
       }
+      window.clearInterval(syncInterval);
     };
   }, []);
 }

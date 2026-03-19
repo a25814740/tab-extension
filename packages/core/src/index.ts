@@ -4,5 +4,6 @@ export * from "./store/appState";
 export * from "./store/appStore";
 export * from "./store/snapshot";
 export * from "./sync/pendingOps";
+export * from "./sync/syncEngine";
 export * from "./utils/sampleData";
 export * from "./utils/position";

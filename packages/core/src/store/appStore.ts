@@ -5,8 +5,10 @@ import { defaultAppState } from "./appState";
 import type { LocalStoreSnapshot } from "../schemas/appSchemas";
 import type { TabItem } from "../domain/models";
 import { sampleWorkspace } from "../utils/sampleData";
-import { enqueueOp } from "../sync/pendingOps";
+import { enqueueOp, markSynced } from "../sync/pendingOps";
 import { toSnapshot } from "./snapshot";
+import type { SyncClient } from "../sync/syncEngine";
+import { syncPendingOps } from "../sync/syncEngine";
 
 export type TabInput = {
   title: string;
@@ -29,6 +31,7 @@ export type AppActions = {
   reorderCollectionsWithIndex: (activeId: string, overId: string, placeAfter: boolean) => void;
   reorderTabsWithIndex: (activeId: string, overId: string, placeAfter: boolean) => void;
   rollbackLastOp: () => void;
+  flushPendingOps: (client: SyncClient) => Promise<void>;
 };
 
 export type AppStore = AppState & AppActions;
@@ -580,6 +583,30 @@ export function createAppStore() {
         tabs: latest.tabs,
         cache: latest.cache,
         rollbackStack: rest,
+      });
+    },
+    flushPendingOps: async (client) => {
+      const state = get();
+      const ops = state.cache.pendingOps;
+      if (ops.length === 0) {
+        return;
+      }
+
+      const result = await syncPendingOps(ops, client);
+      let remaining = ops;
+      if (result.syncedIds.length > 0) {
+        result.syncedIds.forEach((id) => {
+          remaining = markSynced(remaining, id);
+        });
+      }
+
+      const now = new Date().toISOString();
+      set({
+        cache: {
+          ...state.cache,
+          pendingOps: remaining,
+          lastSyncAt: result.syncedIds.length > 0 ? now : state.cache.lastSyncAt,
+        },
       });
     },
   }));

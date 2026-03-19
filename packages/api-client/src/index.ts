@@ -13,3 +13,5 @@ export function createSupabaseClient(config: SupabaseConfig) {
     },
   });
 }
+
+export { createMockSyncClient } from "./syncClient";
