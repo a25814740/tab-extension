@@ -21,6 +21,7 @@ export type AppActions = {
   hydrate: (snapshot: LocalStoreSnapshot) => void;
   setViewMode: (mode: AppState["cache"]["ui"]["viewMode"]) => void;
   setSelectedSpaceId: (spaceId: string | null) => void;
+  setSelectedCollectionId: (collectionId: string | null) => void;
   saveCollectionFromTabs: (name: string, tabs: TabInput[]) => void;
   reorderSpaces: (activeId: string, overId: string) => void;
   reorderCollections: (activeId: string, overId: string) => void;
@@ -98,6 +99,14 @@ export function createAppStore() {
         cache: {
           ...state.cache,
           selectedSpaceId: spaceId,
+        },
+      }));
+    },
+    setSelectedCollectionId: (collectionId) => {
+      set((state) => ({
+        cache: {
+          ...state.cache,
+          selectedCollectionId: collectionId,
         },
       }));
     },

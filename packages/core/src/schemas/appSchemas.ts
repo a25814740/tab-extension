@@ -60,6 +60,7 @@ export const localCacheSchema = z.object({
   currentUserId: z.string().nullable(),
   selectedWorkspaceId: z.string().nullable(),
   selectedSpaceId: z.string().nullable(),
+  selectedCollectionId: z.string().nullable().optional(),
   expandedFolderIds: z.string().array(),
   ui: z.object({
     theme: z.enum(["light", "dark", "system"]),

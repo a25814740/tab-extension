@@ -31,6 +31,7 @@ export function App() {
   const spaces = useAppStore((state) => state.spaces);
   const folders = useAppStore((state) => state.folders);
   const setSelectedSpaceId = useAppStore((state) => state.setSelectedSpaceId);
+  const setSelectedCollectionId = useAppStore((state) => state.setSelectedCollectionId);
   const reorderSpaces = useAppStore((state) => state.reorderSpaces);
   const reorderCollections = useAppStore((state) => state.reorderCollections);
   const reorderCollectionsWithIndex = useAppStore((state) => state.reorderCollectionsWithIndex);
@@ -44,6 +45,7 @@ export function App() {
   const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
   const lastSyncError = useAppStore((state) => state.cache.lastSyncError);
   const nextSyncRetryAt = useAppStore((state) => state.cache.nextSyncRetryAt);
+  const selectedCollectionId = useAppStore((state) => state.cache.selectedCollectionId ?? null);
   const [overId, setOverId] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -235,10 +237,10 @@ export function App() {
               onExpandFolder={expandFolder}
               overId={overId}
             />
-            <AuthPanel />
-            <SharePanel />
-            <CollabPanel />
-          </aside>
+          <AuthPanel />
+          <SharePanel defaultResourceId={selectedCollectionId} />
+          <CollabPanel defaultWorkspaceId={workspace?.id ?? null} />
+        </aside>
           <section className="col-span-9 space-y-4">
             <div className="flex items-center justify-between">
               <SectionTitle title="Collections" />
@@ -262,6 +264,8 @@ export function App() {
                     tabCount={tabCountByCollection.get(collection.id) ?? 0}
                     summary={summaries[collection.id]}
                     onOpenAll={() => handleOpenAll(collection.id)}
+                    selected={selectedCollectionId === collection.id}
+                    onSelect={() => setSelectedCollectionId(collection.id)}
                   >
                     <SortableContext
                       items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}

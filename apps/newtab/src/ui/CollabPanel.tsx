@@ -10,7 +10,7 @@ type CollabConfig = {
 
 const CONFIG_KEY = "toby_auth_config_v1";
 
-export function CollabPanel() {
+export function CollabPanel({ defaultWorkspaceId }: { defaultWorkspaceId?: string | null }) {
   const [config, setConfig] = useState<CollabConfig | null>(null);
   const [workspaceId, setWorkspaceId] = useState("");
   const [userId, setUserId] = useState("");
@@ -25,6 +25,12 @@ export function CollabPanel() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (defaultWorkspaceId && !workspaceId) {
+      setWorkspaceId(defaultWorkspaceId);
+    }
+  }, [defaultWorkspaceId, workspaceId]);
 
   const client = useMemo(() => {
     if (!config) {

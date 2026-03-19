@@ -49,6 +49,7 @@
 - Add extension e2e for new tab load
 - Add auth config clear action
 - Add auth QA steps
+- Add selected collection state and share defaults
 
 ## In Progress
 

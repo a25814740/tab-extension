@@ -17,7 +17,7 @@ type ShareState = {
 
 const CONFIG_KEY = "toby_auth_config_v1";
 
-export function SharePanel() {
+export function SharePanel({ defaultResourceId }: { defaultResourceId?: string | null }) {
   const [config, setConfig] = useState<ShareConfig | null>(null);
   const [state, setState] = useState<ShareState>({
     resourceType: "collection",
@@ -37,6 +37,12 @@ export function SharePanel() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (defaultResourceId && !state.resourceId) {
+      setState((prev) => ({ ...prev, resourceId: defaultResourceId }));
+    }
+  }, [defaultResourceId, state.resourceId]);
 
   const client = useMemo(() => {
     if (!config) {

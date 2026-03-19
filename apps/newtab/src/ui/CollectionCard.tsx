@@ -9,9 +9,20 @@ type Props = {
   onOpenAll: () => void;
   summary?: string;
   children?: React.ReactNode;
+  selected?: boolean;
+  onSelect?: () => void;
 };
 
-export function CollectionCard({ id, name, tabCount, onOpenAll, summary, children }: Props) {
+export function CollectionCard({
+  id,
+  name,
+  tabCount,
+  onOpenAll,
+  summary,
+  children,
+  selected,
+  onSelect,
+}: Props) {
   const sortable = useSortable({
     id,
     data: {
@@ -31,11 +42,19 @@ export function CollectionCard({ id, name, tabCount, onOpenAll, summary, childre
     <Card
       ref={sortable.setNodeRef}
       className={
-        sortable.isDragging ? "p-4 opacity-70" : sortable.isOver ? "p-4 ring-1 ring-slate-500" : "p-4"
+        sortable.isDragging
+          ? "p-4 opacity-70"
+          : selected
+          ? "p-4 ring-2 ring-slate-300"
+          : sortable.isOver
+          ? "p-4 ring-1 ring-slate-500"
+          : "p-4"
       }
       style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}
     >
-      <div className="text-base font-semibold">{name}</div>
+      <button className="text-left text-base font-semibold" onClick={onSelect}>
+        {name}
+      </button>
       <div className="mt-2 text-xs text-slate-400">{tabCount} tabs</div>
       {summary ? <div className="mt-2 text-xs text-slate-300">{summary}</div> : null}
       {children}

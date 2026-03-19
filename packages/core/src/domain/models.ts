@@ -132,6 +132,7 @@ export type LocalAppCache = {
   currentUserId: string | null;
   selectedWorkspaceId: string | null;
   selectedSpaceId: string | null;
+  selectedCollectionId?: string | null;
   expandedFolderIds: string[];
   ui: {
     theme: "light" | "dark" | "system";

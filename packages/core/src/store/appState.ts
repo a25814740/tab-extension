@@ -16,6 +16,7 @@ export const defaultCache: LocalAppCache = {
   currentUserId: null,
   selectedWorkspaceId: null,
   selectedSpaceId: null,
+  selectedCollectionId: null,
   expandedFolderIds: [],
   ui: {
     theme: "system",
