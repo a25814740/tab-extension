@@ -9,9 +9,11 @@ export function App() {
   const collections = useAppStore((state) => state.collections);
   const tabs = useAppStore((state) => state.tabs);
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
+  const addTabToCollection = useAppStore((state) => state.addTabToCollection);
   const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
   const recentCollections = collections.slice(0, 3);
   const [searchQuery, setSearchQuery] = useState("");
+  const [targetCollectionId, setTargetCollectionId] = useState("");
 
   const tabCountByCollection = useMemo(() => {
     const map = new Map<string, number>();
@@ -43,6 +45,10 @@ export function App() {
     if (!tab) {
       return;
     }
+    if (targetCollectionId) {
+      addTabToCollection(targetCollectionId, tab);
+      return;
+    }
     saveCollectionFromTabs(tab.title, [tab]);
   };
 
@@ -64,6 +70,18 @@ export function App() {
       </header>
       <main className="space-y-4 px-4 py-4">
         <div className="space-y-2">
+          <select
+            className="w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm"
+            value={targetCollectionId}
+            onChange={(event) => setTargetCollectionId(event.target.value)}
+          >
+            <option value="">Save to new collection</option>
+            {collections.map((collection) => (
+              <option key={collection.id} value={collection.id}>
+                {collection.name}
+              </option>
+            ))}
+          </select>
           <button
             className="w-full rounded bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-900"
             onClick={handleSaveActiveTab}

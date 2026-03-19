@@ -32,6 +32,7 @@ export type AppActions = {
   reorderTabsWithIndex: (activeId: string, overId: string, placeAfter: boolean) => void;
   rollbackLastOp: () => void;
   flushPendingOps: (client: SyncClient) => Promise<void>;
+  addTabToCollection: (collectionId: string, tab: TabInput) => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -614,6 +615,46 @@ export function createAppStore() {
           ...state.cache,
           pendingOps: remaining,
           lastSyncAt: result.syncedIds.length > 0 ? now : state.cache.lastSyncAt,
+        },
+      });
+    },
+    addTabToCollection: (collectionId, tab) => {
+      const state = get();
+      const targetCollection = state.collections.find((collection) => collection.id === collectionId);
+      if (!targetCollection) {
+        return;
+      }
+      const now = new Date().toISOString();
+      const nextPosition =
+        Math.max(0, ...state.tabs.filter((item) => item.collectionId === collectionId).map((t) => t.position)) +
+        1000;
+
+      const newTab: TabItem = {
+        id: nanoid(),
+        collectionId,
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.favIconUrl ?? null,
+        note: null,
+        position: nextPosition,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "create",
+        entity: "tab",
+        payload: newTab,
+        createdAt: now,
+      });
+
+      set({
+        rollbackStack: pushRollback(state),
+        tabs: [...state.tabs, newTab],
+        cache: {
+          ...state.cache,
+          pendingOps,
         },
       });
     },
