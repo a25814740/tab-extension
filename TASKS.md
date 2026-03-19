@@ -44,6 +44,7 @@
 - Add sync retry/backoff indicator
 - Add Playwright e2e scaffold
 - Run e2e in CI
+- Document test commands
 
 ## In Progress
 

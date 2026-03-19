@@ -26,3 +26,10 @@ pnpm build
 ## Supabase Config (Optional)
 
 If you want auth and sync to work, add your Supabase project URL and anon key in the New Tab sidebar under "Auth & Sync".
+
+## Tests
+
+```bash
+pnpm test
+pnpm --filter @toby/tests test:e2e
+```
