@@ -131,7 +131,6 @@ function SortableSpaceRow({
   );
 }
 
-function SortableFolderRow({ item }: { item: TreeItem }) {
 function SortableFolderRow({
   item,
   isExpanded,
