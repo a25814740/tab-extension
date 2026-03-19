@@ -53,6 +53,7 @@
 - Add open all in side panel
 - Add collection picker in share panel
 - Show pending sync count
+- Add collection sorting controls
 
 ## In Progress
 

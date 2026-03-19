@@ -32,6 +32,8 @@ export function App() {
   const folders = useAppStore((state) => state.folders);
   const setSelectedSpaceId = useAppStore((state) => state.setSelectedSpaceId);
   const setSelectedCollectionId = useAppStore((state) => state.setSelectedCollectionId);
+  const sortMode = useAppStore((state) => state.cache.ui.sortMode);
+  const setSortMode = useAppStore((state) => state.setSortMode);
   const reorderSpaces = useAppStore((state) => state.reorderSpaces);
   const reorderCollections = useAppStore((state) => state.reorderCollections);
   const reorderCollectionsWithIndex = useAppStore((state) => state.reorderCollectionsWithIndex);
@@ -96,6 +98,20 @@ export function App() {
       );
     });
   }, [collections, searchQuery, tabsByCollection]);
+
+  const sortedCollections = useMemo(() => {
+    const list = [...filteredCollections];
+    switch (sortMode) {
+      case "name":
+        return list.sort((a, b) => a.name.localeCompare(b.name));
+      case "createdAt":
+        return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      case "recent":
+        return list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      default:
+        return list.sort((a, b) => a.position - b.position);
+    }
+  }, [filteredCollections, sortMode]);
 
   useEffect(() => {
     const provider = createRuleBasedProvider();
@@ -249,19 +265,31 @@ export function App() {
           <section className="col-span-9 space-y-4">
             <div className="flex items-center justify-between">
               <SectionTitle title="Collections" />
+              <div className="flex items-center gap-2">
               <input
                 className="w-64 rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
                 placeholder="Search collections, tabs"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />
+              <select
+                className="rounded border border-slate-700 bg-slate-900 px-2 py-2 text-sm"
+                value={sortMode}
+                onChange={(event) => setSortMode(event.target.value as typeof sortMode)}
+              >
+                <option value="custom">Custom</option>
+                <option value="recent">Recent</option>
+                <option value="name">Name</option>
+                <option value="createdAt">Created</option>
+              </select>
+              </div>
             </div>
             <SortableContext
-              items={filteredCollections.map((collection) => collection.id)}
+              items={sortedCollections.map((collection) => collection.id)}
               strategy={verticalListSortingStrategy}
             >
               <div className="grid grid-cols-3 gap-4">
-                {filteredCollections.map((collection) => (
+                {sortedCollections.map((collection) => (
                   <CollectionCard
                     key={collection.id}
                     id={collection.id}
