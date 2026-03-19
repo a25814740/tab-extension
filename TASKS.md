@@ -52,6 +52,7 @@
 - Add selected collection state and share defaults
 - Add open all in side panel
 - Add collection picker in share panel
+- Show pending sync count
 
 ## In Progress
 

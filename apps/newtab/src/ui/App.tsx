@@ -45,6 +45,7 @@ export function App() {
   const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
   const lastSyncError = useAppStore((state) => state.cache.lastSyncError);
   const nextSyncRetryAt = useAppStore((state) => state.cache.nextSyncRetryAt);
+  const pendingCount = useAppStore((state) => state.cache.pendingOps.length);
   const selectedCollectionId = useAppStore((state) => state.cache.selectedCollectionId ?? null);
   const [overId, setOverId] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
@@ -198,6 +199,7 @@ export function App() {
             {lastSyncAt ? `• Last sync ${new Date(lastSyncAt).toLocaleTimeString()}` : ""}
             {lastSyncError ? ` • Sync error (${lastSyncError})` : ""}
             {nextSyncRetryAt ? ` • Retry ${new Date(nextSyncRetryAt).toLocaleTimeString()}` : ""}
+            {pendingCount > 0 ? ` • Pending ${pendingCount}` : ""}
           </p>
         </div>
         <div className="flex gap-2">

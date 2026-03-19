@@ -13,6 +13,7 @@ export function App() {
   const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
   const lastSyncError = useAppStore((state) => state.cache.lastSyncError);
   const nextSyncRetryAt = useAppStore((state) => state.cache.nextSyncRetryAt);
+  const pendingCount = useAppStore((state) => state.cache.pendingOps.length);
   const recentCollections = collections.slice(0, 3);
   const [searchQuery, setSearchQuery] = useState("");
   const [targetCollectionId, setTargetCollectionId] = useState("");
@@ -77,6 +78,7 @@ export function App() {
           {lastSyncAt ? `Last sync ${new Date(lastSyncAt).toLocaleTimeString()}` : "Sync pending"}
           {lastSyncError ? ` • Error (${lastSyncError})` : ""}
           {nextSyncRetryAt ? ` • Retry ${new Date(nextSyncRetryAt).toLocaleTimeString()}` : ""}
+          {pendingCount > 0 ? ` • Pending ${pendingCount}` : ""}
         </p>
       </header>
       <main className="space-y-4 px-4 py-4">
