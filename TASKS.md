@@ -32,6 +32,7 @@
 - Add share panel for create/revoke links
 - Add collaboration invite panel
 - Add search filters in new tab and side panel
+- Add integration and e2e test scaffolds
 
 ## In Progress
 
