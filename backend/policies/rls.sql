@@ -31,14 +31,20 @@ create policy "spaces_modify" on spaces
       select 1 from workspaces w where w.id = workspace_id and w.owner_id = auth.uid()
     )
     or exists (
-      select 1 from workspace_members m where m.workspace_id = workspace_id and m.user_id = auth.uid()
+      select 1 from workspace_members m
+      where m.workspace_id = workspace_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'editor')
     )
   ) with check (
     exists (
       select 1 from workspaces w where w.id = workspace_id and w.owner_id = auth.uid()
     )
     or exists (
-      select 1 from workspace_members m where m.workspace_id = workspace_id and m.user_id = auth.uid()
+      select 1 from workspace_members m
+      where m.workspace_id = workspace_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'editor')
     )
   );
 
@@ -58,14 +64,20 @@ create policy "folders_modify" on folders
       select 1 from workspaces w where w.id = workspace_id and w.owner_id = auth.uid()
     )
     or exists (
-      select 1 from workspace_members m where m.workspace_id = workspace_id and m.user_id = auth.uid()
+      select 1 from workspace_members m
+      where m.workspace_id = workspace_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'editor')
     )
   ) with check (
     exists (
       select 1 from workspaces w where w.id = workspace_id and w.owner_id = auth.uid()
     )
     or exists (
-      select 1 from workspace_members m where m.workspace_id = workspace_id and m.user_id = auth.uid()
+      select 1 from workspace_members m
+      where m.workspace_id = workspace_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'editor')
     )
   );
 
@@ -85,14 +97,20 @@ create policy "collections_modify" on collections
       select 1 from workspaces w where w.id = workspace_id and w.owner_id = auth.uid()
     )
     or exists (
-      select 1 from workspace_members m where m.workspace_id = workspace_id and m.user_id = auth.uid()
+      select 1 from workspace_members m
+      where m.workspace_id = workspace_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'editor')
     )
   ) with check (
     exists (
       select 1 from workspaces w where w.id = workspace_id and w.owner_id = auth.uid()
     )
     or exists (
-      select 1 from workspace_members m where m.workspace_id = workspace_id and m.user_id = auth.uid()
+      select 1 from workspace_members m
+      where m.workspace_id = workspace_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'editor')
     )
   );
 
@@ -120,7 +138,9 @@ create policy "tab_items_modify" on tab_items
     or exists (
       select 1 from collections c
       join workspace_members m on m.workspace_id = c.workspace_id
-      where c.id = collection_id and m.user_id = auth.uid()
+      where c.id = collection_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'editor')
     )
   ) with check (
     exists (
@@ -131,7 +151,9 @@ create policy "tab_items_modify" on tab_items
     or exists (
       select 1 from collections c
       join workspace_members m on m.workspace_id = c.workspace_id
-      where c.id = collection_id and m.user_id = auth.uid()
+      where c.id = collection_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'editor')
     )
   );
 

@@ -54,6 +54,7 @@
 - Add collection picker in share panel
 - Show pending sync count
 - Add collection sorting controls
+- Restrict RLS writes by role
 
 ## In Progress
 
