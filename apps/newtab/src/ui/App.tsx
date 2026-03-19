@@ -90,84 +90,76 @@ export function App() {
           </button>
         </div>
       </header>
-      <main className="grid grid-cols-12 gap-6 px-6 py-6">
+      <DndContext
+        collisionDetection={closestCenter}
+        sensors={sensors}
+        onDragEnd={(event) => {
+          if (!event.over || event.active.id === event.over.id) {
+            return;
+          }
+
+          const activeId = String(event.active.id);
+          const overId = String(event.over.id);
+
+          const isSpace = spaces.some((space) => space.id === activeId);
+          const isFolder = folders.some((folder) => folder.id === activeId);
+          const isCollection = collections.some((collection) => collection.id === activeId);
+          const isTab = tabs.some((tab) => tab.id === activeId);
+
+          if (isSpace) {
+            reorderSpaces(activeId, overId);
+            return;
+          }
+
+          if (isFolder) {
+            reorderFolders(activeId, overId);
+            return;
+          }
+
+          if (isCollection) {
+            reorderCollections(activeId, overId);
+            return;
+          }
+
+          if (isTab) {
+            reorderTabs(activeId, overId);
+          }
+        }}
+      >
+        <main className="grid grid-cols-12 gap-6 px-6 py-6">
         <aside className="col-span-3 space-y-4">
           <SectionTitle title="Spaces" />
-          <DndContext
-            collisionDetection={closestCenter}
-            sensors={sensors}
-            onDragEnd={(event) => {
-              if (!event.over || event.active.id === event.over.id) {
-                return;
-              }
-
-              const activeId = String(event.active.id);
-              const overId = String(event.over.id);
-              const isSpace = spaces.some((space) => space.id === activeId);
-              const isFolder = folders.some((folder) => folder.id === activeId);
-
-              if (isSpace) {
-                reorderSpaces(activeId, overId);
-                return;
-              }
-
-              if (isFolder) {
-                reorderFolders(activeId, overId);
-              }
-            }}
-          >
-            <Tree spaces={spaces} folders={folders} onSelectSpace={setSelectedSpaceId} />
-          </DndContext>
+          <Tree spaces={spaces} folders={folders} onSelectSpace={setSelectedSpaceId} />
         </aside>
         <section className="col-span-9 space-y-4">
           <SectionTitle title="Collections" />
-          <DndContext
-            collisionDetection={closestCenter}
-            sensors={sensors}
-            onDragEnd={(event) => {
-              if (event.over && event.active.id !== event.over.id) {
-                reorderCollections(String(event.active.id), String(event.over.id));
-              }
-            }}
-          >
-            <SortableContext items={collections.map((collection) => collection.id)} strategy={verticalListSortingStrategy}>
-              <div className="grid grid-cols-3 gap-4">
-                {collections.map((collection) => (
-                  <CollectionCard
-                    key={collection.id}
-                    id={collection.id}
-                    name={collection.name}
-                    tabCount={tabCountByCollection.get(collection.id) ?? 0}
-                    onOpenAll={() => handleOpenAll(collection.id)}
+          <SortableContext items={collections.map((collection) => collection.id)} strategy={verticalListSortingStrategy}>
+            <div className="grid grid-cols-3 gap-4">
+              {collections.map((collection) => (
+                <CollectionCard
+                  key={collection.id}
+                  id={collection.id}
+                  name={collection.name}
+                  tabCount={tabCountByCollection.get(collection.id) ?? 0}
+                  onOpenAll={() => handleOpenAll(collection.id)}
+                >
+                  <SortableContext
+                    items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
+                    strategy={verticalListSortingStrategy}
                   >
-                    <DndContext
-                      collisionDetection={closestCenter}
-                      sensors={sensors}
-                      onDragEnd={(event) => {
-                        if (!event.over || event.active.id === event.over.id) {
-                          return;
-                        }
-                        reorderTabs(String(event.active.id), String(event.over.id));
-                      }}
-                    >
-                      <SortableContext
-                        items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className="mt-3 space-y-2">
-                          {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
-                            <TabRow key={tab.id} id={tab.id} title={tab.title} url={tab.url} />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                  </CollectionCard>
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+                    <div className="mt-3 space-y-2">
+                      {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
+                        <TabRow key={tab.id} id={tab.id} title={tab.title} url={tab.url} />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </CollectionCard>
+              ))}
+            </div>
+          </SortableContext>
         </section>
       </main>
+      </DndContext>
     </div>
   );
 }

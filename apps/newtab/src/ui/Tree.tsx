@@ -3,7 +3,6 @@ import type { Folder, Space } from "@toby/core";
 import { Card } from "@toby/shared-ui";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 type TreeItem = {
   id: string;
@@ -22,13 +21,11 @@ export function Tree({ spaces, folders, onSelectSpace }: Props) {
   const items = useMemo(() => buildTree(spaces, folders), [spaces, folders]);
 
   return (
-    <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-      <div className="space-y-2">
-        {items.map((item) => (
-          <TreeRow key={item.id} item={item} onSelectSpace={onSelectSpace} />
-        ))}
-      </div>
-    </SortableContext>
+    <div className="space-y-2">
+      {items.map((item) => (
+        <TreeRow key={item.id} item={item} onSelectSpace={onSelectSpace} />
+      ))}
+    </div>
   );
 }
 
@@ -66,14 +63,19 @@ function SortableSpaceRow({
         transition,
       }}
     >
-      <button
-        className="flex w-full items-center gap-2 text-left text-sm"
-        onClick={() => onSelectSpace(item.id)}
-        {...attributes}
-        {...listeners}
-      >
-        <span style={{ paddingLeft: `${item.depth * 12}px` }}>{item.name}</span>
-      </button>
+      <div className="flex w-full items-center justify-between gap-2 text-left text-sm">
+        <button className="flex-1 text-left" onClick={() => onSelectSpace(item.id)}>
+          <span style={{ paddingLeft: `${item.depth * 12}px` }}>{item.name}</span>
+        </button>
+        <button
+          className="rounded border border-slate-700 px-2 py-1 text-xs"
+          aria-label="Drag space"
+          {...attributes}
+          {...listeners}
+        >
+          ::
+        </button>
+      </div>
     </Card>
   );
 }
@@ -92,8 +94,16 @@ function SortableFolderRow({ item }: { item: TreeItem }) {
         transition,
       }}
     >
-      <div className="flex w-full items-center gap-2 text-left text-sm" {...attributes} {...listeners}>
+      <div className="flex w-full items-center justify-between gap-2 text-left text-sm">
         <span style={{ paddingLeft: `${item.depth * 12}px` }}>{item.name}</span>
+        <button
+          className="rounded border border-slate-700 px-2 py-1 text-xs"
+          aria-label="Drag folder"
+          {...attributes}
+          {...listeners}
+        >
+          ::
+        </button>
       </div>
     </Card>
   );
