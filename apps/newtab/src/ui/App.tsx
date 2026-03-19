@@ -4,6 +4,7 @@ import { getCurrentWindowTabs, openTabs } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
 import { Tree } from "./Tree";
 import { CollectionCard } from "./CollectionCard";
+import { TabRow } from "./TabRow";
 import {
   DndContext,
   PointerSensor,
@@ -24,6 +25,7 @@ export function App() {
   const reorderSpaces = useAppStore((state) => state.reorderSpaces);
   const reorderCollections = useAppStore((state) => state.reorderCollections);
   const reorderFolders = useAppStore((state) => state.reorderFolders);
+  const reorderTabs = useAppStore((state) => state.reorderTabs);
   const tabs = useAppStore((state) => state.tabs);
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
 
@@ -41,6 +43,17 @@ export function App() {
       void openTabs(urls);
     }
   };
+
+  const tabsByCollection = useMemo(() => {
+    const map = new Map<string, typeof tabs>();
+    tabs.forEach((tab) => {
+      const list = map.get(tab.collectionId) ?? [];
+      list.push(tab);
+      map.set(tab.collectionId, list);
+    });
+    map.forEach((list) => list.sort((a, b) => a.position - b.position));
+    return map;
+  }, [tabs]);
 
   const handleSaveCurrentWindow = async () => {
     const tabs = await getCurrentWindowTabs();
@@ -126,7 +139,29 @@ export function App() {
                     name={collection.name}
                     tabCount={tabCountByCollection.get(collection.id) ?? 0}
                     onOpenAll={() => handleOpenAll(collection.id)}
-                  />
+                  >
+                    <DndContext
+                      collisionDetection={closestCenter}
+                      sensors={sensors}
+                      onDragEnd={(event) => {
+                        if (!event.over || event.active.id === event.over.id) {
+                          return;
+                        }
+                        reorderTabs(String(event.active.id), String(event.over.id));
+                      }}
+                    >
+                      <SortableContext
+                        items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="mt-3 space-y-2">
+                          {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
+                            <TabRow key={tab.id} id={tab.id} title={tab.title} url={tab.url} />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </CollectionCard>
                 ))}
               </div>
             </SortableContext>

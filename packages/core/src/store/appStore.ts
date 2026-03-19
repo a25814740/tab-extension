@@ -22,6 +22,7 @@ export type AppActions = {
   reorderSpaces: (activeId: string, overId: string) => void;
   reorderCollections: (activeId: string, overId: string) => void;
   reorderFolders: (activeId: string, overId: string) => void;
+  reorderTabs: (activeId: string, overId: string) => void;
 };
 
 export type AppStore = AppState & AppActions;
@@ -195,6 +196,73 @@ export function createAppStore() {
           : folder
       );
       set({ folders: updatedFolders });
+    },
+    reorderTabs: (activeId, overId) => {
+      const state = get();
+      const activeTab = state.tabs.find((tab) => tab.id === activeId);
+      if (!activeTab) {
+        return;
+      }
+
+      const overTab = state.tabs.find((tab) => tab.id === overId);
+      const overCollection = state.collections.find((collection) => collection.id === overId);
+
+      if (overCollection) {
+        const targetTabs = state.tabs
+          .filter((tab) => tab.collectionId === overCollection.id)
+          .sort((a, b) => a.position - b.position);
+        const nextPosition = (targetTabs.length + 1) * 1000;
+
+        const updatedTabs = state.tabs.map((tab) =>
+          tab.id === activeId
+            ? { ...tab, collectionId: overCollection.id, position: nextPosition }
+            : tab
+        );
+        set({ tabs: updatedTabs });
+        return;
+      }
+
+      if (!overTab) {
+        return;
+      }
+
+      if (activeTab.collectionId === overTab.collectionId) {
+        const siblings = state.tabs
+          .filter((tab) => tab.collectionId === activeTab.collectionId)
+          .sort((a, b) => a.position - b.position);
+        const fromIndex = siblings.findIndex((tab) => tab.id === activeId);
+        const toIndex = siblings.findIndex((tab) => tab.id === overId);
+        if (fromIndex < 0 || toIndex < 0) {
+          return;
+        }
+
+        const reordered = [...siblings];
+        const [moved] = reordered.splice(fromIndex, 1);
+        reordered.splice(toIndex, 0, moved);
+
+        const updatedTabs = state.tabs.map((tab) => {
+          const index = reordered.findIndex((item) => item.id === tab.id);
+          if (index === -1) {
+            return tab;
+          }
+          return { ...tab, position: (index + 1) * 1000 };
+        });
+
+        set({ tabs: updatedTabs });
+        return;
+      }
+
+      const targetTabs = state.tabs
+        .filter((tab) => tab.collectionId === overTab.collectionId)
+        .sort((a, b) => a.position - b.position);
+      const nextPosition = (targetTabs.length + 1) * 1000;
+
+      const updatedTabs = state.tabs.map((tab) =>
+        tab.id === activeId
+          ? { ...tab, collectionId: overTab.collectionId, position: nextPosition }
+          : tab
+      );
+      set({ tabs: updatedTabs });
     },
     saveCollectionFromTabs: (name, tabs) => {
       const state = get();

@@ -11,6 +11,7 @@
 - Add quick-save actions (active tab / current window)
 - Add DnD ordering for spaces and collections
 - Add DnD ordering for folders (nested)
+- Add DnD ordering for tabs and cross-collection moves
 
 ## In Progress
 
