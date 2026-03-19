@@ -24,6 +24,7 @@
 - Add sync status indicator in UI
 - Add sync engine unit test
 - Add auth panel to capture Supabase config
+- Add HTTP sync client for Supabase edge function
 
 ## In Progress
 

@@ -2,9 +2,11 @@ import { useEffect } from "react";
 import { useStore } from "zustand";
 import { createAppStore, localSnapshotSchema, toSnapshot } from "@toby/core";
 import { getLocal, setLocal } from "@toby/chrome-adapters";
-import { createMockSyncClient } from "@toby/api-client";
+import { createHttpSyncClient, createMockSyncClient } from "@toby/api-client";
+import { getSync } from "@toby/chrome-adapters";
 
 const LOCAL_SNAPSHOT_KEY = "toby_snapshot_v1";
+const CONFIG_KEY = "toby_auth_config_v1";
 
 export const appStore = createAppStore();
 
@@ -36,6 +38,13 @@ export function useLocalCacheSync() {
     });
 
     const syncClient = createMockSyncClient();
+    void (async () => {
+      const config = await getSync<{ supabaseUrl?: string } | null>(CONFIG_KEY, null);
+      if (config?.supabaseUrl) {
+        const endpoint = `${config.supabaseUrl}/functions/v1/sync_ops`;
+        appStore.getState().flushPendingOps(createHttpSyncClient(endpoint));
+      }
+    })();
     const syncInterval = window.setInterval(() => {
       void appStore.getState().flushPendingOps(syncClient);
     }, 10000);
