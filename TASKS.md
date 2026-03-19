@@ -25,6 +25,7 @@
 - Add sync engine unit test
 - Add auth panel to capture Supabase config
 - Add HTTP sync client for Supabase edge function
+- Add edge function stub for sync ops
 
 ## In Progress
 
