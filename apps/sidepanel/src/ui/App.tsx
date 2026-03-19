@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, SectionTitle } from "@toby/shared-ui";
 import { getActiveTab, getCurrentWindowTabs } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
@@ -10,6 +10,7 @@ export function App() {
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
   const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
   const recentCollections = collections.slice(0, 3);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const tabCountByCollection = useMemo(() => {
     const map = new Map<string, number>();
@@ -18,6 +19,23 @@ export function App() {
     });
     return map;
   }, [tabs]);
+
+  const filteredCollections = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return recentCollections;
+    }
+    const query = searchQuery.toLowerCase();
+    return collections.filter((collection) => {
+      if (collection.name.toLowerCase().includes(query)) {
+        return true;
+      }
+      const list = tabs.filter((tab) => tab.collectionId === collection.id);
+      return list.some(
+        (tab) =>
+          tab.title.toLowerCase().includes(query) || tab.url.toLowerCase().includes(query)
+      );
+    });
+  }, [collections, recentCollections, searchQuery, tabs]);
 
   const handleSaveActiveTab = async () => {
     const tab = await getActiveTab();
@@ -61,7 +79,7 @@ export function App() {
         <div>
           <SectionTitle title="Recent Collections" />
           <div className="mt-2 space-y-2">
-            {recentCollections.map((collection) => (
+            {filteredCollections.map((collection) => (
               <Card key={collection.id} className="p-3">
                 <div className="text-sm font-medium">{collection.name}</div>
                 <div className="text-xs text-slate-400">
@@ -76,6 +94,8 @@ export function App() {
           <input
             className="mt-2 w-full rounded border border-slate-700 bg-slate-800 px-3 py-2 text-sm"
             placeholder="Search tabs, collections, folders"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
           />
         </div>
       </main>

@@ -44,6 +44,7 @@ export function App() {
   const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
   const [overId, setOverId] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState("");
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
 
   const tabCountByCollection = useMemo(() => {
@@ -53,6 +54,7 @@ export function App() {
     });
     return map;
   }, [tabs]);
+
 
   const handleOpenAll = (collectionId: string) => {
     const urls = tabs.filter((tab) => tab.collectionId === collectionId).map((tab) => tab.url);
@@ -71,6 +73,23 @@ export function App() {
     map.forEach((list) => list.sort((a, b) => a.position - b.position));
     return map;
   }, [tabs]);
+
+  const filteredCollections = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return collections;
+    }
+    const query = searchQuery.toLowerCase();
+    return collections.filter((collection) => {
+      if (collection.name.toLowerCase().includes(query)) {
+        return true;
+      }
+      const list = tabsByCollection.get(collection.id) ?? [];
+      return list.some(
+        (tab) =>
+          tab.title.toLowerCase().includes(query) || tab.url.toLowerCase().includes(query)
+      );
+    });
+  }, [collections, searchQuery, tabsByCollection]);
 
   useEffect(() => {
     const provider = createRuleBasedProvider();
@@ -197,26 +216,37 @@ export function App() {
       </header>
       <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
         <main className="grid grid-cols-12 gap-6 px-6 py-6">
-        <aside className="col-span-3 space-y-4">
-          <SectionTitle title="Spaces" />
-          <Tree
-            spaces={spaces}
-            folders={folders}
-            onSelectSpace={setSelectedSpaceId}
-            expandedFolderIds={expandedFolderIds}
-            onToggleFolder={toggleFolderExpanded}
-            onExpandFolder={expandFolder}
-            overId={overId}
-          />
-          <AuthPanel />
-          <SharePanel />
-          <CollabPanel />
-        </aside>
-        <section className="col-span-9 space-y-4">
-          <SectionTitle title="Collections" />
-          <SortableContext items={collections.map((collection) => collection.id)} strategy={verticalListSortingStrategy}>
-            <div className="grid grid-cols-3 gap-4">
-              {collections.map((collection) => (
+          <aside className="col-span-3 space-y-4">
+            <SectionTitle title="Spaces" />
+            <Tree
+              spaces={spaces}
+              folders={folders}
+              onSelectSpace={setSelectedSpaceId}
+              expandedFolderIds={expandedFolderIds}
+              onToggleFolder={toggleFolderExpanded}
+              onExpandFolder={expandFolder}
+              overId={overId}
+            />
+            <AuthPanel />
+            <SharePanel />
+            <CollabPanel />
+          </aside>
+          <section className="col-span-9 space-y-4">
+            <div className="flex items-center justify-between">
+              <SectionTitle title="Collections" />
+              <input
+                className="w-64 rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+                placeholder="Search collections, tabs"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+            </div>
+            <SortableContext
+              items={filteredCollections.map((collection) => collection.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="grid grid-cols-3 gap-4">
+                {filteredCollections.map((collection) => (
                   <CollectionCard
                     key={collection.id}
                     id={collection.id}
@@ -225,22 +255,22 @@ export function App() {
                     summary={summaries[collection.id]}
                     onOpenAll={() => handleOpenAll(collection.id)}
                   >
-                  <SortableContext
-                    items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="mt-3 space-y-2">
-                      {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
-                        <TabRow key={tab.id} id={tab.id} title={tab.title} url={tab.url} />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </CollectionCard>
-              ))}
-            </div>
-          </SortableContext>
-        </section>
-      </main>
+                    <SortableContext
+                      items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="mt-3 space-y-2">
+                        {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
+                          <TabRow key={tab.id} id={tab.id} title={tab.title} url={tab.url} />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </CollectionCard>
+                ))}
+              </div>
+            </SortableContext>
+          </section>
+        </main>
       </DndContext>
     </div>
   );

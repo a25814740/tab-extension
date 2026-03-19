@@ -31,6 +31,7 @@
 - Rollback pending ops on sync failures
 - Add share panel for create/revoke links
 - Add collaboration invite panel
+- Add search filters in new tab and side panel
 
 ## In Progress
 
