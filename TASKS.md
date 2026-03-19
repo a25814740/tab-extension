@@ -46,6 +46,7 @@
 - Run e2e in CI
 - Document test commands
 - Add extension e2e config
+- Add extension e2e for new tab load
 
 ## In Progress
 

@@ -5,3 +5,9 @@ test("extension loads", async ({ context }) => {
   await page.goto("chrome://extensions");
   await expect(page).toHaveTitle(/Extensions/);
 });
+
+test("new tab loads dashboard", async ({ context }) => {
+  const page = await context.newPage();
+  await page.goto("chrome://newtab");
+  await expect(page.getByText("Toby-like Dashboard")).toBeVisible();
+});
