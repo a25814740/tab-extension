@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card, SectionTitle } from "@toby/shared-ui";
-import { getActiveTab, getCurrentWindowTabs } from "@toby/chrome-adapters";
+import { getActiveTab, getCurrentWindowTabs, openTabs } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
 import { AiPanel } from "./AiPanel";
 
@@ -62,6 +62,13 @@ export function App() {
     saveCollectionFromTabs(`Window ${new Date().toLocaleTimeString()}`, windowTabs);
   };
 
+  const handleOpenAll = (collectionId: string) => {
+    const urls = tabs.filter((tab) => tab.collectionId === collectionId).map((tab) => tab.url);
+    if (urls.length > 0) {
+      void openTabs(urls);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <header className="border-b border-slate-800 px-4 py-3">
@@ -108,6 +115,12 @@ export function App() {
                 <div className="text-xs text-slate-400">
                   {tabCountByCollection.get(collection.id) ?? 0} tabs
                 </div>
+                <button
+                  className="mt-2 w-full rounded border border-slate-700 px-2 py-1 text-xs"
+                  onClick={() => handleOpenAll(collection.id)}
+                >
+                  Open All
+                </button>
               </Card>
             ))}
           </div>
