@@ -130,6 +130,42 @@ export function App() {
     "h-4 w-4 rounded border-slate-600 bg-slate-900 text-rose-400 focus:ring-rose-500/40";
   const pulledWorkspacesRef = useRef<Set<string>>(new Set());
 
+  const workspace = useMemo(() => {
+    if (selectedWorkspaceId) {
+      return workspaces.find((item) => item.id === selectedWorkspaceId) ?? workspaceState ?? null;
+    }
+    return workspaceState ?? workspaces[0] ?? null;
+  }, [selectedWorkspaceId, workspaceState, workspaces]);
+  const activeWorkspaceId = selectedWorkspaceId ?? workspace?.id ?? null;
+  const effectiveSupabaseUrl = config?.supabaseUrl?.trim() || DEFAULT_SUPABASE_URL;
+  const effectiveSupabaseAnonKey = config?.supabaseAnonKey?.trim() || DEFAULT_SUPABASE_ANON_KEY;
+  if (typeof window !== "undefined") {
+    (window as typeof window & {
+      __tobySupabaseDebug?: {
+        url: string;
+        anonKeyPresent: boolean;
+        configUrl?: string;
+        configKeyPresent?: boolean;
+        selectedWorkspaceId?: string | null;
+        workspaceId?: string | null;
+      };
+    }).__tobySupabaseDebug = {
+      url: effectiveSupabaseUrl,
+      anonKeyPresent: Boolean(effectiveSupabaseAnonKey),
+      configUrl: config?.supabaseUrl,
+      configKeyPresent: Boolean(config?.supabaseAnonKey),
+      selectedWorkspaceId,
+      workspaceId: workspace?.id ?? null,
+    };
+  }
+  const supabaseClient = useMemo(() => {
+    if (!effectiveSupabaseUrl || !effectiveSupabaseAnonKey) {
+      return null;
+    }
+    return createSupabaseClient({ url: effectiveSupabaseUrl, anonKey: effectiveSupabaseAnonKey });
+  }, [effectiveSupabaseAnonKey, effectiveSupabaseUrl]);
+  const supabaseConfigured = Boolean(effectiveSupabaseUrl && effectiveSupabaseAnonKey);
+
   const resolveAccessToken = useCallback(async () => {
     if (!supabaseClient) {
       return null;
@@ -200,42 +236,6 @@ export function App() {
 
     appStore.getState().hydrate(nextSnapshot);
   }, []);
-
-  const workspace = useMemo(() => {
-    if (selectedWorkspaceId) {
-      return workspaces.find((item) => item.id === selectedWorkspaceId) ?? workspaceState ?? null;
-    }
-    return workspaceState ?? workspaces[0] ?? null;
-  }, [selectedWorkspaceId, workspaceState, workspaces]);
-  const activeWorkspaceId = selectedWorkspaceId ?? workspace?.id ?? null;
-  const effectiveSupabaseUrl = config?.supabaseUrl?.trim() || DEFAULT_SUPABASE_URL;
-  const effectiveSupabaseAnonKey = config?.supabaseAnonKey?.trim() || DEFAULT_SUPABASE_ANON_KEY;
-  if (typeof window !== "undefined") {
-    (window as typeof window & {
-      __tobySupabaseDebug?: {
-        url: string;
-        anonKeyPresent: boolean;
-        configUrl?: string;
-        configKeyPresent?: boolean;
-        selectedWorkspaceId?: string | null;
-        workspaceId?: string | null;
-      };
-    }).__tobySupabaseDebug = {
-      url: effectiveSupabaseUrl,
-      anonKeyPresent: Boolean(effectiveSupabaseAnonKey),
-      configUrl: config?.supabaseUrl,
-      configKeyPresent: Boolean(config?.supabaseAnonKey),
-      selectedWorkspaceId,
-      workspaceId: workspace?.id ?? null,
-    };
-  }
-  const supabaseClient = useMemo(() => {
-    if (!effectiveSupabaseUrl || !effectiveSupabaseAnonKey) {
-      return null;
-    }
-    return createSupabaseClient({ url: effectiveSupabaseUrl, anonKey: effectiveSupabaseAnonKey });
-  }, [effectiveSupabaseAnonKey, effectiveSupabaseUrl]);
-  const supabaseConfigured = Boolean(effectiveSupabaseUrl && effectiveSupabaseAnonKey);
   const SHARE_TOKEN_KEY = "toby_pending_share_token_v1";
   const AUTH_TOKEN_KEY = "toby_auth_token_v1";
   const scopedSpaces = useMemo(
