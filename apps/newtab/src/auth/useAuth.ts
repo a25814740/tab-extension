@@ -85,6 +85,25 @@ export function useAuthLogic() {
     });
   }, [config.supabaseUrl, config.supabaseAnonKey]);
 
+  // Ensure a profile row exists so member lists can show name/email instead of raw IDs.
+  const upsertProfile = useCallback(
+    async (user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }) => {
+      if (!client || !user?.id) {
+        return;
+      }
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      const email = user.email ?? null;
+      await client.from("profiles").upsert({
+        id: user.id,
+        email,
+        full_name: meta.full_name as string | null,
+        name: meta.name as string | null,
+        avatar_url: meta.avatar_url as string | null,
+      });
+    },
+    [client]
+  );
+
   const handleSave = useCallback(async () => {
     await setSync(CONFIG_KEY, config);
     setStatus(t("auth.status.configSaved"));
@@ -152,6 +171,13 @@ export function useAuthLogic() {
 
     await setLocal(USER_KEY, authUser);
     await setLocal(TOKEN_KEY, tokens.accessToken);
+    if (user.data.user) {
+      await upsertProfile({
+        id: user.data.user.id,
+        email: user.data.user.email,
+        user_metadata: meta as Record<string, unknown>,
+      });
+    }
     if (authUser?.email) {
       setStatus(`${t("auth.status.signedInAs")} ${authUser.email}`);
     } else {
@@ -206,6 +232,11 @@ export function useAuthLogic() {
         };
         await setLocal(USER_KEY, authUser);
         await setLocal(TOKEN_KEY, session.data.session?.access_token ?? null);
+        await upsertProfile({
+          id: session.data.session?.user?.id ?? "",
+          email,
+          user_metadata: meta as Record<string, unknown>,
+        });
         setStatus(`${t("auth.status.signedInAs")} ${email}`);
         return;
       }

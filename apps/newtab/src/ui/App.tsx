@@ -114,7 +114,13 @@ export function App() {
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState<"owner" | "admin" | "editor" | "commenter" | "viewer">("viewer");
   const [members, setMembers] = useState<
-    Array<{ id: string; name: string; email: string; role: "owner" | "admin" | "editor" | "commenter" | "viewer" }>
+    Array<{
+      id: string;
+      userId: string;
+      name: string;
+      email: string;
+      role: "owner" | "admin" | "editor" | "commenter" | "viewer";
+    }>
   >([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [memberStatus, setMemberStatus] = useState("");
@@ -609,14 +615,15 @@ export function App() {
     if (members.length > 0 || !authUser) {
       return;
     }
-    setMembers([
-      {
-        id: "current-user",
-        name: authUser.name ?? "You",
-        email: authUser.email ?? "",
-        role: "owner",
-      },
-    ]);
+      setMembers([
+        {
+          id: "current-user",
+          userId: authUser.id,
+          name: authUser.name ?? "You",
+          email: authUser.email ?? "",
+          role: "owner",
+        },
+      ]);
   }, [authUser, members.length]);
 
   const ensureRemoteWorkspace = useCallback(async () => {
@@ -673,24 +680,26 @@ export function App() {
       return;
     }
 
-      const rows = [...(memberRes.data ?? [])];
-      const ownerId = workspace?.ownerId ?? null;
-      if (ownerId && !rows.some((row) => row.user_id === ownerId)) {
-        if (authUser?.id === ownerId) {
-          await supabaseClient.from("workspace_members").insert({
-            id: crypto.randomUUID(),
-            workspace_id: workspace.id,
-            user_id: ownerId,
-            role: "owner",
-          });
-        }
-        rows.unshift({
-          id: `owner-${ownerId}`,
+    const rows = [...(memberRes.data ?? [])];
+    const ownerId = workspace?.ownerId ?? null;
+    // Ensure the owner is represented even if membership rows are missing.
+    if (ownerId && !rows.some((row) => row.user_id === ownerId)) {
+      if (authUser?.id === ownerId) {
+        await supabaseClient.from("workspace_members").insert({
+          id: crypto.randomUUID(),
+          workspace_id: workspace.id,
           user_id: ownerId,
           role: "owner",
         });
       }
+      rows.unshift({
+        id: `owner-${ownerId}`,
+        user_id: ownerId,
+        role: "owner",
+      });
+    }
     const userIds = rows.map((row) => row.user_id).filter(Boolean);
+    // Join profiles to show display names/emails in the member list.
     let profiles: Array<{ id: string; email?: string; full_name?: string; name?: string; avatar_url?: string }> = [];
     if (userIds.length > 0) {
       const profileRes = await supabaseClient
@@ -708,6 +717,7 @@ export function App() {
         profile?.full_name ?? profile?.name ?? profile?.email ?? row.user_id ?? "Member";
       return {
         id: row.id as string,
+        userId: row.user_id as string,
         name: displayName,
         email: profile?.email ?? row.user_id ?? "",
         role: (row.role ?? "viewer") as "owner" | "admin" | "editor" | "commenter" | "viewer",
@@ -715,7 +725,7 @@ export function App() {
     });
     setMembers(nextMembers);
     setMembersLoading(false);
-    }, [authUser?.id, ensureRemoteWorkspace, supabaseClient, workspace]);
+  }, [authUser?.id, ensureRemoteWorkspace, supabaseClient, workspace]);
 
   useEffect(() => {
     if (!orgSettingsOpen || orgSettingsTab !== "members") {
@@ -746,7 +756,7 @@ export function App() {
     if (workspace?.ownerId && authUser.id === workspace.ownerId) {
       return "owner";
     }
-    const member = members.find((item) => item.email === authUser.email);
+    const member = members.find((item) => item.userId === authUser.id || item.email === authUser.email);
     return member?.role ?? null;
   }, [authUser, members, workspace?.ownerId]);
 
@@ -1136,15 +1146,16 @@ export function App() {
         setMemberStatus(insert.error.message);
         return;
       }
-      setMembers((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-          name: memberName.trim() || lookup.data.full_name || lookup.data.name || lookup.data.email || memberEmail.trim(),
-          email: lookup.data.email ?? memberEmail.trim(),
-          role: memberRole,
-        },
-      ]);
+        setMembers((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            userId: lookup.data.id,
+            name: memberName.trim() || lookup.data.full_name || lookup.data.name || lookup.data.email || memberEmail.trim(),
+            email: lookup.data.email ?? memberEmail.trim(),
+            role: memberRole,
+          },
+        ]);
       setMemberName("");
       setMemberEmail("");
       setMemberRole("viewer");
