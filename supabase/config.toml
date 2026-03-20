@@ -4,4 +4,4 @@ project_id = "zhfibzpgabqgqgixgisk"
 verify_jwt = false
 
 [functions.accept_share]
-verify_jwt = true
+verify_jwt = false
