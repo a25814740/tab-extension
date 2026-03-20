@@ -101,6 +101,7 @@ serve(async (req) => {
 
   if (!existing) {
     const { error: insertError } = await adminClient.from("workspace_members").insert({
+      id: crypto.randomUUID(),
       workspace_id: share.resource_id,
       user_id: userId,
       role,
