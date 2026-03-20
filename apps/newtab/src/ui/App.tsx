@@ -135,6 +135,7 @@ export function App() {
   const checkboxClass =
     "h-4 w-4 rounded border-slate-600 bg-slate-900 text-rose-400 focus:ring-rose-500/40";
   const pulledWorkspacesRef = useRef<Set<string>>(new Set());
+  const AUTH_USER_KEY = "toby_auth_user_v1";
 
   const workspace = useMemo(() => {
     if (selectedWorkspaceId) {
@@ -171,6 +172,33 @@ export function App() {
     return createSupabaseClient({ url: effectiveSupabaseUrl, anonKey: effectiveSupabaseAnonKey });
   }, [effectiveSupabaseAnonKey, effectiveSupabaseUrl]);
   const supabaseConfigured = Boolean(effectiveSupabaseUrl && effectiveSupabaseAnonKey);
+
+  useEffect(() => {
+    if (authUser || !supabaseClient) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const userResult = await supabaseClient.auth.getUser();
+      const user = userResult.data.user;
+      if (cancelled || !user?.id || !user.email) {
+        return;
+      }
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      await setLocal(AUTH_USER_KEY, {
+        id: user.id,
+        email: user.email,
+        name:
+          (meta.full_name as string | undefined) ??
+          (meta.name as string | undefined) ??
+          user.email.split("@")[0],
+        avatarUrl: (meta.avatar_url as string | undefined) ?? null,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [AUTH_USER_KEY, authUser, supabaseClient]);
 
   const resolveAccessToken = useCallback(async () => {
     if (!supabaseClient) {
