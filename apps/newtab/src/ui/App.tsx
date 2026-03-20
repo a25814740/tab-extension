@@ -7,11 +7,11 @@ import { CollectionCard } from "./CollectionCard";
 import { TabRow } from "./TabRow";
 import { createRuleBasedProvider } from "@toby/ai";
 import { AuthMiniPanel } from "./AuthPanel";
-import { createHttpSyncClient, createMockSyncClient, createSupabaseClient, updateMemberRole, removeMember, createShareLink, revokeShareLink, acceptShareLink } from "@toby/api-client";
+import { createHttpSyncClient, createMockSyncClient, createSupabaseClient, updateMemberRole, removeMember, createShareLink, revokeShareLink, acceptShareLink, fetchWorkspaceSnapshot } from "@toby/api-client";
 import { getSync } from "@toby/chrome-adapters";
 import { appStore } from "../store/appStore";
 import { useLocale } from "../i18n";
-import { localSnapshotSchema } from "@toby/core";
+import { localSnapshotSchema, toSnapshot } from "@toby/core";
 import { DEFAULT_SUPABASE_ANON_KEY, DEFAULT_SUPABASE_URL, useAuthLogic, useAuthUser } from "../auth/useAuth";
 import { fetchOgMetadata } from "../utils/og";
 import { SelectMenu } from "./SelectMenu";
@@ -128,6 +128,78 @@ export function App() {
   const importFileRef = useRef<HTMLInputElement | null>(null);
   const checkboxClass =
     "h-4 w-4 rounded border-slate-600 bg-slate-900 text-rose-400 focus:ring-rose-500/40";
+  const pulledWorkspacesRef = useRef<Set<string>>(new Set());
+
+  const resolveAccessToken = useCallback(async () => {
+    if (!supabaseClient) {
+      return null;
+    }
+    try {
+      const sessionResult = await supabaseClient.auth.getSession();
+      let accessToken = sessionResult.data.session?.access_token ?? null;
+      if (!accessToken && sessionResult.data.session) {
+        const refreshed = await supabaseClient.auth.refreshSession();
+        accessToken = refreshed.data.session?.access_token ?? null;
+      }
+      return accessToken;
+    } catch {
+      return null;
+    }
+  }, [supabaseClient]);
+
+  const applyRemoteSnapshot = useCallback((snapshot: {
+    workspace: {
+      id: string;
+      ownerId: string;
+      name: string;
+      logoUrl?: string | null;
+      inviteCount?: number | null;
+      points?: number | null;
+      createdAt: string;
+      updatedAt: string;
+    } | null;
+    spaces: Array<any>;
+    folders: Array<any>;
+    collections: Array<any>;
+    tabs: Array<any>;
+  }) => {
+    if (!snapshot.workspace) {
+      return;
+    }
+    const workspaceId = snapshot.workspace.id;
+    const current = toSnapshot(appStore.getState());
+    const remoteSpaces = snapshot.spaces ?? [];
+    const remoteFolders = snapshot.folders ?? [];
+    const remoteCollections = snapshot.collections ?? [];
+    const remoteTabs = snapshot.tabs ?? [];
+    const remoteCollectionIds = new Set(remoteCollections.map((item: { id: string }) => item.id));
+
+    const nextWorkspaces = current.workspaces.some((item) => item.id === workspaceId)
+      ? current.workspaces.map((item) => (item.id === workspaceId ? { ...item, ...snapshot.workspace } : item))
+      : [...current.workspaces, snapshot.workspace];
+
+    const nextWorkspace =
+      current.workspace?.id === workspaceId
+        ? { ...current.workspace, ...snapshot.workspace }
+        : current.cache.selectedWorkspaceId === workspaceId
+          ? snapshot.workspace
+          : current.workspace;
+
+    const nextSnapshot = {
+      ...current,
+      workspaces: nextWorkspaces,
+      workspace: nextWorkspace ?? current.workspace ?? snapshot.workspace,
+      spaces: [...current.spaces.filter((item) => item.workspaceId !== workspaceId), ...remoteSpaces],
+      folders: [...current.folders.filter((item) => item.workspaceId !== workspaceId), ...remoteFolders],
+      collections: [
+        ...current.collections.filter((item) => item.workspaceId !== workspaceId),
+        ...remoteCollections,
+      ],
+      tabs: [...current.tabs.filter((item) => !remoteCollectionIds.has(item.collectionId)), ...remoteTabs],
+    };
+
+    appStore.getState().hydrate(nextSnapshot);
+  }, []);
 
   const workspace = useMemo(() => {
     if (selectedWorkspaceId) {
@@ -270,20 +342,7 @@ export function App() {
       if (isMounted) {
         setShareNotice(t("share.notice.accepting"));
       }
-        let accessToken: string | null = null;
-        try {
-          const sessionResult = await supabaseClient.auth.getSession();
-          accessToken = sessionResult.data.session?.access_token ?? null;
-          if (!accessToken && sessionResult.data.session) {
-            const refreshed = await supabaseClient.auth.refreshSession();
-            accessToken = refreshed.data.session?.access_token ?? null;
-          }
-        } catch {
-          accessToken = null;
-        }
-        if (!accessToken) {
-          accessToken = await getLocal<string | null>(AUTH_TOKEN_KEY, null);
-        }
+        const accessToken = await resolveAccessToken();
         if (!accessToken) {
           if (isMounted) {
             setShareNotice(t("share.notice.loginRequired"));
@@ -315,8 +374,17 @@ export function App() {
             : null;
         setSelectedCollectionId(firstCollection?.id ?? null);
       }
-      await setLocal(SHARE_TOKEN_KEY, null);
-      setShareNotice(t("share.notice.joined"));
+        if (workspaceId) {
+          const snapshotRes = await fetchWorkspaceSnapshot(supabaseClient, workspaceId, {
+            accessToken,
+            anonKey: effectiveSupabaseAnonKey,
+          });
+          if (!snapshotRes.error && snapshotRes.data?.ok) {
+            applyRemoteSnapshot(snapshotRes.data);
+          }
+        }
+        await setLocal(SHARE_TOKEN_KEY, null);
+        setShareNotice(t("share.notice.joined"));
     })();
 
     return () => {
@@ -333,6 +401,40 @@ export function App() {
     supabaseClient,
     t,
     upsertWorkspace,
+  ]);
+
+  useEffect(() => {
+    if (!supabaseClient || !authUser?.id || !activeWorkspaceId) {
+      return;
+    }
+    const hasData = scopedSpaces.length > 0 || scopedCollections.length > 0 || scopedTabs.length > 0;
+    if (hasData || pulledWorkspacesRef.current.has(activeWorkspaceId)) {
+      return;
+    }
+    pulledWorkspacesRef.current.add(activeWorkspaceId);
+    void (async () => {
+      const accessToken = await resolveAccessToken();
+      if (!accessToken) {
+        return;
+      }
+      const snapshotRes = await fetchWorkspaceSnapshot(supabaseClient, activeWorkspaceId, {
+        accessToken,
+        anonKey: effectiveSupabaseAnonKey,
+      });
+      if (!snapshotRes.error && snapshotRes.data?.ok) {
+        applyRemoteSnapshot(snapshotRes.data);
+      }
+    })();
+  }, [
+    activeWorkspaceId,
+    applyRemoteSnapshot,
+    authUser?.id,
+    effectiveSupabaseAnonKey,
+    resolveAccessToken,
+    scopedCollections.length,
+    scopedSpaces.length,
+    scopedTabs.length,
+    supabaseClient,
   ]);
 
   const bulkMoveSpaces = useMemo(
@@ -571,7 +673,23 @@ export function App() {
       return;
     }
 
-    const rows = memberRes.data ?? [];
+      const rows = [...(memberRes.data ?? [])];
+      const ownerId = workspace?.ownerId ?? null;
+      if (ownerId && !rows.some((row) => row.user_id === ownerId)) {
+        if (authUser?.id === ownerId) {
+          await supabaseClient.from("workspace_members").insert({
+            id: crypto.randomUUID(),
+            workspace_id: workspace.id,
+            user_id: ownerId,
+            role: "owner",
+          });
+        }
+        rows.unshift({
+          id: `owner-${ownerId}`,
+          user_id: ownerId,
+          role: "owner",
+        });
+      }
     const userIds = rows.map((row) => row.user_id).filter(Boolean);
     let profiles: Array<{ id: string; email?: string; full_name?: string; name?: string; avatar_url?: string }> = [];
     if (userIds.length > 0) {
@@ -597,7 +715,7 @@ export function App() {
     });
     setMembers(nextMembers);
     setMembersLoading(false);
-  }, [ensureRemoteWorkspace, supabaseClient, workspace]);
+    }, [authUser?.id, ensureRemoteWorkspace, supabaseClient, workspace]);
 
   useEffect(() => {
     if (!orgSettingsOpen || orgSettingsTab !== "members") {
@@ -625,9 +743,12 @@ export function App() {
     if (!authUser) {
       return null;
     }
+    if (workspace?.ownerId && authUser.id === workspace.ownerId) {
+      return "owner";
+    }
     const member = members.find((item) => item.email === authUser.email);
     return member?.role ?? null;
-  }, [authUser, members]);
+  }, [authUser, members, workspace?.ownerId]);
 
   const canManageMembers = currentMemberRole === "owner" || currentMemberRole === "admin";
   const canAssignOwner = currentMemberRole === "owner";

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.accept_share]
 verify_jwt = false
+
+[functions.workspace_snapshot]
+verify_jwt = false
