@@ -33,8 +33,20 @@ export async function revokeShareLink(client: SupabaseClient, linkId: string) {
   return client.from("share_links").update({ revoked_at: new Date().toISOString() }).eq("id", linkId);
 }
 
-export async function acceptShareLink(client: SupabaseClient, token: string) {
+export async function acceptShareLink(
+  client: SupabaseClient,
+  token: string,
+  options?: { accessToken?: string | null; anonKey?: string | null }
+) {
+  const headers: Record<string, string> = {};
+  if (options?.accessToken) {
+    headers.Authorization = `Bearer ${options.accessToken}`;
+  }
+  if (options?.anonKey) {
+    headers.apikey = options.anonKey;
+  }
   return client.functions.invoke("accept_share", {
     body: { token },
+    headers,
   });
 }

@@ -270,7 +270,11 @@ export function App() {
       if (isMounted) {
         setShareNotice(t("share.notice.accepting"));
       }
-      const result = await acceptShareLink(supabaseClient, token);
+        const accessToken = await getLocal<string | null>(AUTH_TOKEN_KEY, null);
+        const result = await acceptShareLink(supabaseClient, token, {
+          accessToken,
+          anonKey: effectiveSupabaseAnonKey,
+        });
       if (!isMounted) {
         return;
       }
