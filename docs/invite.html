@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>加入組織</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top, #1e293b 0%, #0b1222 45%, #070b14 100%);
+        color: #e2e8f0;
+      }
+      .wrap {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+      }
+      .card {
+        width: min(560px, 100%);
+        border: 1px solid #1f2937;
+        border-radius: 16px;
+        background: rgba(10, 16, 32, 0.92);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        padding: 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+      }
+      p {
+        margin: 0;
+        color: #93a4bf;
+        line-height: 1.6;
+        font-size: 14px;
+      }
+      .btn {
+        margin-top: 16px;
+        display: inline-block;
+        width: 100%;
+        border-radius: 10px;
+        text-decoration: none;
+        text-align: center;
+        font-weight: 700;
+        padding: 12px 14px;
+      }
+      .btn-primary {
+        background: #f43f5e;
+        color: #fff;
+      }
+      .btn-secondary {
+        border: 1px solid #334155;
+        color: #e2e8f0;
+      }
+      .hint {
+        margin-top: 12px;
+        font-size: 12px;
+        color: #a8b7cc;
+      }
+      code {
+        display: block;
+        margin-top: 10px;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: #0f172a;
+        padding: 10px;
+        word-break: break-all;
+        color: #f8fafc;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="card">
+        <h1>加入組織</h1>
+        <p id="desc">正在準備邀請資訊...</p>
+        <a id="openLink" class="btn btn-primary" href="#">開啟擴充套件並加入</a>
+        <button id="copyLink" class="btn btn-secondary" type="button">複製擴充套件連結</button>
+        <div class="hint" id="hint"></div>
+        <code id="targetText"></code>
+      </section>
+    </div>
+    <script>
+      const EXT_ID = "cnkaokcgobaccmgnealiplhkgkabmkpi";
+      const EXT_PATH = "newtab/index.html";
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token") || "";
+      const target = `chrome-extension://${EXT_ID}/${EXT_PATH}?token=${encodeURIComponent(token)}`;
+      const openLink = document.getElementById("openLink");
+      const copyLink = document.getElementById("copyLink");
+      const desc = document.getElementById("desc");
+      const hint = document.getElementById("hint");
+      const targetText = document.getElementById("targetText");
+
+      if (!token) {
+        desc.textContent = "連結缺少 token，請回到擴充套件儀錶板重新產生邀請。";
+        openLink.style.display = "none";
+        copyLink.style.display = "none";
+        targetText.style.display = "none";
+      } else {
+        desc.textContent = "請先安裝擴充套件，然後點按鈕開啟並完成加入。";
+        openLink.href = target;
+        targetText.textContent = target;
+      }
+
+      copyLink.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(target);
+          hint.textContent = "已複製，貼到 Chrome 網址列即可開啟。";
+        } catch (_) {
+          hint.textContent = "複製失敗，請手動複製下方連結。";
+        }
+      });
+    </script>
+  </body>
+</html>

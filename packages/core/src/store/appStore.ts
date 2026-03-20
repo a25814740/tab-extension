@@ -15,14 +15,25 @@ export type TabInput = {
   url: string;
   favIconUrl?: string;
   pinned?: boolean;
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  ogImage?: string | null;
+  screenshotUrl?: string | null;
 };
 
 export type AppActions = {
   hydrate: (snapshot: LocalStoreSnapshot) => void;
   setViewMode: (mode: AppState["cache"]["ui"]["viewMode"]) => void;
+  setSelectedWorkspaceId: (workspaceId: string | null) => void;
   setSelectedSpaceId: (spaceId: string | null) => void;
   setSelectedCollectionId: (collectionId: string | null) => void;
   setSortMode: (mode: AppState["cache"]["ui"]["sortMode"]) => void;
+  addWorkspace: (name: string) => void;
+  upsertWorkspace: (payload: { id: string; name: string; ownerId?: string | null }) => void;
+  updateWorkspace: (workspaceId: string, payload: { name?: string; logoUrl?: string | null }) => void;
+  deleteWorkspace: (workspaceId: string) => void;
+  addSpace: (name: string) => void;
+  addCollection: (name: string) => void;
   saveCollectionFromTabs: (name: string, tabs: TabInput[]) => void;
   reorderSpaces: (activeId: string, overId: string) => void;
   reorderCollections: (activeId: string, overId: string) => void;
@@ -35,6 +46,16 @@ export type AppActions = {
   rollbackLastOp: () => void;
   flushPendingOps: (client: SyncClient) => Promise<void>;
   addTabToCollection: (collectionId: string, tab: TabInput) => void;
+  updateTabMetadata: (tabId: string, payload: Partial<Pick<TabItem, "ogTitle" | "ogDescription" | "ogImage">>) => void;
+  updateTab: (tabId: string, payload: Pick<TabItem, "title" | "url" | "note">) => void;
+  deleteTab: (tabId: string) => void;
+  moveTabToCollection: (tabId: string, collectionId: string) => void;
+  updateCollectionTitle: (collectionId: string, name: string) => void;
+  toggleCollectionStar: (collectionId: string) => void;
+  moveCollectionWithinSpace: (collectionId: string, direction: "up" | "down") => void;
+  moveCollectionToSpace: (collectionId: string, workspaceId: string, spaceId: string) => void;
+  sortTabsInCollection: (collectionId: string) => void;
+  deleteCollection: (collectionId: string) => void;
   dedupeTabs: () => void;
   setSyncRetryAt: (isoTime: string | null) => void;
 };
@@ -50,6 +71,7 @@ function buildInitialState(): AppState {
 
   return {
     ...defaultAppState,
+    workspaces: [sample.workspace],
     workspace: sample.workspace,
     spaces: sample.spaces.map((space) => ({
       ...space,
@@ -57,6 +79,11 @@ function buildInitialState(): AppState {
     folders: sample.spaces.flatMap((space) => space.folders),
     collections,
     tabs,
+    cache: {
+      ...defaultAppState.cache,
+      selectedWorkspaceId: sample.workspace.id,
+      selectedSpaceId: sample.spaces[0]?.id ?? null,
+    },
   };
 }
 
@@ -74,13 +101,233 @@ export function createAppStore() {
   return createStore<AppStore>((set, get) => ({
     ...buildInitialState(),
     hydrate: (snapshot) => {
+      const nextWorkspaces = snapshot.workspaces ?? (snapshot.workspace ? [snapshot.workspace] : []);
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const needsMigration = nextWorkspaces.some((workspace) => !uuidRegex.test(workspace.id));
+      if (needsMigration) {
+        const workspaceMap = new Map<string, string>();
+        const spaceMap = new Map<string, string>();
+        const folderMap = new Map<string, string>();
+        const collectionMap = new Map<string, string>();
+
+        nextWorkspaces.forEach((workspace) => {
+          workspaceMap.set(workspace.id, crypto.randomUUID());
+        });
+        snapshot.spaces.forEach((space) => {
+          spaceMap.set(space.id, crypto.randomUUID());
+        });
+        snapshot.folders.forEach((folder) => {
+          folderMap.set(folder.id, crypto.randomUUID());
+        });
+        snapshot.collections.forEach((collection) => {
+          collectionMap.set(collection.id, crypto.randomUUID());
+        });
+
+        snapshot = {
+          ...snapshot,
+          workspaces: nextWorkspaces.map((workspace) => ({
+            ...workspace,
+            id: workspaceMap.get(workspace.id) ?? workspace.id,
+            ownerId: workspace.ownerId && uuidRegex.test(workspace.ownerId) ? workspace.ownerId : crypto.randomUUID(),
+          })),
+          workspace: snapshot.workspace
+            ? {
+                ...snapshot.workspace,
+                id: workspaceMap.get(snapshot.workspace.id) ?? snapshot.workspace.id,
+                ownerId:
+                  snapshot.workspace.ownerId && uuidRegex.test(snapshot.workspace.ownerId)
+                    ? snapshot.workspace.ownerId
+                    : crypto.randomUUID(),
+              }
+            : null,
+          spaces: snapshot.spaces.map((space) => ({
+            ...space,
+            id: spaceMap.get(space.id) ?? space.id,
+            workspaceId: workspaceMap.get(space.workspaceId) ?? space.workspaceId,
+          })),
+          folders: snapshot.folders.map((folder) => ({
+            ...folder,
+            id: folderMap.get(folder.id) ?? folder.id,
+            workspaceId: workspaceMap.get(folder.workspaceId) ?? folder.workspaceId,
+            spaceId: spaceMap.get(folder.spaceId) ?? folder.spaceId,
+            parentFolderId: folder.parentFolderId ? folderMap.get(folder.parentFolderId) ?? folder.parentFolderId : null,
+          })),
+          collections: snapshot.collections.map((collection) => ({
+            ...collection,
+            id: collectionMap.get(collection.id) ?? collection.id,
+            workspaceId: workspaceMap.get(collection.workspaceId) ?? collection.workspaceId,
+            spaceId: spaceMap.get(collection.spaceId) ?? collection.spaceId,
+            folderId: collection.folderId ? folderMap.get(collection.folderId) ?? collection.folderId : null,
+          })),
+          tabs: snapshot.tabs.map((tab) => ({
+            ...tab,
+            id: crypto.randomUUID(),
+            collectionId: collectionMap.get(tab.collectionId) ?? tab.collectionId,
+          })),
+          cache: {
+            ...snapshot.cache,
+            selectedWorkspaceId: snapshot.cache.selectedWorkspaceId
+              ? workspaceMap.get(snapshot.cache.selectedWorkspaceId) ?? snapshot.cache.selectedWorkspaceId
+              : null,
+            selectedSpaceId: snapshot.cache.selectedSpaceId
+              ? spaceMap.get(snapshot.cache.selectedSpaceId) ?? snapshot.cache.selectedSpaceId
+              : null,
+            selectedCollectionId: snapshot.cache.selectedCollectionId
+              ? collectionMap.get(snapshot.cache.selectedCollectionId) ?? snapshot.cache.selectedCollectionId
+              : null,
+          },
+        };
+      }
+      const baseWorkspaces = snapshot.workspaces ?? (snapshot.workspace ? [snapshot.workspace] : []);
+      const workspaceIdsFromData = new Set<string>();
+      snapshot.spaces.forEach((space) => workspaceIdsFromData.add(space.workspaceId));
+      snapshot.collections.forEach((collection) => workspaceIdsFromData.add(collection.workspaceId));
+      // Rebuild missing workspaces using the best available owner id hints.
+      const resolveOwnerId = (workspaceId: string) => {
+        const directOwnerId = baseWorkspaces.find((workspace) => workspace.id === workspaceId)?.ownerId ?? null;
+        const snapshotOwnerId = snapshot.workspace?.id === workspaceId ? snapshot.workspace.ownerId : null;
+        const collectionOwnerId =
+          snapshot.collections.find((collection) => collection.workspaceId === workspaceId)?.createdBy ?? null;
+        const cacheOwnerId = snapshot.cache.currentUserId ?? null;
+        const candidates = [directOwnerId, snapshotOwnerId, collectionOwnerId, cacheOwnerId].filter(
+          (value): value is string => Boolean(value)
+        );
+        const match = candidates.find((value) => uuidRegex.test(value));
+        return match ?? crypto.randomUUID();
+      };
+      const finalWorkspaces = [...baseWorkspaces];
+      workspaceIdsFromData.forEach((workspaceId) => {
+        if (!finalWorkspaces.some((workspace) => workspace.id === workspaceId)) {
+          const now = new Date().toISOString();
+          finalWorkspaces.push({
+            id: workspaceId,
+            ownerId: resolveOwnerId(workspaceId),
+            name: `Workspace ${workspaceId.slice(0, 6)}`,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      });
+      const workspaceHasData = (workspaceId: string) => {
+        return (
+          snapshot.spaces.some((space) => space.workspaceId === workspaceId) ||
+          snapshot.collections.some((collection) => collection.workspaceId === workspaceId)
+        );
+      };
+      const isPlaceholderWorkspace = (workspace: { name: string; logoUrl?: string | null }) =>
+        workspace.name.startsWith("Workspace ") && !workspace.logoUrl;
+      const workspaceSortKey = (workspaceId: string) => {
+        const spaceDates = snapshot.spaces
+          .filter((space) => space.workspaceId === workspaceId)
+          .map((space) => space.createdAt);
+        const collectionDates = snapshot.collections
+          .filter((collection) => collection.workspaceId === workspaceId)
+          .map((collection) => collection.createdAt);
+        const allDates = [...spaceDates, ...collectionDates].filter(Boolean);
+        return allDates.sort()[0] ?? "9999-12-31T23:59:59.999Z";
+      };
+      const dataWorkspaceIds = new Set(workspaceIdsFromData);
+      const dataWorkspaces = finalWorkspaces.filter((workspace) => dataWorkspaceIds.has(workspace.id));
+      const staleWorkspaces = finalWorkspaces.filter((workspace) => !dataWorkspaceIds.has(workspace.id));
+      const placeholderDataWorkspaces = dataWorkspaces.filter(isPlaceholderWorkspace);
+      const namedStaleWorkspaces = staleWorkspaces.filter((workspace) => !isPlaceholderWorkspace(workspace));
+      const selectedWorkspaceIsData =
+        snapshot.cache.selectedWorkspaceId && dataWorkspaceIds.has(snapshot.cache.selectedWorkspaceId);
+      if (
+        placeholderDataWorkspaces.length > 0 &&
+        namedStaleWorkspaces.length > 0 &&
+        namedStaleWorkspaces.every((workspace) => !workspaceHasData(workspace.id)) &&
+        placeholderDataWorkspaces.length >= namedStaleWorkspaces.length &&
+        selectedWorkspaceIsData
+      ) {
+        const sortedPlaceholders = [...placeholderDataWorkspaces].sort(
+          (a, b) => workspaceSortKey(a.id).localeCompare(workspaceSortKey(b.id))
+        );
+        const sortedNamedStale = [...namedStaleWorkspaces].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        sortedNamedStale.forEach((stale, index) => {
+          const target = sortedPlaceholders[index];
+          if (!target) {
+            return;
+          }
+          target.name = stale.name;
+          target.logoUrl = stale.logoUrl ?? null;
+          if (stale.ownerId && uuidRegex.test(stale.ownerId)) {
+            target.ownerId = stale.ownerId;
+          }
+        });
+      }
+      const filteredWorkspaces =
+        placeholderDataWorkspaces.length > 0 &&
+        namedStaleWorkspaces.length > 0 &&
+        namedStaleWorkspaces.every((workspace) => !workspaceHasData(workspace.id)) &&
+        placeholderDataWorkspaces.length >= namedStaleWorkspaces.length &&
+        selectedWorkspaceIsData
+          ? finalWorkspaces.filter(
+              (workspace) => dataWorkspaceIds.has(workspace.id) || workspaceHasData(workspace.id)
+            )
+          : finalWorkspaces;
+      const preferredWorkspaceId =
+        snapshot.cache.selectedWorkspaceId && filteredWorkspaces.some((w) => w.id === snapshot.cache.selectedWorkspaceId)
+          ? snapshot.cache.selectedWorkspaceId
+          : snapshot.workspace?.id ?? null;
+      let activeWorkspaceId = preferredWorkspaceId;
+      if (activeWorkspaceId && !workspaceHasData(activeWorkspaceId)) {
+        activeWorkspaceId = null;
+      }
+      if (!activeWorkspaceId && filteredWorkspaces.length > 0) {
+        const sorted = [...filteredWorkspaces].sort((a, b) => {
+          const scoreA = snapshot.collections.filter((c) => c.workspaceId === a.id).length * 1000 +
+            snapshot.spaces.filter((s) => s.workspaceId === a.id).length;
+          const scoreB = snapshot.collections.filter((c) => c.workspaceId === b.id).length * 1000 +
+            snapshot.spaces.filter((s) => s.workspaceId === b.id).length;
+          return scoreB - scoreA;
+        });
+        activeWorkspaceId = sorted[0]?.id ?? null;
+      }
+      const activeWorkspace = filteredWorkspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? null;
+      const activeSpaceId =
+        activeWorkspaceId && snapshot.cache.selectedSpaceId
+          ? snapshot.spaces.some(
+              (space) =>
+                space.id === snapshot.cache.selectedSpaceId && space.workspaceId === activeWorkspaceId
+            )
+            ? snapshot.cache.selectedSpaceId
+            : snapshot.spaces.find((space) => space.workspaceId === activeWorkspaceId)?.id ?? null
+          : activeWorkspaceId
+          ? snapshot.spaces.find((space) => space.workspaceId === activeWorkspaceId)?.id ?? null
+          : null;
+      const activeCollectionId =
+        activeWorkspaceId && activeSpaceId && snapshot.cache.selectedCollectionId
+          ? snapshot.collections.some(
+              (collection) =>
+                collection.id === snapshot.cache.selectedCollectionId &&
+                collection.workspaceId === activeWorkspaceId &&
+                collection.spaceId === activeSpaceId
+            )
+            ? snapshot.cache.selectedCollectionId
+            : snapshot.collections.find(
+                (collection) =>
+                  collection.workspaceId === activeWorkspaceId && collection.spaceId === activeSpaceId
+              )?.id ?? null
+          : activeWorkspaceId && activeSpaceId
+          ? snapshot.collections.find(
+              (collection) => collection.workspaceId === activeWorkspaceId && collection.spaceId === activeSpaceId
+            )?.id ?? null
+          : null;
       set({
-        workspace: snapshot.workspace,
+        workspaces: filteredWorkspaces,
+        workspace: activeWorkspace,
         spaces: snapshot.spaces,
         folders: snapshot.folders,
         collections: snapshot.collections,
         tabs: snapshot.tabs,
-        cache: snapshot.cache,
+        cache: {
+          ...snapshot.cache,
+          selectedWorkspaceId: activeWorkspaceId,
+          selectedSpaceId: activeSpaceId,
+          selectedCollectionId: activeCollectionId,
+        },
         rollbackStack: [],
       });
     },
@@ -94,6 +341,19 @@ export function createAppStore() {
           },
         },
       }));
+    },
+    setSelectedWorkspaceId: (workspaceId) => {
+      const state = get();
+      const active = state.workspaces.find((workspace) => workspace.id === workspaceId) ?? null;
+      set({
+        workspace: active,
+        cache: {
+          ...state.cache,
+          selectedWorkspaceId: workspaceId,
+          selectedSpaceId: null,
+          selectedCollectionId: null,
+        },
+      });
     },
     setSelectedSpaceId: (spaceId) => {
       set((state) => ({
@@ -122,6 +382,202 @@ export function createAppStore() {
         },
       }));
     },
+    addWorkspace: (name) => {
+      const state = get();
+      const now = new Date().toISOString();
+      const newWorkspace = {
+        id: crypto.randomUUID(),
+        ownerId: state.workspace?.ownerId ?? crypto.randomUUID(),
+        name,
+        logoUrl: null,
+        inviteCount: 0,
+        points: 0,
+        createdAt: now,
+        updatedAt: now,
+      };
+      set({
+        rollbackStack: pushRollback(state),
+        workspaces: [...state.workspaces, newWorkspace],
+        workspace: newWorkspace,
+        spaces: state.spaces,
+        folders: state.folders,
+        collections: state.collections,
+        tabs: state.tabs,
+        cache: {
+          ...state.cache,
+          selectedWorkspaceId: newWorkspace.id,
+          selectedSpaceId: null,
+          selectedCollectionId: null,
+        },
+      });
+    },
+    upsertWorkspace: (payload) => {
+      const state = get();
+      const now = new Date().toISOString();
+      const existing = state.workspaces.find((workspace) => workspace.id === payload.id);
+      if (existing) {
+        const updatedWorkspaces = state.workspaces.map((workspace) =>
+          workspace.id === payload.id
+            ? {
+                ...workspace,
+                name: payload.name || workspace.name,
+                ownerId: payload.ownerId && payload.ownerId.trim() ? payload.ownerId : workspace.ownerId,
+                updatedAt: now,
+              }
+            : workspace
+        );
+        const active = state.workspace?.id === payload.id ? updatedWorkspaces.find((w) => w.id === payload.id) : state.workspace;
+        set({
+          workspaces: updatedWorkspaces,
+          workspace: active ?? null,
+        });
+        return;
+      }
+      const newWorkspace = {
+        id: payload.id,
+        ownerId: payload.ownerId && payload.ownerId.trim() ? payload.ownerId : state.workspace?.ownerId ?? crypto.randomUUID(),
+        name: payload.name,
+        logoUrl: null,
+        inviteCount: 0,
+        points: 0,
+        createdAt: now,
+        updatedAt: now,
+      };
+      set({
+        workspaces: [...state.workspaces, newWorkspace],
+      });
+    },
+    updateWorkspace: (workspaceId, payload) => {
+      const state = get();
+      const now = new Date().toISOString();
+      const updatedWorkspaces = state.workspaces.map((workspace) =>
+        workspace.id === workspaceId
+          ? {
+              ...workspace,
+              name: payload.name ?? workspace.name,
+              logoUrl: payload.logoUrl ?? workspace.logoUrl ?? null,
+              inviteCount: payload.inviteCount ?? workspace.inviteCount ?? 0,
+              points: payload.points ?? workspace.points ?? 0,
+              updatedAt: now,
+            }
+          : workspace
+      );
+      const active = updatedWorkspaces.find((workspace) => workspace.id === workspaceId) ?? state.workspace;
+      set({
+        rollbackStack: pushRollback(state),
+        workspaces: updatedWorkspaces,
+        workspace: active ?? null,
+      });
+    },
+    deleteWorkspace: (workspaceId) => {
+      const state = get();
+      const remainingWorkspaces = state.workspaces.filter((workspace) => workspace.id !== workspaceId);
+      const remainingSpaces = state.spaces.filter((space) => space.workspaceId !== workspaceId);
+      const remainingFolders = state.folders.filter((folder) => folder.workspaceId !== workspaceId);
+      const remainingCollections = state.collections.filter((collection) => collection.workspaceId !== workspaceId);
+      const remainingTabs = state.tabs.filter(
+        (tab) => remainingCollections.some((collection) => collection.id === tab.collectionId)
+      );
+      const nextWorkspace = remainingWorkspaces[0] ?? null;
+      set({
+        rollbackStack: pushRollback(state),
+        workspaces: remainingWorkspaces,
+        workspace: nextWorkspace,
+        spaces: remainingSpaces,
+        folders: remainingFolders,
+        collections: remainingCollections,
+        tabs: remainingTabs,
+        cache: {
+          ...state.cache,
+          selectedWorkspaceId: nextWorkspace?.id ?? null,
+          selectedSpaceId: null,
+          selectedCollectionId: null,
+        },
+      });
+    },
+    addSpace: (name) => {
+      const state = get();
+      const workspaceId = state.cache.selectedWorkspaceId ?? state.workspace?.id ?? null;
+      if (!workspaceId) {
+        return;
+      }
+      const now = new Date().toISOString();
+      const nextPosition =
+        Math.max(
+          0,
+          ...state.spaces.filter((space) => space.workspaceId === workspaceId).map((space) => space.position)
+        ) + 1000;
+      const newSpace = {
+        id: crypto.randomUUID(),
+        workspaceId,
+        name,
+        position: nextPosition,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "create",
+        entity: "space",
+        payload: newSpace,
+        createdAt: now,
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        spaces: [...state.spaces, newSpace],
+        cache: {
+          ...state.cache,
+          selectedSpaceId: newSpace.id,
+          pendingOps,
+        },
+      });
+    },
+    addCollection: (name) => {
+      const state = get();
+      const workspaceId = state.cache.selectedWorkspaceId ?? state.workspace?.id ?? null;
+      const workspaceSpaces = workspaceId
+        ? state.spaces.filter((space) => space.workspaceId === workspaceId)
+        : [];
+      const targetSpaceId =
+        state.cache.selectedSpaceId ??
+        workspaceSpaces.sort((a, b) => a.position - b.position)[0]?.id ??
+        "";
+      if (!workspaceId || !targetSpaceId || !state.workspace) {
+        return;
+      }
+      const now = new Date().toISOString();
+      const collectionId = crypto.randomUUID();
+      const newCollection = {
+        id: collectionId,
+        workspaceId,
+        spaceId: targetSpaceId,
+        folderId: null,
+        name,
+        note: null,
+        color: null,
+        starred: false,
+        position: state.collections.length + 1,
+        createdBy: state.workspace.ownerId,
+        createdAt: now,
+        updatedAt: now,
+        archivedAt: null,
+      };
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "create",
+        entity: "collection",
+        payload: { collection: newCollection, tabs: [] },
+        createdAt: now,
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        collections: [...state.collections, newCollection],
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
     reorderSpaces: (activeId, overId) => {
       const state = get();
       const activeIndex = state.spaces.findIndex((space) => space.id === activeId);
@@ -130,14 +586,30 @@ export function createAppStore() {
         return;
       }
 
-      const reordered = [...state.spaces];
-      const [moved] = reordered.splice(activeIndex, 1);
-      reordered.splice(overIndex, 0, moved);
-
-      const updated = reordered.map((space, index) => ({
-        ...space,
-        position: (index + 1) * 1000,
-      }));
+      const activeSpace = state.spaces.find((space) => space.id === activeId);
+      const overSpace = state.spaces.find((space) => space.id === overId);
+      if (!activeSpace || !overSpace || activeSpace.workspaceId !== overSpace.workspaceId) {
+        return;
+      }
+      const workspaceId = activeSpace.workspaceId;
+      const workspaceSpaces = state.spaces
+        .filter((space) => space.workspaceId === workspaceId)
+        .sort((a, b) => a.position - b.position);
+      const fromIndex = workspaceSpaces.findIndex((space) => space.id === activeId);
+      const toIndex = workspaceSpaces.findIndex((space) => space.id === overId);
+      if (fromIndex < 0 || toIndex < 0) {
+        return;
+      }
+      const reordered = [...workspaceSpaces];
+      const [moved] = reordered.splice(fromIndex, 1);
+      reordered.splice(toIndex, 0, moved);
+      const updated = state.spaces.map((space) => {
+        const index = reordered.findIndex((item) => item.id === space.id);
+        if (index === -1) {
+          return space;
+        }
+        return { ...space, position: (index + 1) * 1000 };
+      });
 
       const pendingOps = enqueueOp(state.cache.pendingOps, {
         id: nanoid(),
@@ -509,22 +981,30 @@ export function createAppStore() {
     },
     saveCollectionFromTabs: (name, tabs) => {
       const state = get();
-      const targetSpaceId = state.cache.selectedSpaceId ?? state.spaces[0]?.id ?? "";
-      const collectionId = nanoid();
+      const workspaceId = state.cache.selectedWorkspaceId ?? state.workspace?.id ?? null;
+      const workspaceSpaces = workspaceId
+        ? state.spaces.filter((space) => space.workspaceId === workspaceId)
+        : [];
+      const targetSpaceId =
+        state.cache.selectedSpaceId ??
+        workspaceSpaces.sort((a, b) => a.position - b.position)[0]?.id ??
+        "";
+      const collectionId = crypto.randomUUID();
       const now = new Date().toISOString();
 
-      if (!state.workspace || !targetSpaceId) {
+      if (!state.workspace || !workspaceId || !targetSpaceId) {
         return;
       }
 
       const newCollection = {
         id: collectionId,
-        workspaceId: state.workspace.id,
+        workspaceId,
         spaceId: targetSpaceId,
         folderId: null,
         name,
         note: null,
         color: null,
+        starred: false,
         position: state.collections.length + 1,
         createdBy: state.workspace.ownerId,
         createdAt: now,
@@ -533,11 +1013,15 @@ export function createAppStore() {
       };
 
       const newTabs: TabItem[] = tabs.map((tab, index) => ({
-        id: nanoid(),
+        id: crypto.randomUUID(),
         collectionId,
         title: tab.title,
         url: tab.url,
         faviconUrl: tab.favIconUrl ?? null,
+        ogTitle: tab.ogTitle ?? null,
+        ogDescription: tab.ogDescription ?? null,
+        ogImage: tab.ogImage ?? null,
+        screenshotUrl: tab.screenshotUrl ?? null,
         note: null,
         position: index + 1,
         createdAt: now,
@@ -671,11 +1155,14 @@ export function createAppStore() {
         1000;
 
       const newTab: TabItem = {
-        id: nanoid(),
+        id: crypto.randomUUID(),
         collectionId,
         title: tab.title,
         url: tab.url,
         faviconUrl: tab.favIconUrl ?? null,
+        ogTitle: tab.ogTitle ?? null,
+        ogDescription: tab.ogDescription ?? null,
+        ogImage: tab.ogImage ?? null,
         note: null,
         position: nextPosition,
         createdAt: now,
@@ -693,6 +1180,297 @@ export function createAppStore() {
       set({
         rollbackStack: pushRollback(state),
         tabs: [...state.tabs, newTab],
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
+    updateTabMetadata: (tabId, payload) => {
+      const state = get();
+      const updated = state.tabs.map((tab) =>
+        tab.id === tabId
+          ? {
+              ...tab,
+              ogTitle: payload.ogTitle ?? tab.ogTitle ?? null,
+              ogDescription: payload.ogDescription ?? tab.ogDescription ?? null,
+              ogImage: payload.ogImage ?? tab.ogImage ?? null,
+              updatedAt: new Date().toISOString(),
+            }
+          : tab
+      );
+      set({ tabs: updated });
+    },
+    updateTab: (tabId, payload) => {
+      const state = get();
+      const now = new Date().toISOString();
+      const updated = state.tabs.map((tab) =>
+        tab.id === tabId
+          ? {
+              ...tab,
+              title: payload.title,
+              url: payload.url,
+              note: payload.note ?? null,
+              updatedAt: now,
+            }
+          : tab
+      );
+
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "tab",
+        payload: { id: tabId, title: payload.title, url: payload.url, note: payload.note ?? null },
+        createdAt: now,
+      });
+
+      set({
+        rollbackStack: pushRollback(state),
+        tabs: updated,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
+    deleteTab: (tabId) => {
+      const state = get();
+      const tab = state.tabs.find((item) => item.id === tabId);
+      if (!tab) {
+        return;
+      }
+      const now = new Date().toISOString();
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "delete",
+        entity: "tab",
+        payload: { id: tabId, collectionId: tab.collectionId },
+        createdAt: now,
+      });
+
+      set({
+        rollbackStack: pushRollback(state),
+        tabs: state.tabs.filter((item) => item.id !== tabId),
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
+    moveTabToCollection: (tabId, collectionId) => {
+      const state = get();
+      const tab = state.tabs.find((item) => item.id === tabId);
+      if (!tab || tab.collectionId === collectionId) {
+        return;
+      }
+      const now = new Date().toISOString();
+      const maxPosition = state.tabs
+        .filter((item) => item.collectionId === collectionId)
+        .reduce((max, item) => Math.max(max, item.position), 0);
+      const updated = state.tabs.map((item) =>
+        item.id === tabId
+          ? {
+              ...item,
+              collectionId,
+              position: maxPosition + 1,
+              updatedAt: now,
+            }
+          : item
+      );
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "tab",
+        payload: { id: tabId, collectionId, position: maxPosition + 1 },
+        createdAt: now,
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        tabs: updated,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
+    updateCollectionTitle: (collectionId, name) => {
+      const state = get();
+      const now = new Date().toISOString();
+      const updated = state.collections.map((collection) =>
+        collection.id === collectionId ? { ...collection, name, updatedAt: now } : collection
+      );
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "collection",
+        payload: { id: collectionId, name },
+        createdAt: now,
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        collections: updated,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
+    toggleCollectionStar: (collectionId) => {
+      const state = get();
+      const now = new Date().toISOString();
+      const updated = state.collections.map((collection) =>
+        collection.id === collectionId
+          ? { ...collection, starred: !collection.starred, updatedAt: now }
+          : collection
+      );
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "collection",
+        payload: { id: collectionId, starred: updated.find((c) => c.id === collectionId)?.starred ?? false },
+        createdAt: now,
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        collections: updated,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
+    moveCollectionWithinSpace: (collectionId, direction) => {
+      const state = get();
+      const collection = state.collections.find((item) => item.id === collectionId);
+      if (!collection) {
+        return;
+      }
+      const siblings = state.collections
+        .filter(
+          (item) => item.workspaceId === collection.workspaceId && item.spaceId === collection.spaceId
+        )
+        .sort((a, b) => a.position - b.position);
+      const index = siblings.findIndex((item) => item.id === collectionId);
+      if (index < 0) {
+        return;
+      }
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= siblings.length) {
+        return;
+      }
+      const reordered = [...siblings];
+      const [moved] = reordered.splice(index, 1);
+      reordered.splice(targetIndex, 0, moved);
+
+      const updated = state.collections.map((item) => {
+        const localIndex = reordered.findIndex((sibling) => sibling.id === item.id);
+        if (localIndex === -1) {
+          return item;
+        }
+        return { ...item, position: (localIndex + 1) * 1000 };
+      });
+
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "collection",
+        payload: { order: reordered.map((item, idx) => ({ id: item.id, position: (idx + 1) * 1000 })) },
+        createdAt: new Date().toISOString(),
+      });
+
+      set({
+        rollbackStack: pushRollback(state),
+        collections: updated,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
+    moveCollectionToSpace: (collectionId, workspaceId, spaceId) => {
+      const state = get();
+      const collection = state.collections.find((item) => item.id === collectionId);
+      if (!collection) {
+        return;
+      }
+      const now = new Date().toISOString();
+      const targetMax = Math.max(
+        0,
+        ...state.collections
+          .filter((item) => item.workspaceId === workspaceId && item.spaceId === spaceId)
+          .map((item) => item.position)
+      );
+      const nextPosition = targetMax + 1000;
+      const updated = state.collections.map((item) =>
+        item.id === collectionId
+          ? { ...item, workspaceId, spaceId, position: nextPosition, updatedAt: now }
+          : item
+      );
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "collection",
+        payload: { id: collectionId, workspaceId, spaceId, position: nextPosition },
+        createdAt: now,
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        collections: updated,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
+    sortTabsInCollection: (collectionId) => {
+      const state = get();
+      const siblings = state.tabs
+        .filter((tab) => tab.collectionId === collectionId)
+        .sort((a, b) => a.title.localeCompare(b.title));
+      if (siblings.length <= 1) {
+        return;
+      }
+      const updatedTabs = state.tabs.map((tab) => {
+        const index = siblings.findIndex((item) => item.id === tab.id);
+        if (index === -1) {
+          return tab;
+        }
+        return { ...tab, position: (index + 1) * 1000 };
+      });
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "tab",
+        payload: { order: siblings.map((tab, index) => ({ id: tab.id, position: (index + 1) * 1000 })) },
+        createdAt: new Date().toISOString(),
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        tabs: updatedTabs,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
+    deleteCollection: (collectionId) => {
+      const state = get();
+      const collection = state.collections.find((item) => item.id === collectionId);
+      if (!collection) {
+        return;
+      }
+      const now = new Date().toISOString();
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "delete",
+        entity: "collection",
+        payload: { id: collectionId },
+        createdAt: now,
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        collections: state.collections.filter((item) => item.id !== collectionId),
+        tabs: state.tabs.filter((tab) => tab.collectionId !== collectionId),
         cache: {
           ...state.cache,
           pendingOps,

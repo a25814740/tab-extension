@@ -5,6 +5,7 @@ import type { LocalStoreSnapshot } from "../schemas/appSchemas";
 export function toSnapshot(state: AppState): LocalStoreSnapshot {
   return {
     workspace: state.workspace,
+    workspaces: state.workspaces,
     spaces: state.spaces,
     folders: state.folders,
     collections: state.collections,

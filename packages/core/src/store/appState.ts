@@ -2,6 +2,7 @@ import type { Collection, Folder, LocalAppCache, Space, TabItem, Workspace } fro
 import type { LocalStoreSnapshot } from "../schemas/appSchemas";
 
 export type AppState = {
+  workspaces: Workspace[];
   workspace: Workspace | null;
   spaces: Space[];
   folders: Folder[];
@@ -31,6 +32,7 @@ export const defaultCache: LocalAppCache = {
 };
 
 export const defaultAppState: AppState = {
+  workspaces: [],
   workspace: null,
   spaces: [],
   folders: [],

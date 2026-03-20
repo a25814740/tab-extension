@@ -13,3 +13,15 @@ export async function inviteMember(client: SupabaseClient, payload: InvitePayloa
     role: payload.role,
   });
 }
+
+export async function updateMemberRole(
+  client: SupabaseClient,
+  memberId: string,
+  role: InvitePayload["role"]
+) {
+  return client.from("workspace_members").update({ role }).eq("id", memberId);
+}
+
+export async function removeMember(client: SupabaseClient, memberId: string) {
+  return client.from("workspace_members").delete().eq("id", memberId);
+}

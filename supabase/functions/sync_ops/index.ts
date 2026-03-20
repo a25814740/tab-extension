@@ -20,6 +20,23 @@ serve(async (req) => {
     return new Response("Missing Supabase env", { status: 500 });
   }
 
+  const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  const token = authHeader.replace("Bearer ", "");
+  const authedClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
+  const user = await authedClient.auth.getUser();
+  if (!user.data.user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   const { ops } = await req.json();
   if (!Array.isArray(ops)) {
     return new Response("Invalid payload", { status: 400 });
@@ -32,7 +49,7 @@ serve(async (req) => {
 
   for (const op of ops as PendingOp[]) {
     try {
-      await applyOp(client, op);
+      await applyOp(client, op, user.data.user.id);
       syncedIds.push(op.id);
     } catch {
       failedIds.push(op.id);
@@ -44,7 +61,7 @@ serve(async (req) => {
   });
 });
 
-async function applyOp(client: ReturnType<typeof createClient>, op: PendingOp) {
+async function applyOp(client: ReturnType<typeof createClient>, op: PendingOp, userId: string) {
   const table = entityToTable(op.entity);
   if (!table) {
     throw new Error("Unknown entity");
@@ -52,6 +69,9 @@ async function applyOp(client: ReturnType<typeof createClient>, op: PendingOp) {
 
   if (op.type === "create") {
     await client.from(table).insert(op.payload);
+    if (op.entity === "collection" || op.entity === "tab") {
+      await audit(client, userId, op.type, op.entity, op.payload);
+    }
     return;
   }
 
@@ -70,6 +90,9 @@ async function applyOp(client: ReturnType<typeof createClient>, op: PendingOp) {
     const payload = { ...op.payload };
     delete (payload as Record<string, unknown>).id;
     await client.from(table).update(payload).eq("id", id);
+    if (op.entity === "collection" || op.entity === "tab") {
+      await audit(client, userId, op.type, op.entity, { id, ...payload });
+    }
     return;
   }
 
@@ -79,7 +102,32 @@ async function applyOp(client: ReturnType<typeof createClient>, op: PendingOp) {
       throw new Error("Missing id for delete");
     }
     await client.from(table).delete().eq("id", id);
+    if (op.entity === "collection" || op.entity === "tab") {
+      await audit(client, userId, op.type, op.entity, { id });
+    }
   }
+}
+
+async function audit(
+  client: ReturnType<typeof createClient>,
+  userId: string,
+  action: string,
+  entityType: string,
+  payload: Record<string, unknown>
+) {
+  const workspaceId = (payload.workspace_id ?? payload.workspaceId ?? null) as string | null;
+  if (!workspaceId) {
+    return;
+  }
+  await client.from("activity_logs").insert({
+    id: crypto.randomUUID(),
+    workspace_id: workspaceId,
+    actor_user_id: userId,
+    action,
+    entity_type: entityType,
+    entity_id: (payload.id ?? payload.collection_id ?? payload.collectionId ?? "") as string,
+    payload,
+  });
 }
 
 function entityToTable(entity: PendingOp["entity"]) {

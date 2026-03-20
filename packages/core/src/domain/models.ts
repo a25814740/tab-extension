@@ -13,6 +13,9 @@ export type Workspace = {
   id: string;
   ownerId: string;
   name: string;
+  logoUrl?: string | null;
+  inviteCount?: number | null;
+  points?: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -53,6 +56,7 @@ export type Collection = {
   name: string;
   note: string | null;
   color: string | null;
+  starred?: boolean | null;
   position: number;
   createdBy: string;
   createdAt: string;
@@ -66,6 +70,10 @@ export type TabItem = {
   title: string;
   url: string;
   faviconUrl: string | null;
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  ogImage?: string | null;
+  screenshotUrl?: string | null;
   note: string | null;
   position: number;
   createdAt: string;
@@ -137,7 +145,7 @@ export type LocalAppCache = {
   ui: {
     theme: "light" | "dark" | "system";
     sidebarCollapsed: boolean;
-    viewMode: "grid" | "list";
+    viewMode: "grid" | "list" | "compact" | "image";
     sortMode: "custom" | "recent" | "name" | "createdAt";
   };
   pendingOps: PendingOp[];

@@ -1,149 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { Card, SectionTitle } from "@toby/shared-ui";
-import { createSupabaseClient, signInWithMagicLink, signOut } from "@toby/api-client";
-import { getRedirectUrl, getSync, launchWebAuthFlow, setSync } from "@toby/chrome-adapters";
-
-type AuthConfig = {
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-  email: string;
-};
-
-const CONFIG_KEY = "toby_auth_config_v1";
+import { useLocale } from "../i18n";
+import { useAuthLogic, useAuthUser } from "../auth/useAuth";
+import { useAppStore } from "../store/appStore";
 
 export function AuthPanel() {
-  const [config, setConfig] = useState<AuthConfig>({
-    supabaseUrl: "",
-    supabaseAnonKey: "",
-    email: "",
-  });
-  const [status, setStatus] = useState<string>("Not signed in");
-
-  useEffect(() => {
-    void (async () => {
-      const stored = await getSync<AuthConfig | null>(CONFIG_KEY, null);
-      if (stored) {
-        setConfig(stored);
-      }
-    })();
-  }, []);
-
-  const client = useMemo(() => {
-    if (!config.supabaseUrl || !config.supabaseAnonKey) {
-      return null;
-    }
-    return createSupabaseClient({
-      url: config.supabaseUrl,
-      anonKey: config.supabaseAnonKey,
-    });
-  }, [config.supabaseUrl, config.supabaseAnonKey]);
-
-  const handleSave = async () => {
-    await setSync(CONFIG_KEY, config);
-    setStatus("Config saved");
-  };
-
-  const handleGoogle = async () => {
-    if (!client) {
-      setStatus("Missing Supabase config");
-      return;
-    }
-
-    const redirectUrl = getRedirectUrl("supabase");
-    const authUrl = `${config.supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(
-      redirectUrl
-    )}`;
-
-    const responseUrl = await launchWebAuthFlow(authUrl, true);
-    if (!responseUrl) {
-      setStatus("Auth flow cancelled");
-      return;
-    }
-
-    const tokens = extractTokens(responseUrl);
-    if (!tokens.accessToken || !tokens.refreshToken) {
-      setStatus("Missing tokens from auth response");
-      return;
-    }
-
-    await client.auth.setSession({
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken,
-    });
-    const user = await client.auth.getUser();
-    setStatus(user.data.user?.email ?? "Signed in");
-  };
-
-  const handleMagic = async () => {
-    if (!client) {
-      setStatus("Missing Supabase config");
-      return;
-    }
-    if (!config.email) {
-      setStatus("Email required");
-      return;
-    }
-    await signInWithMagicLink(client, config.email);
-    setStatus("Magic link sent");
-  };
-
-  const handleSignOut = async () => {
-    if (!client) {
-      return;
-    }
-    await signOut(client);
-    setStatus("Signed out");
-  };
-
-  const handleClearConfig = async () => {
-    await setSync(CONFIG_KEY, { supabaseUrl: "", supabaseAnonKey: "", email: "" });
-    setConfig({ supabaseUrl: "", supabaseAnonKey: "", email: "" });
-    setStatus("Config cleared");
-  };
+  const { t } = useLocale();
+  const { config, setConfig, status, redirectUrl, handleSave, handleGoogle, handleSignOut, handleClearConfig } =
+    useAuthLogic();
 
   return (
     <Card className="p-4">
-      <SectionTitle title="Auth & Sync" />
+      <SectionTitle title={t("auth.title")} />
       <div className="mt-3 space-y-2 text-xs">
-        <label className="block">
-          <span className="text-slate-400">Supabase URL</span>
-          <input
-            className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1"
-            value={config.supabaseUrl}
-            onChange={(event) => setConfig({ ...config, supabaseUrl: event.target.value })}
-          />
-        </label>
-        <label className="block">
-          <span className="text-slate-400">Supabase Anon Key</span>
-          <input
-            className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1"
-            value={config.supabaseAnonKey}
-            onChange={(event) => setConfig({ ...config, supabaseAnonKey: event.target.value })}
-          />
-        </label>
-        <label className="block">
-          <span className="text-slate-400">Email (magic link)</span>
-          <input
-            className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1"
-            value={config.email}
-            onChange={(event) => setConfig({ ...config, email: event.target.value })}
-          />
-        </label>
         <div className="flex flex-wrap gap-2 pt-2">
           <button className="rounded border border-slate-700 px-2 py-1" onClick={handleSave}>
-            Save Config
+            {t("auth.saveConfig")}
           </button>
           <button className="rounded border border-slate-700 px-2 py-1" onClick={handleGoogle}>
-            Google Sign In
-          </button>
-          <button className="rounded border border-slate-700 px-2 py-1" onClick={handleMagic}>
-            Magic Link
+            {t("auth.googleSignIn")}
           </button>
           <button className="rounded border border-slate-700 px-2 py-1" onClick={handleSignOut}>
-            Sign Out
+            {t("auth.signOut")}
           </button>
           <button className="rounded border border-slate-700 px-2 py-1" onClick={handleClearConfig}>
-            Clear
+            {t("auth.clear")}
           </button>
         </div>
         <div className="text-slate-400">{status}</div>
@@ -152,11 +34,191 @@ export function AuthPanel() {
   );
 }
 
-function extractTokens(url: string) {
-  const fragment = url.split("#")[1] ?? "";
-  const params = new URLSearchParams(fragment);
-  return {
-    accessToken: params.get("access_token"),
-    refreshToken: params.get("refresh_token"),
-  };
+export function AuthMiniPanel() {
+  const { t, locale, setLocale } = useLocale();
+  const user = useAuthUser();
+  const { handleGoogle, handleSignOut } = useAuthLogic();
+  const lastSyncAt = useAppStore((state) => state.cache.lastSyncAt);
+  const lastSyncError = useAppStore((state) => state.cache.lastSyncError);
+  const nextSyncRetryAt = useAppStore((state) => state.cache.nextSyncRetryAt);
+  const pendingCount = useAppStore((state) => state.cache.pendingOps.length);
+  const [open, setOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(false);
+  const [updatesOpen, setUpdatesOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+
+  return (
+    <div className="w-full">
+      <button
+        className="flex w-full flex-col items-center justify-center gap-1 px-1 py-1 text-[10px] text-slate-200"
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-900/70">
+          {user?.avatarUrl ? (
+            <img src={user.avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[10px]">
+              {user?.name?.slice(0, 2).toUpperCase() ?? "?"}
+            </div>
+          )}
+        </div>
+        <span className="max-w-[48px] truncate">{user?.name ?? t("app.signIn")}</span>
+      </button>
+
+      {open ? (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setOpen(false)} />
+          <div className="fixed bottom-4 left-4 z-50 w-64 p-3">
+            <div className="space-y-3 rounded-2xl border border-slate-800/80 bg-slate-900/95 p-4 shadow-xl backdrop-blur">
+              <div className="flex flex-col items-center gap-2 text-center">
+                <div className="h-12 w-12 overflow-hidden rounded-full bg-slate-800">
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[12px]">
+                      {user?.name?.slice(0, 2).toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                </div>
+                <div className="text-sm font-semibold text-slate-100">
+                  {user?.name ?? t("app.signIn")}
+                </div>
+                <div className="text-[11px] text-slate-500">{user?.email ?? "-"}</div>
+              <div className="mt-2 w-full">
+                {!user ? (
+                  <button className="w-full rounded-lg border border-slate-700 px-2 py-2 text-xs hover:bg-slate-900/60" onClick={handleGoogle}>
+                    {t("auth.googleSignIn")}
+                  </button>
+                ) : (
+                    <button
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 px-2 py-2 text-xs hover:bg-slate-900/60"
+                      onClick={handleSignOut}
+                    >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M10 16l4 -4l-4 -4"></path>
+                      <path d="M4 12h10"></path>
+                      <path d="M12 4h6v16h-6"></path>
+                    </svg>
+                    {t("auth.signOut")}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3 w-full border-t border-slate-800/60 pt-3 text-[10px] text-slate-500">
+                {lastSyncAt ? `${t("app.lastSync")} ${new Date(lastSyncAt).toLocaleTimeString()}` : ""}
+                {lastSyncError ? ` • ${t("app.syncError")} (${lastSyncError})` : ""}
+                {nextSyncRetryAt ? ` • ${t("app.retry")} ${new Date(nextSyncRetryAt).toLocaleTimeString()}` : ""}
+                {pendingCount > 0 ? ` • ${t("app.pending")} ${pendingCount}` : ""}
+              </div>
+            </div>
+            <div className="space-y-2">
+                <button
+                  className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-300 hover:bg-slate-900/60"
+                  onClick={() => setFaqOpen(true)}
+                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 18h.01"></path>
+                  <path d="M12 15a3 3 0 1 0 -3 -3"></path>
+                  <path d="M19.4 15a7 7 0 1 0 -14.8 0"></path>
+                </svg>
+                {t("rail.faq")}
+              </button>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-300 hover:bg-slate-900/60"
+                onClick={() => setUpdatesOpen(true)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"></path>
+                  <path d="M9 17v1a3 3 0 0 0 6 0v-1"></path>
+                </svg>
+                {t("rail.updates")}
+              </button>
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-300 hover:bg-slate-900/60"
+                onClick={() => setLangOpen(true)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 5h7"></path>
+                  <path d="M9 3v2c0 4.418 -2.239 8 -5 8"></path>
+                  <path d="M5 9c0 4.418 2.239 8 5 8"></path>
+                  <path d="M15 3v2"></path>
+                  <path d="M19 3v2"></path>
+                  <path d="M15 9c0 1.657 1.343 3 3 3"></path>
+                  <path d="M18 12c0 1.657 -1.343 3 -3 3"></path>
+                </svg>
+                {t("app.language")}
+              </button>
+            </div>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {faqOpen ? (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setFaqOpen(false)}>
+          <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
+            <div className="text-sm font-semibold">{t("rail.faq")}</div>
+            <div className="mt-3 text-xs text-slate-400">FAQ 內容可放這裡。</div>
+            <div className="mt-4 flex justify-end">
+              <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setFaqOpen(false)}>
+                {t("tab.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {updatesOpen ? (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setUpdatesOpen(false)}>
+          <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
+            <div className="text-sm font-semibold">{t("rail.updates")}</div>
+            <div className="mt-3 text-xs text-slate-400">更新通知可放這裡。</div>
+            <div className="mt-4 flex justify-end">
+              <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setUpdatesOpen(false)}>
+                {t("tab.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {langOpen ? (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setLangOpen(false)}>
+          <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
+            <div className="text-sm font-semibold">{t("app.language")}</div>
+            <div className="mt-4 grid grid-cols-1 gap-2 text-xs">
+              <button
+                className={`flex items-center justify-between rounded-lg border px-3 py-2 ${locale === "zh-TW" ? "border-rose-400 text-white" : "border-slate-700 text-slate-300"} hover:bg-slate-900/60`}
+                onClick={() => setLocale("zh-TW")}
+              >
+                <span>🇹🇼 繁體中文</span>
+                {locale === "zh-TW" ? "✓" : ""}
+              </button>
+              <button
+                className={`flex items-center justify-between rounded-lg border px-3 py-2 ${locale === "en" ? "border-rose-400 text-white" : "border-slate-700 text-slate-300"} hover:bg-slate-900/60`}
+                onClick={() => setLocale("en")}
+              >
+                <span>🇺🇸 English</span>
+                {locale === "en" ? "✓" : ""}
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setLangOpen(false)}>
+                {t("tab.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }

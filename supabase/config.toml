@@ -1,0 +1,7 @@
+project_id = "zhfibzpgabqgqgixgisk"
+
+[functions.share]
+verify_jwt = false
+
+[functions.accept_share]
+verify_jwt = true

@@ -7,6 +7,7 @@ import { getSync } from "@toby/chrome-adapters";
 
 const LOCAL_SNAPSHOT_KEY = "toby_snapshot_v1";
 const CONFIG_KEY = "toby_auth_config_v1";
+const TOKEN_KEY = "toby_auth_token_v1";
 
 export const appStore = createAppStore();
 
@@ -37,12 +38,35 @@ export function useLocalCacheSync() {
       }, 250);
     });
 
+    const handleStorageChange = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: chrome.storage.AreaName
+    ) => {
+      if (areaName !== "local") {
+        return;
+      }
+      const change = changes[LOCAL_SNAPSHOT_KEY];
+      if (!change?.newValue) {
+        return;
+      }
+      const parsed = localSnapshotSchema.safeParse(change.newValue);
+      if (isMounted && parsed.success) {
+        appStore.getState().hydrate(parsed.data);
+      }
+    };
+    if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
+      chrome.storage.onChanged.addListener(handleStorageChange);
+    }
+
     const syncClient = createMockSyncClient();
     void (async () => {
-      const config = await getSync<{ supabaseUrl?: string } | null>(CONFIG_KEY, null);
-      if (config?.supabaseUrl) {
+      const config = await getSync<{ supabaseUrl?: string; supabaseAnonKey?: string } | null>(CONFIG_KEY, null);
+      const token = await getLocal<string | null>(TOKEN_KEY, null);
+      if (config?.supabaseUrl && token) {
         const endpoint = `${config.supabaseUrl}/functions/v1/sync_ops`;
-        appStore.getState().flushPendingOps(createHttpSyncClient(endpoint));
+        appStore.getState().flushPendingOps(
+          createHttpSyncClient(endpoint, { accessToken: token, anonKey: config.supabaseAnonKey ?? null })
+        );
       }
     })();
     const syncInterval = window.setInterval(() => {
@@ -60,6 +84,9 @@ export function useLocalCacheSync() {
         window.clearTimeout(timeout);
       }
       window.clearInterval(syncInterval);
+      if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
+        chrome.storage.onChanged.removeListener(handleStorageChange);
+      }
     };
   }, []);
 }

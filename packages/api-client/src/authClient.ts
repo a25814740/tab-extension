@@ -9,6 +9,17 @@ export async function signInWithGoogle(client: SupabaseClient) {
   });
 }
 
+export async function getGoogleOAuthUrl(client: SupabaseClient, redirectTo: string) {
+  const result = await client.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo,
+      skipBrowserRedirect: true,
+    },
+  });
+  return result;
+}
+
 export async function signInWithMagicLink(client: SupabaseClient, email: string) {
   return client.auth.signInWithOtp({
     email,

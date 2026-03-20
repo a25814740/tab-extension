@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, SectionTitle } from "@toby/shared-ui";
+import { SelectMenu } from "./SelectMenu";
 import { createSupabaseClient, createShareLink, revokeShareLink } from "@toby/api-client";
 import { getSync } from "@toby/chrome-adapters";
+import { useLocale } from "../i18n";
 
 type ShareConfig = {
   supabaseUrl: string;
@@ -24,6 +26,9 @@ export function SharePanel({
   defaultResourceId?: string | null;
   collections?: Array<{ id: string; name: string }>;
 }) {
+  const { t } = useLocale();
+  const checkboxClass =
+    "h-4 w-4 rounded border-slate-600 bg-slate-900 text-rose-400 focus:ring-rose-500/40";
   const [config, setConfig] = useState<ShareConfig | null>(null);
   const [state, setState] = useState<ShareState>({
     resourceType: "collection",
@@ -59,11 +64,11 @@ export function SharePanel({
 
   const handleCreate = async () => {
     if (!client) {
-      setStatus("Missing Supabase config");
+      setStatus(t("share.status.missingSupabase"));
       return;
     }
     if (!state.resourceId) {
-      setStatus("Resource id required");
+      setStatus(t("share.status.resourceRequired"));
       return;
     }
     const result = await createShareLink(client, state);
@@ -73,16 +78,16 @@ export function SharePanel({
     }
     setShareId(result.data?.id ?? "");
     setShareToken(result.data?.token ?? "");
-    setStatus("Share link created");
+    setStatus(t("share.status.created"));
   };
 
   const handleRevoke = async () => {
     if (!client) {
-      setStatus("Missing Supabase config");
+      setStatus(t("share.status.missingSupabase"));
       return;
     }
     if (!shareId) {
-      setStatus("Share id required");
+      setStatus(t("share.status.revokeRequired"));
       return;
     }
     const result = await revokeShareLink(client, shareId);
@@ -90,29 +95,27 @@ export function SharePanel({
       setStatus(result.error.message);
       return;
     }
-    setStatus("Share link revoked");
+    setStatus(t("share.status.revoked"));
   };
 
   return (
     <Card className="p-4">
-      <SectionTitle title="Share" />
+      <SectionTitle title={t("share.title")} />
       <div className="mt-3 space-y-2 text-xs">
         <label className="block">
-          <span className="text-slate-400">Resource type</span>
-          <select
-            className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1"
+          <SelectMenu
             value={state.resourceType}
-            onChange={(event) =>
-              setState({ ...state, resourceType: event.target.value as ShareState["resourceType"] })
-            }
-          >
-            <option value="collection">Collection</option>
-            <option value="folder">Folder</option>
-            <option value="space">Space</option>
-          </select>
+            onChange={(value) => setState({ ...state, resourceType: value })}
+            options={[
+              { value: "collection", label: t("entity.collection"), group: "資源類型" },
+              { value: "folder", label: t("entity.folder"), group: "資源類型" },
+              { value: "space", label: t("entity.space"), group: "資源類型" },
+            ]}
+            label={t("share.resourceType")}
+          />
         </label>
         <label className="block">
-          <span className="text-slate-400">Resource id</span>
+          <span className="text-slate-400">{t("share.resourceId")}</span>
           <input
             className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1"
             value={state.resourceId}
@@ -121,60 +124,55 @@ export function SharePanel({
         </label>
         {state.resourceType === "collection" && collections && collections.length > 0 ? (
           <label className="block">
-            <span className="text-slate-400">Select collection</span>
-            <select
-              className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1"
+            <SelectMenu
               value={state.resourceId}
-              onChange={(event) => setState({ ...state, resourceId: event.target.value })}
-            >
-              <option value="">Choose collection</option>
-              {collections.map((collection) => (
-                <option key={collection.id} value={collection.id}>
-                  {collection.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setState({ ...state, resourceId: value })}
+              options={[
+                { value: "", label: t("share.chooseCollection"), group: "集合" },
+                ...collections.map((collection) => ({ value: collection.id, label: collection.name, group: "集合" })),
+              ]}
+              label={t("share.selectCollection")}
+              searchable
+              searchPlaceholder="搜尋集合"
+            />
           </label>
         ) : null}
         <label className="block">
-          <span className="text-slate-400">Permission</span>
-          <select
-            className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1"
+          <SelectMenu
             value={state.permission}
-            onChange={(event) =>
-              setState({ ...state, permission: event.target.value as ShareState["permission"] })
-            }
-          >
-            <option value="view">View</option>
-            <option value="comment">Comment</option>
-            <option value="edit">Edit</option>
-          </select>
+            onChange={(value) => setState({ ...state, permission: value })}
+            options={[
+              { value: "view", label: t("share.permission.view"), group: "權限" },
+              { value: "comment", label: t("share.permission.comment"), group: "權限" },
+              { value: "edit", label: t("share.permission.edit"), group: "權限" },
+            ]}
+            label={t("share.permission")}
+          />
         </label>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
+            className={checkboxClass}
             checked={state.isPublic}
             onChange={(event) => setState({ ...state, isPublic: event.target.checked })}
           />
-          <span className="text-slate-400">Public link</span>
+          <span className="text-slate-400">{t("share.publicLink")}</span>
         </label>
         <label className="block">
-          <span className="text-slate-400">Share id (for revoke)</span>
+          <span className="text-slate-400">{t("share.shareId")}</span>
           <input
             className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1"
             value={shareId}
             onChange={(event) => setShareId(event.target.value)}
           />
         </label>
-        {shareToken ? (
-          <div className="text-slate-400">Token: {shareToken}</div>
-        ) : null}
+        {shareToken ? <div className="text-slate-400">{t("share.token")}: {shareToken}</div> : null}
         <div className="flex flex-wrap gap-2 pt-2">
           <button className="rounded border border-slate-700 px-2 py-1" onClick={handleCreate}>
-            Create Link
+            {t("share.create")}
           </button>
           <button className="rounded border border-slate-700 px-2 py-1" onClick={handleRevoke}>
-            Revoke Link
+            {t("share.revoke")}
           </button>
         </div>
         <div className="text-slate-400">{status}</div>
