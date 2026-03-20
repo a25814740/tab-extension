@@ -270,7 +270,26 @@ export function App() {
       if (isMounted) {
         setShareNotice(t("share.notice.accepting"));
       }
-        const accessToken = await getLocal<string | null>(AUTH_TOKEN_KEY, null);
+        let accessToken: string | null = null;
+        try {
+          const sessionResult = await supabaseClient.auth.getSession();
+          accessToken = sessionResult.data.session?.access_token ?? null;
+          if (!accessToken && sessionResult.data.session) {
+            const refreshed = await supabaseClient.auth.refreshSession();
+            accessToken = refreshed.data.session?.access_token ?? null;
+          }
+        } catch {
+          accessToken = null;
+        }
+        if (!accessToken) {
+          accessToken = await getLocal<string | null>(AUTH_TOKEN_KEY, null);
+        }
+        if (!accessToken) {
+          if (isMounted) {
+            setShareNotice(t("share.notice.loginRequired"));
+          }
+          return;
+        }
         const result = await acceptShareLink(supabaseClient, token, {
           accessToken,
           anonKey: effectiveSupabaseAnonKey,
