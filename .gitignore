@@ -6,3 +6,5 @@ node_modules
 extension/newtab/assets/
 extension/sidepanel/assets/
 extension/options/
+extension/newtab/
+extension/sidepanel/
