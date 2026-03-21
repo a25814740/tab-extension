@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { createContext, createElement, useCallback, useEffect, useMemo, useState, useContext } from "react";
 import { getSync, setSync } from "@toby/chrome-adapters";
 
@@ -72,7 +73,7 @@ type LocaleContextValue = {
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
-export function LocaleProvider({ children }: { children: React.ReactNode }) {
+export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
 
   useEffect(() => {

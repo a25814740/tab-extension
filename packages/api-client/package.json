@@ -7,9 +7,10 @@
   "types": "./src/index.ts",
   "scripts": {
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@toby/core": "workspace:*",
     "@supabase/supabase-js": "^2.45.0",
     "nanoid": "^5.0.7"
   },

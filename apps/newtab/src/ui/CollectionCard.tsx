@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Card } from "@toby/shared-ui";
 import { useLocale } from "../i18n";
@@ -30,7 +31,7 @@ type Props = {
   activeWorkspaceId: string | null;
   spaceId: string;
   summary?: string;
-  children?: React.ReactNode;
+  children?: ReactNode;
   isActive?: boolean;
   onSelect?: () => void;
   collapsed?: boolean;
@@ -66,7 +67,6 @@ export function CollectionCard({
   spaceId,
   summary,
   children,
-  selected,
   onSelect,
   collapsed,
   onToggleCollapse,
@@ -107,7 +107,7 @@ export function CollectionCard({
     <Card
       className={
         isActive
-          ? "group relative w-full rounded-none border-transparent bg-transparent p-4 ring-1 ring-rose-400/70 shadow-none"
+          ? "group relative w-full rounded-none border-transparent bg-transparent p-4 shadow-none"
           : isDropTarget
           ? "group relative w-full rounded-none border-transparent bg-slate-900/60 p-4 ring-1 ring-rose-400/50 shadow-none"
           : "group relative w-full rounded-none border-transparent bg-transparent p-4 shadow-none hover:bg-slate-900/40"

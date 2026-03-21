@@ -35,6 +35,8 @@ This file tracks incomplete work. Keep entries short and actionable.
 
 ## Phase 6
 
-- [ ] Add tests (unit + minimal e2e)
-- [ ] Fix lint/typecheck/build pipelines
+- [x] Stabilize lint/test/build pipelines
+- [x] Exclude Playwright e2e from Vitest runs
+- [ ] Add minimal Playwright e2e coverage
+- [ ] Add typecheck pipeline (tsc)
 - [ ] Document remaining UI refactors

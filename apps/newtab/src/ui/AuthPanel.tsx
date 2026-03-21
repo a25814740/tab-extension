@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import { useState } from "react";
 import { Card, SectionTitle } from "@toby/shared-ui";
 import { useLocale } from "../i18n";
 import { useAuthLogic, useAuthUser } from "../auth/useAuth";
@@ -7,8 +6,7 @@ import { useAppStore } from "../store/appStore";
 
 export function AuthPanel() {
   const { t } = useLocale();
-  const { config, setConfig, status, redirectUrl, handleSave, handleGoogle, handleSignOut, handleClearConfig } =
-    useAuthLogic();
+  const { status, handleSave, handleGoogle, handleSignOut, handleClearConfig } = useAuthLogic();
 
   return (
     <Card className="p-4">

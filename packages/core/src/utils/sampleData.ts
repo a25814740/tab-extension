@@ -1,4 +1,3 @@
-import { nanoid } from "nanoid";
 import type { Collection, Folder, Space, TabItem, Workspace } from "../domain/models";
 
 export type SampleWorkspace = {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SectionTitle } from "@toby/shared-ui";
-import { getAllWindowsWithTabs, getCurrentWindowTabs, openTabs, focusTab, closeTabs, getLocal, setLocal } from "@toby/chrome-adapters";
+import { getAllWindowsWithTabs, openTabs, focusTab, closeTabs, getLocal, setLocal } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
 import { Tree } from "./Tree";
 import { CollectionCard } from "./CollectionCard";
@@ -176,8 +176,6 @@ export function App() {
     }
     return createSupabaseClient({ url: effectiveSupabaseUrl, anonKey: effectiveSupabaseAnonKey });
   }, [effectiveSupabaseAnonKey, effectiveSupabaseUrl]);
-  const supabaseConfigured = Boolean(effectiveSupabaseUrl && effectiveSupabaseAnonKey);
-
   useEffect(() => {
     if (authUser || !supabaseClient) {
       return;
@@ -222,7 +220,8 @@ export function App() {
     }
   }, [supabaseClient]);
 
-  const applyRemoteSnapshot = useCallback((snapshot: {
+  type RemoteEntity = { id: string } & Record<string, unknown>;
+  type RemoteSnapshot = {
     workspace: {
       id: string;
       ownerId: string;
@@ -233,11 +232,13 @@ export function App() {
       createdAt: string;
       updatedAt: string;
     } | null;
-    spaces: Array<any>;
-    folders: Array<any>;
-    collections: Array<any>;
-    tabs: Array<any>;
-  }) => {
+    spaces: Array<RemoteEntity>;
+    folders: Array<RemoteEntity>;
+    collections: Array<RemoteEntity>;
+    tabs: Array<RemoteEntity>;
+  };
+
+  const applyRemoteSnapshot = useCallback((snapshot: RemoteSnapshot) => {
     if (!snapshot.workspace) {
       return;
     }
@@ -276,7 +277,6 @@ export function App() {
     appStore.getState().hydrate(nextSnapshot);
   }, []);
   const SHARE_TOKEN_KEY = "toby_pending_share_token_v1";
-  const AUTH_TOKEN_KEY = "toby_auth_token_v1";
   const MEMBERSHIP_KEY = "toby_membership_v1";
   const scopedSpaces = useMemo(
     () => (activeWorkspaceId ? spaces.filter((space) => space.workspaceId === activeWorkspaceId) : []),
@@ -993,18 +993,6 @@ export function App() {
       return;
     }
     addSpace(name.trim());
-  };
-
-  const handleSaveCurrentWindow = async () => {
-    if (!guardWrite()) {
-      return;
-    }
-    const tabs = await getCurrentWindowTabs();
-    if (tabs.length === 0) {
-      return;
-    }
-
-    saveCollectionFromTabs(`${t("app.windowPrefix")} ${new Date().toLocaleTimeString()}`, tabs);
   };
 
   const handleCreateCollection = () => {
