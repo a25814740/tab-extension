@@ -8,10 +8,9 @@ import { TabRow } from "./TabRow";
 import { createRuleBasedProvider } from "@toby/ai";
 import { AuthMiniPanel } from "./AuthPanel";
 import { createSupabaseClient, updateMemberRole, removeMember, createShareLink, revokeShareLink, acceptShareLink, fetchWorkspaceSnapshot } from "@toby/api-client";
-import { getSync } from "@toby/chrome-adapters";
 import { appStore } from "../store/appStore";
 import { useLocale } from "../i18n";
-import { localSnapshotSchema, toSnapshot } from "@toby/core";
+import { localSnapshotSchema, toSnapshot, type MembershipStatus } from "@toby/core";
 import { DEFAULT_SUPABASE_ANON_KEY, DEFAULT_SUPABASE_URL, useAuthLogic, useAuthUser } from "../auth/useAuth";
 import { fetchOgMetadata } from "../utils/og";
 import { SelectMenu } from "./SelectMenu";
@@ -34,6 +33,8 @@ export function App() {
     void startupDriveSync();
   }, []);
   const { t, locale } = useLocale();
+  const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
+  const [upgradeNotice, setUpgradeNotice] = useState("");
   const authUser = useAuthUser();
   const { handleGoogle, status, config } = useAuthLogic();
   const workspaceState = useAppStore((state) => state.workspace);
@@ -276,6 +277,7 @@ export function App() {
   }, []);
   const SHARE_TOKEN_KEY = "toby_pending_share_token_v1";
   const AUTH_TOKEN_KEY = "toby_auth_token_v1";
+  const MEMBERSHIP_KEY = "toby_membership_v1";
   const scopedSpaces = useMemo(
     () => (activeWorkspaceId ? spaces.filter((space) => space.workspaceId === activeWorkspaceId) : []),
     [activeWorkspaceId, spaces]
@@ -299,6 +301,33 @@ export function App() {
         : [],
     [activeWorkspaceId, tabs, scopedCollections]
   );
+
+  useEffect(() => {
+    let isMounted = true;
+    const load = async () => {
+      const membership = await getLocal<{ status: MembershipStatus } | null>(MEMBERSHIP_KEY, null);
+      if (isMounted) {
+        setMembershipStatus(membership?.status ?? null);
+      }
+    };
+    void load();
+    const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area !== "local" || !changes[MEMBERSHIP_KEY]) {
+        return;
+      }
+      const next = changes[MEMBERSHIP_KEY].newValue as { status?: MembershipStatus } | null;
+      setMembershipStatus(next?.status ?? null);
+    };
+    if (chrome?.storage?.onChanged) {
+      chrome.storage.onChanged.addListener(onChanged);
+    }
+    return () => {
+      isMounted = false;
+      if (chrome?.storage?.onChanged) {
+        chrome.storage.onChanged.removeListener(onChanged);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!workspaces.length) {
@@ -935,7 +964,19 @@ export function App() {
     };
   }, [t]);
 
+  const canWrite = membershipStatus === "trial_active" || membershipStatus === "paid_active";
+  const guardWrite = () => {
+    if (canWrite) {
+      return true;
+    }
+    setUpgradeNotice(locale === "en" ? "Trial expired. Please upgrade." : "試用已到期，請升級方案。");
+    return false;
+  };
+
   const handleCreateWorkspace = () => {
+    if (!guardWrite()) {
+      return;
+    }
     const name = window.prompt("輸入新的組織名稱");
     if (!name) {
       return;
@@ -944,6 +985,9 @@ export function App() {
   };
 
   const handleCreateSpace = () => {
+    if (!guardWrite()) {
+      return;
+    }
     const name = window.prompt("輸入 Space 名稱");
     if (!name) {
       return;
@@ -952,6 +996,9 @@ export function App() {
   };
 
   const handleSaveCurrentWindow = async () => {
+    if (!guardWrite()) {
+      return;
+    }
     const tabs = await getCurrentWindowTabs();
     if (tabs.length === 0) {
       return;
@@ -961,6 +1008,9 @@ export function App() {
   };
 
   const handleCreateCollection = () => {
+    if (!guardWrite()) {
+      return;
+    }
     const name = window.prompt(locale === "en" ? "Collection name" : "請輸入集合名稱");
     if (!name || !name.trim()) {
       return;
@@ -969,6 +1019,9 @@ export function App() {
   };
 
   const handleSaveWindowGroup = (title: string, list: Array<{ id: number; title: string; url: string; favIconUrl?: string }>) => {
+    if (!guardWrite()) {
+      return;
+    }
     if (list.length === 0) {
       return;
     }
@@ -982,6 +1035,9 @@ export function App() {
   };
 
   const handleDropWindowTabToCollection = (tabId: number, targetCollectionId: string) => {
+    if (!guardWrite()) {
+      return;
+    }
     const tab = windowGroups.flatMap((window) => window.tabs).find((item) => item.id === tabId);
     if (!tab) {
       return;
@@ -1001,6 +1057,9 @@ export function App() {
   };
 
   const handleDropSavedTabToCollection = (tabId: string, targetCollectionId: string) => {
+    if (!guardWrite()) {
+      return;
+    }
     const tab = tabs.find((item) => item.id === tabId);
     if (!tab) {
       return;
@@ -1027,6 +1086,9 @@ export function App() {
   };
 
   const handleSaveSelectedWindowTabs = () => {
+    if (!guardWrite()) {
+      return;
+    }
     if (selectedWindowTabIds.size === 0) {
       return;
     }
@@ -1487,7 +1549,10 @@ export function App() {
   };
 
   const handleSync = async () => {
-    await manualDriveSync();
+    const result = await manualDriveSync();
+    if (!result.ok && result.error === "membership_inactive") {
+      setUpgradeNotice(locale === "en" ? "Trial expired. Please upgrade." : "試用已到期，請升級方案。");
+    }
   };
 
   const sensors = useSensors(
@@ -1582,6 +1647,11 @@ export function App() {
           {shareNotice ? (
             <div className="fixed left-1/2 top-4 z-[9999] -translate-x-1/2 rounded-full border border-slate-800 bg-slate-900/90 px-4 py-2 text-xs text-slate-200 shadow-lg backdrop-blur">
               {shareNotice}
+            </div>
+          ) : null}
+          {upgradeNotice ? (
+            <div className="fixed left-1/2 top-12 z-[9999] -translate-x-1/2 rounded-full border border-rose-700/60 bg-rose-900/60 px-4 py-2 text-xs text-rose-100 shadow-lg backdrop-blur">
+              {upgradeNotice}
             </div>
           ) : null}
           <aside className="flex h-full w-16 flex-col items-center justify-between border-r border-slate-800 py-4">

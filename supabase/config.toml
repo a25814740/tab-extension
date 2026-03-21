@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.workspace_snapshot]
 verify_jwt = false
+
+[functions.payuni_webhook]
+verify_jwt = false
+
+[functions.payuni_return]
+verify_jwt = false

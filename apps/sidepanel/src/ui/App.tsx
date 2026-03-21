@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, SectionTitle } from "@toby/shared-ui";
-import { getActiveTab, getCurrentWindowTabs, openTabs } from "@toby/chrome-adapters";
+import { getActiveTab, getCurrentWindowTabs, openTabs, getLocal } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
 import { AiPanel } from "./AiPanel";
 import { useLocale } from "../i18n";
+import type { MembershipStatus } from "@toby/core";
 
 export function App() {
   useLocalCacheSync();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
+  const [upgradeNotice, setUpgradeNotice] = useState("");
   const workspaces = useAppStore((state) => state.workspaces);
   const spaces = useAppStore((state) => state.spaces);
   const collections = useAppStore((state) => state.collections);
@@ -84,6 +87,42 @@ export function App() {
   const [targetSpaceId, setTargetSpaceId] = useState("");
   const [targetCollectionId, setTargetCollectionId] = useState("");
   const recentCollections = scopedCollections.slice(0, 3);
+
+  useEffect(() => {
+    let isMounted = true;
+    const load = async () => {
+      const membership = await getLocal<{ status: MembershipStatus } | null>("toby_membership_v1", null);
+      if (isMounted) {
+        setMembershipStatus(membership?.status ?? null);
+      }
+    };
+    void load();
+    const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area !== "local" || !changes.toby_membership_v1) {
+        return;
+      }
+      const next = changes.toby_membership_v1.newValue as { status?: MembershipStatus } | null;
+      setMembershipStatus(next?.status ?? null);
+    };
+    if (chrome?.storage?.onChanged) {
+      chrome.storage.onChanged.addListener(onChanged);
+    }
+    return () => {
+      isMounted = false;
+      if (chrome?.storage?.onChanged) {
+        chrome.storage.onChanged.removeListener(onChanged);
+      }
+    };
+  }, []);
+
+  const canWrite = membershipStatus === "trial_active" || membershipStatus === "paid_active";
+  const guardWrite = () => {
+    if (canWrite) {
+      return true;
+    }
+    setUpgradeNotice(locale === "en" ? "Trial expired. Please upgrade." : "試用已到期，請升級方案。");
+    return false;
+  };
 
   const tabCountByCollection = useMemo(() => {
     const map = new Map<string, number>();
@@ -162,6 +201,9 @@ export function App() {
   );
 
   const handleSaveActiveTab = async () => {
+    if (!guardWrite()) {
+      return;
+    }
     const tab = await getActiveTab();
     if (!tab) {
       return;
@@ -174,6 +216,9 @@ export function App() {
   };
 
   const handleSaveCurrentWindow = async () => {
+    if (!guardWrite()) {
+      return;
+    }
     const windowTabs = await getCurrentWindowTabs();
     if (windowTabs.length === 0) {
       return;
@@ -190,6 +235,11 @@ export function App() {
 
   return (
     <div className="min-h-screen min-w-[380px] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+      {upgradeNotice ? (
+        <div className="border-b border-rose-700/60 bg-rose-900/60 px-4 py-2 text-xs text-rose-100">
+          {upgradeNotice}
+        </div>
+      ) : null}
       <header className="border-b border-slate-800/80 px-4 py-3">
         <h1 className="text-base font-semibold tracking-wide">{t("side.title")}</h1>
         <p className="text-xs text-slate-400/90">

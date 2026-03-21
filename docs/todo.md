@@ -29,9 +29,9 @@ This file tracks incomplete work. Keep entries short and actionable.
 
 ## Phase 5
 
-- [ ] Add PAYUNi payment skeleton + webhook handler
-- [ ] Wire entitlement update after payment
-- [ ] Enforce expiry behavior in extension
+- [x] Add PAYUNi payment skeleton + webhook handler
+- [x] Wire entitlement update after payment
+- [x] Enforce expiry behavior in extension
 
 ## Phase 6
 
