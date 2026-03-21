@@ -4,7 +4,7 @@ import type { AppState } from "./appState";
 import { defaultAppState } from "./appState";
 import type { LocalStoreSnapshot } from "../schemas/appSchemas";
 import type { TabItem } from "../domain/models";
-import { sampleWorkspace } from "../utils/sampleData";
+import { sampleWorkspaces } from "../utils/sampleData";
 import { enqueueOp, markSynced } from "../sync/pendingOps";
 import { toSnapshot } from "./snapshot";
 import type { SyncClient } from "../sync/syncEngine";
@@ -66,26 +66,35 @@ export type AppActions = {
 export type AppStore = AppState & AppActions;
 
 function buildInitialState(): AppState {
-  const sample = sampleWorkspace();
-  const collections = sample.collections.map((collection) => ({
-    ...collection,
-  }));
-  const tabs = sample.collections.flatMap((collection) => collection.tabs);
+  const samples = sampleWorkspaces();
+  const workspaces = samples.map((sample) => sample.workspace);
+  const collections = samples.flatMap((sample) =>
+    sample.collections.map((collection) => ({
+      ...collection,
+    }))
+  );
+  const tabs = samples.flatMap((sample) => sample.collections.flatMap((collection) => collection.tabs));
+  const spaces = samples.flatMap((sample) =>
+    sample.spaces.map((space) => ({
+      ...space,
+    }))
+  );
+  const folders = samples.flatMap((sample) => sample.spaces.flatMap((space) => space.folders));
+  const primaryWorkspace = workspaces[0] ?? null;
+  const primarySpace = spaces.find((space) => space.workspaceId === primaryWorkspace?.id) ?? null;
 
   return {
     ...defaultAppState,
-    workspaces: [sample.workspace],
-    workspace: sample.workspace,
-    spaces: sample.spaces.map((space) => ({
-      ...space,
-    })),
-    folders: sample.spaces.flatMap((space) => space.folders),
+    workspaces,
+    workspace: primaryWorkspace,
+    spaces,
+    folders,
     collections,
     tabs,
     cache: {
       ...defaultAppState.cache,
-      selectedWorkspaceId: sample.workspace.id,
-      selectedSpaceId: sample.spaces[0]?.id ?? null,
+      selectedWorkspaceId: primaryWorkspace?.id ?? null,
+      selectedSpaceId: primarySpace?.id ?? null,
     },
   };
 }

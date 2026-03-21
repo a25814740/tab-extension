@@ -40,3 +40,6 @@ This file tracks incomplete work. Keep entries short and actionable.
 - [x] Add minimal Playwright e2e coverage
 - [x] Add typecheck pipeline (tsc)
 - [ ] Document remaining UI refactors
+
+## UI
+- [ ] Complete New Tab UI v0.3 stabilization (see `docs/ui-v0.3-todo.md`)

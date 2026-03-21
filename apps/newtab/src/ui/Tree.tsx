@@ -17,6 +17,10 @@ type Props = {
   spaces: Space[];
   folders: Folder[];
   onSelectSpace: (spaceId: string) => void;
+  onAddCollection: (spaceId: string) => void;
+  onEditSpace: (spaceId: string) => void;
+  onDeleteSpace: (spaceId: string) => void;
+  onInviteSpace: (spaceId: string) => void;
   expandedFolderIds: string[];
   onToggleFolder: (folderId: string) => void;
   onExpandFolder: (folderId: string) => void;
@@ -27,6 +31,10 @@ export function Tree({
   spaces,
   folders,
   onSelectSpace,
+  onAddCollection,
+  onEditSpace,
+  onDeleteSpace,
+  onInviteSpace,
   expandedFolderIds,
   onToggleFolder,
   onExpandFolder,
@@ -57,6 +65,10 @@ export function Tree({
           key={item.id}
           item={item}
           onSelectSpace={onSelectSpace}
+          onAddCollection={onAddCollection}
+          onEditSpace={onEditSpace}
+          onDeleteSpace={onDeleteSpace}
+          onInviteSpace={onInviteSpace}
           onToggleFolder={onToggleFolder}
           isExpanded={expandedFolderIds.includes(item.id)}
           overId={overId}
@@ -69,18 +81,36 @@ export function Tree({
 function TreeRow({
   item,
   onSelectSpace,
+  onAddCollection,
+  onEditSpace,
+  onDeleteSpace,
+  onInviteSpace,
   onToggleFolder,
   isExpanded,
   overId,
 }: {
   item: TreeItem;
   onSelectSpace: (spaceId: string) => void;
+  onAddCollection: (spaceId: string) => void;
+  onEditSpace: (spaceId: string) => void;
+  onDeleteSpace: (spaceId: string) => void;
+  onInviteSpace: (spaceId: string) => void;
   onToggleFolder: (folderId: string) => void;
   isExpanded: boolean;
   overId: string | null;
 }) {
   if (item.type === "space") {
-    return <SortableSpaceRow item={item} onSelectSpace={onSelectSpace} overId={overId} />;
+    return (
+      <SortableSpaceRow
+        item={item}
+        onSelectSpace={onSelectSpace}
+        onAddCollection={onAddCollection}
+        onEditSpace={onEditSpace}
+        onDeleteSpace={onDeleteSpace}
+        onInviteSpace={onInviteSpace}
+        overId={overId}
+      />
+    );
   }
 
   return (
@@ -96,13 +126,21 @@ function TreeRow({
 function SortableSpaceRow({
   item,
   onSelectSpace,
+  onAddCollection,
+  onEditSpace,
+  onDeleteSpace,
+  onInviteSpace,
   overId,
 }: {
   item: TreeItem;
   onSelectSpace: (spaceId: string) => void;
+  onAddCollection: (spaceId: string) => void;
+  onEditSpace: (spaceId: string) => void;
+  onDeleteSpace: (spaceId: string) => void;
+  onInviteSpace: (spaceId: string) => void;
   overId: string | null;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
     id: item.id,
   });
@@ -135,6 +173,52 @@ function SortableSpaceRow({
             {item.name}
           </span>
         </button>
+        <div className="flex items-center gap-1 text-[10px] text-slate-400">
+          <button
+            className="rounded border border-slate-700 px-1 py-0.5 hover:text-white"
+            title={t("toolbar.addCollection")}
+            aria-label={t("toolbar.addCollection")}
+            onClick={(event) => {
+              event.stopPropagation();
+              onAddCollection(item.id);
+            }}
+          >
+            +
+          </button>
+          <button
+            className="rounded border border-slate-700 px-1 py-0.5 hover:text-white"
+            title={locale === "en" ? "Edit space" : "編輯空間"}
+            aria-label={locale === "en" ? "Edit space" : "編輯空間"}
+            onClick={(event) => {
+              event.stopPropagation();
+              onEditSpace(item.id);
+            }}
+          >
+            ✎
+          </button>
+          <button
+            className="rounded border border-slate-700 px-1 py-0.5 hover:text-white"
+            title={locale === "en" ? "Invite" : "邀請好友"}
+            aria-label={locale === "en" ? "Invite" : "邀請好友"}
+            onClick={(event) => {
+              event.stopPropagation();
+              onInviteSpace(item.id);
+            }}
+          >
+            👥
+          </button>
+          <button
+            className="rounded border border-slate-700 px-1 py-0.5 text-rose-300 hover:text-rose-200"
+            title={locale === "en" ? "Delete space" : "刪除空間"}
+            aria-label={locale === "en" ? "Delete space" : "刪除空間"}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDeleteSpace(item.id);
+            }}
+          >
+            🗑
+          </button>
+        </div>
         <button
           className="rounded border border-slate-700 px-2 py-1 text-xs"
           aria-label={t("drag.space")}
