@@ -15,6 +15,7 @@
     "@toby/api-client": "workspace:*",
     "@toby/shared-ui": "workspace:*",
     "@toby/ai": "workspace:*",
+    "@toby/google-drive-sync": "workspace:*",
     "@toby/chrome-adapters": "workspace:*",
     "@headlessui/react": "^2.1.8",
     "react": "^18.3.1",

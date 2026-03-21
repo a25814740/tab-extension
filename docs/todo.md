@@ -23,9 +23,9 @@ This file tracks incomplete work. Keep entries short and actionable.
 
 ## Phase 4
 
-- [ ] Implement Google OAuth flow for Drive sync
-- [ ] Implement appDataFolder sync (save/restore/manual sync/startup check)
-- [ ] Add conflict handling (latest-write-wins)
+- [x] Implement Google OAuth flow for Drive sync
+- [x] Implement appDataFolder sync (save/restore/manual sync/startup check)
+- [x] Add conflict handling (latest-write-wins)
 
 ## Phase 5
 

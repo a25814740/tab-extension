@@ -32,6 +32,7 @@ Create env values from `docs/env.md` and wire them into your local setup.
 - Add Google OAuth credentials for a Chrome extension.
 - Request scope: `https://www.googleapis.com/auth/drive.appdata`.
 - Use `chrome.identity` to request tokens only when the user enables sync.
+- Update `extension/manifest.json` `oauth2.client_id` with your Google OAuth client id.
 
 ## Supabase (Business Metadata)
 

@@ -7,7 +7,7 @@ import { CollectionCard } from "./CollectionCard";
 import { TabRow } from "./TabRow";
 import { createRuleBasedProvider } from "@toby/ai";
 import { AuthMiniPanel } from "./AuthPanel";
-import { createHttpSyncClient, createMockSyncClient, createSupabaseClient, updateMemberRole, removeMember, createShareLink, revokeShareLink, acceptShareLink, fetchWorkspaceSnapshot } from "@toby/api-client";
+import { createSupabaseClient, updateMemberRole, removeMember, createShareLink, revokeShareLink, acceptShareLink, fetchWorkspaceSnapshot } from "@toby/api-client";
 import { getSync } from "@toby/chrome-adapters";
 import { appStore } from "../store/appStore";
 import { useLocale } from "../i18n";
@@ -15,6 +15,7 @@ import { localSnapshotSchema, toSnapshot } from "@toby/core";
 import { DEFAULT_SUPABASE_ANON_KEY, DEFAULT_SUPABASE_URL, useAuthLogic, useAuthUser } from "../auth/useAuth";
 import { fetchOgMetadata } from "../utils/og";
 import { SelectMenu } from "./SelectMenu";
+import { manualDriveSync, startupDriveSync } from "../sync/driveSync";
 import {
   DndContext,
   PointerSensor,
@@ -29,6 +30,9 @@ import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinat
 
 export function App() {
   useLocalCacheSync();
+  useEffect(() => {
+    void startupDriveSync();
+  }, []);
   const { t, locale } = useLocale();
   const authUser = useAuthUser();
   const { handleGoogle, status, config } = useAuthLogic();
@@ -1483,19 +1487,7 @@ export function App() {
   };
 
   const handleSync = async () => {
-    // Force a flush; the store already chooses the correct client.
-    const config = await getSync<{ supabaseUrl?: string } | null>("toby_auth_config_v1", null);
-      if (config?.supabaseUrl) {
-        const endpoint = `${config.supabaseUrl}/functions/v1/sync_ops`;
-        const token = await getLocal<string | null>(AUTH_TOKEN_KEY, null);
-        if (token) {
-          await appStore
-            .getState()
-            .flushPendingOps(createHttpSyncClient(endpoint, { accessToken: token, anonKey: config.supabaseAnonKey ?? null }));
-          return;
-        }
-      }
-    await appStore.getState().flushPendingOps(createMockSyncClient());
+    await manualDriveSync();
   };
 
   const sensors = useSensors(

@@ -30,18 +30,27 @@ export type DriveSyncResult = {
 };
 
 export type DriveSyncProvider<T> = {
-  ensureFile: (token: DriveAuthToken, name: string) => Promise<DriveFilePointer>;
+  ensureFile: (
+    token: DriveAuthToken,
+    name: string,
+    options?: { createIfMissing?: boolean }
+  ) => Promise<DriveFilePointer | null>;
   loadSnapshot: (token: DriveAuthToken, file: DriveFilePointer) => Promise<DriveSnapshot<T> | null>;
   saveSnapshot: (token: DriveAuthToken, file: DriveFilePointer, snapshot: DriveSnapshot<T>) => Promise<DriveSyncResult>;
 };
+
+export { createGoogleDriveProvider } from "./googleDriveProvider";
 
 export function createMockDriveSyncProvider<T>(): DriveSyncProvider<T> {
   let stored: DriveSnapshot<T> | null = null;
   let file: DriveFilePointer | null = null;
   return {
-    async ensureFile(_token, name) {
+    async ensureFile(_token, name, options) {
       if (file) {
         return file;
+      }
+      if (options?.createIfMissing === false) {
+        return null;
       }
       file = {
         fileId: `mock_${Math.random().toString(36).slice(2)}`,

@@ -2,12 +2,7 @@ import { useEffect } from "react";
 import { useStore } from "zustand";
 import { createAppStore, localSnapshotSchema, migrateLocalSnapshot, toSnapshot } from "@toby/core";
 import { getLocal, setLocal } from "@toby/chrome-adapters";
-import { createHttpSyncClient, createMockSyncClient } from "@toby/api-client";
-import { getSync } from "@toby/chrome-adapters";
-
 const LOCAL_SNAPSHOT_KEY = "toby_snapshot_v1";
-const CONFIG_KEY = "toby_auth_config_v1";
-const TOKEN_KEY = "toby_auth_token_v1";
 
 export const appStore = createAppStore();
 
@@ -58,32 +53,12 @@ export function useLocalCacheSync() {
       chrome.storage.onChanged.addListener(handleStorageChange);
     }
 
-    const syncClient = createMockSyncClient();
-    void (async () => {
-      const config = await getSync<{ supabaseUrl?: string; supabaseAnonKey?: string } | null>(CONFIG_KEY, null);
-      const token = await getLocal<string | null>(TOKEN_KEY, null);
-      if (config?.supabaseUrl && token) {
-        const endpoint = `${config.supabaseUrl}/functions/v1/sync_ops`;
-        appStore.getState().flushPendingOps(
-          createHttpSyncClient(endpoint, { accessToken: token, anonKey: config.supabaseAnonKey ?? null })
-        );
-      }
-    })();
-    const syncInterval = window.setInterval(() => {
-      const nextRetry = appStore.getState().cache.nextSyncRetryAt;
-      if (nextRetry && new Date(nextRetry).getTime() > Date.now()) {
-        return;
-      }
-      void appStore.getState().flushPendingOps(syncClient);
-    }, 10000);
-
     return () => {
       isMounted = false;
       unsubscribe();
       if (timeout) {
         window.clearTimeout(timeout);
       }
-      window.clearInterval(syncInterval);
       if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
         chrome.storage.onChanged.removeListener(handleStorageChange);
       }
