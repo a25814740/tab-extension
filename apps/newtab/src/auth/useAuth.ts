@@ -111,7 +111,7 @@ export function useAuthLogic() {
 
     let responseUrl: string | null = null;
     try {
-      responseUrl = await launchWebAuthFlow(authUrl, true);
+      responseUrl = (await launchWebAuthFlow(authUrl, true)) ?? null;
     } catch (error) {
       setStatus(`${t("auth.status.authFailed")}: ${String(error)}`);
       return;

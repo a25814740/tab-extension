@@ -8,6 +8,8 @@ test("extension loads", async ({ context }) => {
 
 test("new tab loads dashboard", async ({ context }) => {
   const page = await context.newPage();
-  await page.goto("chrome://newtab");
+  const background = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
+  const extensionId = new URL(background.url()).host;
+  await page.goto(`chrome-extension://${extensionId}/newtab/index.html`);
   await expect(page.getByText("Toby-like Dashboard")).toBeVisible();
 });

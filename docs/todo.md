@@ -37,6 +37,6 @@ This file tracks incomplete work. Keep entries short and actionable.
 
 - [x] Stabilize lint/test/build pipelines
 - [x] Exclude Playwright e2e from Vitest runs
-- [ ] Add minimal Playwright e2e coverage
-- [ ] Add typecheck pipeline (tsc)
+- [x] Add minimal Playwright e2e coverage
+- [x] Add typecheck pipeline (tsc)
 - [ ] Document remaining UI refactors

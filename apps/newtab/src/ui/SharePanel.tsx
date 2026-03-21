@@ -11,6 +11,7 @@ type ShareConfig = {
 };
 
 type ShareState = {
+  workspaceId: string;
   resourceType: "collection" | "folder" | "space";
   resourceId: string;
   permission: "view" | "comment" | "edit";
@@ -21,9 +22,11 @@ const CONFIG_KEY = "toby_auth_config_v1";
 
 export function SharePanel({
   defaultResourceId,
+  defaultWorkspaceId,
   collections,
 }: {
   defaultResourceId?: string | null;
+  defaultWorkspaceId?: string | null;
   collections?: Array<{ id: string; name: string }>;
 }) {
   const { t } = useLocale();
@@ -31,6 +34,7 @@ export function SharePanel({
     "h-4 w-4 rounded border-slate-600 bg-slate-900 text-rose-400 focus:ring-rose-500/40";
   const [config, setConfig] = useState<ShareConfig | null>(null);
   const [state, setState] = useState<ShareState>({
+    workspaceId: defaultWorkspaceId ?? "",
     resourceType: "collection",
     resourceId: "",
     permission: "view",
@@ -55,6 +59,12 @@ export function SharePanel({
     }
   }, [defaultResourceId, state.resourceId]);
 
+  useEffect(() => {
+    if (defaultWorkspaceId && !state.workspaceId) {
+      setState((prev) => ({ ...prev, workspaceId: defaultWorkspaceId }));
+    }
+  }, [defaultWorkspaceId, state.workspaceId]);
+
   const client = useMemo(() => {
     if (!config) {
       return null;
@@ -65,6 +75,10 @@ export function SharePanel({
   const handleCreate = async () => {
     if (!client) {
       setStatus(t("share.status.missingSupabase"));
+      return;
+    }
+    if (!state.workspaceId) {
+      setStatus(t("share.status.resourceRequired"));
       return;
     }
     if (!state.resourceId) {

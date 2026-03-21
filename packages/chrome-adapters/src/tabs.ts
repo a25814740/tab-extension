@@ -13,6 +13,22 @@ export type WindowSnapshot = {
   tabs: TabSnapshot[];
 };
 
+function toTabSnapshot(tab: chrome.tabs.Tab): TabSnapshot | null {
+  if (tab.id === undefined || !tab.url) {
+    return null;
+  }
+  const snapshot: TabSnapshot = {
+    id: tab.id,
+    title: tab.title ?? "Untitled",
+    url: tab.url,
+    pinned: tab.pinned ?? false,
+  };
+  if (typeof tab.favIconUrl === "string") {
+    snapshot.favIconUrl = tab.favIconUrl;
+  }
+  return snapshot;
+}
+
 export async function getActiveTab(): Promise<TabSnapshot | null> {
   if (!chrome?.tabs) {
     return null;
@@ -20,17 +36,7 @@ export async function getActiveTab(): Promise<TabSnapshot | null> {
 
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
-  if (!tab || tab.id === undefined || !tab.url) {
-    return null;
-  }
-
-  return {
-    id: tab.id,
-    title: tab.title ?? "Untitled",
-    url: tab.url,
-    favIconUrl: tab.favIconUrl,
-    pinned: tab.pinned ?? false,
-  };
+  return tab ? toTabSnapshot(tab) : null;
 }
 
 export async function getCurrentWindowTabs(): Promise<TabSnapshot[]> {
@@ -39,15 +45,7 @@ export async function getCurrentWindowTabs(): Promise<TabSnapshot[]> {
   }
 
   const tabs = await chrome.tabs.query({ currentWindow: true });
-  return tabs
-    .filter((tab) => tab.id !== undefined && tab.url)
-    .map((tab) => ({
-      id: tab.id as number,
-      title: tab.title ?? "Untitled",
-      url: tab.url as string,
-      favIconUrl: tab.favIconUrl,
-      pinned: tab.pinned ?? false,
-    }));
+  return tabs.map((tab) => toTabSnapshot(tab)).filter((tab): tab is TabSnapshot => tab !== null);
 }
 
 export async function getAllWindowsWithTabs(): Promise<WindowSnapshot[]> {
@@ -60,14 +58,8 @@ export async function getAllWindowsWithTabs(): Promise<WindowSnapshot[]> {
     .filter((window) => window.id !== undefined)
     .map((window, index) => {
       const tabs = (window.tabs ?? [])
-        .filter((tab) => tab.id !== undefined && tab.url)
-        .map((tab) => ({
-          id: tab.id as number,
-          title: tab.title ?? "Untitled",
-          url: tab.url as string,
-          favIconUrl: tab.favIconUrl,
-          pinned: tab.pinned ?? false,
-        }));
+        .map((tab) => toTabSnapshot(tab))
+        .filter((tab): tab is TabSnapshot => tab !== null);
       return {
         id: window.id as number,
         title: `Window ${index + 1}`,
@@ -113,14 +105,11 @@ export async function getCurrentWindowTabsWithScreenshots(): Promise<TabSnapshot
       }
     }
 
-    results.push({
-      id: tabId,
-      title: tab.title ?? "Untitled",
-      url: tab.url as string,
-      favIconUrl: tab.favIconUrl,
-      pinned: tab.pinned ?? false,
-      screenshotUrl,
-    });
+    const snapshot = toTabSnapshot(tab);
+    if (snapshot) {
+      snapshot.screenshotUrl = screenshotUrl;
+      results.push(snapshot);
+    }
   }
 
   if (activeTabId) {

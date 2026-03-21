@@ -30,7 +30,10 @@ export type AppActions = {
   setSortMode: (mode: AppState["cache"]["ui"]["sortMode"]) => void;
   addWorkspace: (name: string) => void;
   upsertWorkspace: (payload: { id: string; name: string; ownerId?: string | null }) => void;
-  updateWorkspace: (workspaceId: string, payload: { name?: string; logoUrl?: string | null }) => void;
+  updateWorkspace: (
+    workspaceId: string,
+    payload: { name?: string; logoUrl?: string | null; inviteCount?: number | null; points?: number | null }
+  ) => void;
   deleteWorkspace: (workspaceId: string) => void;
   addSpace: (name: string) => void;
   addCollection: (name: string) => void;
@@ -215,7 +218,7 @@ export function createAppStore() {
           snapshot.collections.some((collection) => collection.workspaceId === workspaceId)
         );
       };
-      const isPlaceholderWorkspace = (workspace: { name: string; logoUrl?: string | null }) =>
+      const isPlaceholderWorkspace = (workspace: { name: string; logoUrl?: string | null | undefined }) =>
         workspace.name.startsWith("Workspace ") && !workspace.logoUrl;
       const workspaceSortKey = (workspaceId: string) => {
         const spaceDates = snapshot.spaces

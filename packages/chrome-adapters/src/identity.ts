@@ -8,7 +8,8 @@ export async function getAuthToken(interactive: boolean): Promise<AuthTokenResul
     return null;
   }
 
-  const token = await chrome.identity.getAuthToken({ interactive });
+  const tokenResult = await chrome.identity.getAuthToken({ interactive });
+  const token = typeof tokenResult === "string" ? tokenResult : tokenResult?.token;
   if (!token) {
     return null;
   }

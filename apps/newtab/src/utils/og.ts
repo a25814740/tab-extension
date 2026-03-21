@@ -44,18 +44,27 @@ export async function fetchOgMetadata(url: string, timeoutMs = 6000): Promise<Og
     const ogTitle =
       doc.querySelector(META_SELECTORS.ogTitle)?.getAttribute("content") ??
       doc.querySelector(META_SELECTORS.title)?.textContent ??
-      undefined;
+      null;
     const ogDescription =
       doc.querySelector(META_SELECTORS.ogDescription)?.getAttribute("content") ??
       doc.querySelector(META_SELECTORS.description)?.getAttribute("content") ??
-      undefined;
-    const ogImageRaw = doc.querySelector(META_SELECTORS.ogImage)?.getAttribute("content") ?? undefined;
-    const ogImage = normalizeUrl(url, ogImageRaw) ?? undefined;
-    return {
-      title: ogTitle?.trim() || undefined,
-      description: ogDescription?.trim() || undefined,
-      image: ogImage?.trim() || undefined,
-    };
+      null;
+    const ogImageRaw = doc.querySelector(META_SELECTORS.ogImage)?.getAttribute("content") ?? null;
+    const ogImage = normalizeUrl(url, ogImageRaw);
+    const metadata: OgMetadata = {};
+    const trimmedTitle = ogTitle?.trim() || "";
+    const trimmedDescription = ogDescription?.trim() || "";
+    const trimmedImage = ogImage?.trim() || "";
+    if (trimmedTitle) {
+      metadata.title = trimmedTitle;
+    }
+    if (trimmedDescription) {
+      metadata.description = trimmedDescription;
+    }
+    if (trimmedImage) {
+      metadata.image = trimmedImage;
+    }
+    return metadata;
   } catch {
     return null;
   } finally {

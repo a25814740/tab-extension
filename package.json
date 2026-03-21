@@ -7,10 +7,12 @@
     "test": "pnpm -r test",
     "build": "pnpm -r build",
     "dev:newtab": "pnpm --filter @toby/newtab dev",
-    "dev:sidepanel": "pnpm --filter @toby/sidepanel dev"
+    "dev:sidepanel": "pnpm --filter @toby/sidepanel dev",
+    "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
+    "@types/chrome": "^0.0.270",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
     "eslint": "^9.9.0",

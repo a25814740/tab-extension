@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type SupabaseConfig = {
   url: string;
@@ -7,7 +8,7 @@ export type SupabaseConfig = {
 
 type SupabaseClientCache = {
   key: string;
-  client: ReturnType<typeof createClient>;
+  client: SupabaseClient<unknown>;
 };
 
 declare global {
@@ -24,7 +25,7 @@ export function createSupabaseClient(config: SupabaseConfig) {
       persistSession: true,
       autoRefreshToken: true,
     },
-  });
+  }) as SupabaseClient<unknown>;
   globalThis.__tobySupabaseClientCache = { key: cacheKey, client };
   return client;
 }

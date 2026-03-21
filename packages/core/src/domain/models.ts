@@ -13,9 +13,9 @@ export type Workspace = {
   id: string;
   ownerId: string;
   name: string;
-  logoUrl?: string | null;
-  inviteCount?: number | null;
-  points?: number | null;
+  logoUrl?: string | null | undefined;
+  inviteCount?: number | null | undefined;
+  points?: number | null | undefined;
   createdAt: string;
   updatedAt: string;
 };
@@ -56,7 +56,7 @@ export type Collection = {
   name: string;
   note: string | null;
   color: string | null;
-  starred?: boolean | null;
+  starred?: boolean | null | undefined;
   position: number;
   createdBy: string;
   createdAt: string;
@@ -70,10 +70,10 @@ export type TabItem = {
   title: string;
   url: string;
   faviconUrl: string | null;
-  ogTitle?: string | null;
-  ogDescription?: string | null;
-  ogImage?: string | null;
-  screenshotUrl?: string | null;
+  ogTitle?: string | null | undefined;
+  ogDescription?: string | null | undefined;
+  ogImage?: string | null | undefined;
+  screenshotUrl?: string | null | undefined;
   note: string | null;
   position: number;
   createdAt: string;
@@ -140,7 +140,7 @@ export type LocalAppCache = {
   currentUserId: string | null;
   selectedWorkspaceId: string | null;
   selectedSpaceId: string | null;
-  selectedCollectionId?: string | null;
+  selectedCollectionId?: string | null | undefined;
   expandedFolderIds: string[];
   ui: {
     theme: "light" | "dark" | "system";
@@ -150,6 +150,6 @@ export type LocalAppCache = {
   };
   pendingOps: PendingOp[];
   lastSyncAt: string | null;
-  lastSyncError?: string | null;
-  nextSyncRetryAt?: string | null;
+  lastSyncError?: string | null | undefined;
+  nextSyncRetryAt?: string | null | undefined;
 };

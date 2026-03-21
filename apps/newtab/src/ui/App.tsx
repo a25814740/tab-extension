@@ -7,10 +7,19 @@ import { CollectionCard } from "./CollectionCard";
 import { TabRow } from "./TabRow";
 import { createRuleBasedProvider } from "@toby/ai";
 import { AuthMiniPanel } from "./AuthPanel";
-import { createSupabaseClient, updateMemberRole, removeMember, createShareLink, revokeShareLink, acceptShareLink, fetchWorkspaceSnapshot } from "@toby/api-client";
+import {
+  createSupabaseClient,
+  updateMemberRole,
+  removeMember,
+  createShareLink,
+  revokeShareLink,
+  acceptShareLink,
+  fetchWorkspaceSnapshot,
+  type WorkspaceSnapshotResult,
+} from "@toby/api-client";
 import { appStore } from "../store/appStore";
 import { useLocale } from "../i18n";
-import { localSnapshotSchema, toSnapshot, type MembershipStatus } from "@toby/core";
+import { localSnapshotSchema, toSnapshot, type LocalStoreSnapshot, type MembershipStatus } from "@toby/core";
 import { DEFAULT_SUPABASE_ANON_KEY, DEFAULT_SUPABASE_URL, useAuthLogic, useAuthUser } from "../auth/useAuth";
 import { fetchOgMetadata } from "../utils/og";
 import { SelectMenu } from "./SelectMenu";
@@ -27,8 +36,22 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
+type MemberRole = "owner" | "admin" | "editor" | "commenter" | "viewer";
+
 export function App() {
   useLocalCacheSync();
+  const toWindowTab = (tab: { id: number; title: string; url: string; favIconUrl?: string }) => {
+    const item: { id: number; title: string; url: string; favIconUrl?: string } = {
+      id: tab.id,
+      title: tab.title,
+      url: tab.url,
+    };
+    if (typeof tab.favIconUrl === "string") {
+      item.favIconUrl = tab.favIconUrl;
+    }
+    return item;
+  };
+
   useEffect(() => {
     void startupDriveSync();
   }, []);
@@ -117,14 +140,14 @@ export function App() {
   const [memberSearch, setMemberSearch] = useState("");
   const [memberName, setMemberName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
-  const [memberRole, setMemberRole] = useState<"owner" | "admin" | "editor" | "commenter" | "viewer">("viewer");
+  const [memberRole, setMemberRole] = useState<MemberRole>("viewer");
   const [members, setMembers] = useState<
     Array<{
       id: string;
       userId: string;
       name: string;
       email: string;
-      role: "owner" | "admin" | "editor" | "commenter" | "viewer";
+      role: MemberRole;
     }>
   >([]);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -220,23 +243,7 @@ export function App() {
     }
   }, [supabaseClient]);
 
-  type RemoteEntity = { id: string } & Record<string, unknown>;
-  type RemoteSnapshot = {
-    workspace: {
-      id: string;
-      ownerId: string;
-      name: string;
-      logoUrl?: string | null;
-      inviteCount?: number | null;
-      points?: number | null;
-      createdAt: string;
-      updatedAt: string;
-    } | null;
-    spaces: Array<RemoteEntity>;
-    folders: Array<RemoteEntity>;
-    collections: Array<RemoteEntity>;
-    tabs: Array<RemoteEntity>;
-  };
+  type RemoteSnapshot = WorkspaceSnapshotResult;
 
   const applyRemoteSnapshot = useCallback((snapshot: RemoteSnapshot) => {
     if (!snapshot.workspace) {
@@ -244,15 +251,16 @@ export function App() {
     }
     const workspaceId = snapshot.workspace.id;
     const current = toSnapshot(appStore.getState());
+    const currentWorkspaces = current.workspaces ?? [];
     const remoteSpaces = snapshot.spaces ?? [];
     const remoteFolders = snapshot.folders ?? [];
     const remoteCollections = snapshot.collections ?? [];
     const remoteTabs = snapshot.tabs ?? [];
     const remoteCollectionIds = new Set(remoteCollections.map((item: { id: string }) => item.id));
 
-    const nextWorkspaces = current.workspaces.some((item) => item.id === workspaceId)
-      ? current.workspaces.map((item) => (item.id === workspaceId ? { ...item, ...snapshot.workspace } : item))
-      : [...current.workspaces, snapshot.workspace];
+    const nextWorkspaces = currentWorkspaces.some((item) => item.id === workspaceId)
+      ? currentWorkspaces.map((item) => (item.id === workspaceId ? { ...item, ...snapshot.workspace } : item))
+      : [...currentWorkspaces, snapshot.workspace];
 
     const nextWorkspace =
       current.workspace?.id === workspaceId
@@ -261,7 +269,7 @@ export function App() {
           ? snapshot.workspace
           : current.workspace;
 
-    const nextSnapshot = {
+    const nextSnapshot: LocalStoreSnapshot = {
       ...current,
       workspaces: nextWorkspaces,
       workspace: nextWorkspace ?? current.workspace ?? snapshot.workspace,
@@ -947,12 +955,7 @@ export function App() {
         windows.map((win, index) => ({
           id: win.id,
           title: `${t("right.window")} ${index + 1}`,
-          tabs: win.tabs.map((tab) => ({
-            id: tab.id,
-            title: tab.title,
-            url: tab.url,
-            favIconUrl: tab.favIconUrl,
-          })),
+          tabs: win.tabs.map(toWindowTab),
         }))
       );
     };
@@ -1006,20 +1009,29 @@ export function App() {
     addCollection(name.trim());
   };
 
-  const handleSaveWindowGroup = (title: string, list: Array<{ id: number; title: string; url: string; favIconUrl?: string }>) => {
+  const toTabInput = (tab: { title: string; url: string; favIconUrl?: string }) => {
+    const input: { title: string; url: string; pinned: boolean; favIconUrl?: string } = {
+      title: tab.title,
+      url: tab.url,
+      pinned: false,
+    };
+    if (typeof tab.favIconUrl === "string") {
+      input.favIconUrl = tab.favIconUrl;
+    }
+    return input;
+  };
+
+  const handleSaveWindowGroup = (
+    title: string,
+    list: Array<{ id: number; title: string; url: string; favIconUrl?: string }>
+  ) => {
     if (!guardWrite()) {
       return;
     }
     if (list.length === 0) {
       return;
     }
-    saveCollectionFromTabs(title, list.map((tab) => ({
-      id: tab.id,
-      title: tab.title,
-      url: tab.url,
-      favIconUrl: tab.favIconUrl ?? undefined,
-      pinned: false,
-    })));
+    saveCollectionFromTabs(title, list.map((tab) => toTabInput(tab)));
   };
 
   const handleDropWindowTabToCollection = (tabId: number, targetCollectionId: string) => {
@@ -1034,12 +1046,7 @@ export function App() {
     if (!targetCollection) {
       return;
     }
-    addTabToCollection(targetCollectionId, {
-      title: tab.title,
-      url: tab.url,
-      favIconUrl: tab.favIconUrl,
-      pinned: false,
-    });
+    addTabToCollection(targetCollectionId, toTabInput(tab));
     void closeTabs([tabId]);
     setDragOverCollectionId(null);
   };
@@ -1091,13 +1098,7 @@ export function App() {
     if (selectedTabs.length === 0) {
       return;
     }
-    saveCollectionFromTabs(t("right.selectedTabs"), selectedTabs.map((tab) => ({
-      id: tab.id,
-      title: tab.title,
-      url: tab.url,
-      favIconUrl: tab.favIconUrl ?? undefined,
-      pinned: false,
-    })));
+    saveCollectionFromTabs(t("right.selectedTabs"), selectedTabs.map((tab) => toTabInput(tab)));
     setSelectedWindowTabIds(new Set());
   };
 
@@ -1215,13 +1216,14 @@ export function App() {
         .select("id, email, full_name, name")
         .eq("email", memberEmail.trim())
         .maybeSingle();
-      if (lookup.error || !lookup.data?.id) {
+      const profile = lookup.data;
+      if (lookup.error || !profile?.id) {
         setMemberStatus(t("org.members.notFound"));
         return;
       }
       const insert = await supabaseClient.from("workspace_members").insert({
         workspace_id: workspace.id,
-        user_id: lookup.data.id,
+        user_id: profile.id,
         role: memberRole,
       });
       if (insert.error) {
@@ -1232,9 +1234,9 @@ export function App() {
           ...prev,
           {
             id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            userId: lookup.data.id,
-            name: memberName.trim() || lookup.data.full_name || lookup.data.name || lookup.data.email || memberEmail.trim(),
-            email: lookup.data.email ?? memberEmail.trim(),
+            userId: profile.id,
+            name: memberName.trim() || profile.full_name || profile.name || profile.email || memberEmail.trim(),
+            email: profile.email ?? memberEmail.trim(),
             role: memberRole,
           },
         ]);
@@ -1951,11 +1953,11 @@ export function App() {
                                 id={tab.id}
                                 title={tab.title}
                                 url={tab.url}
-                                faviconUrl={tab.faviconUrl ?? undefined}
-                                ogTitle={tab.ogTitle ?? undefined}
-                                ogDescription={tab.ogDescription ?? undefined}
-                                note={tab.note ?? undefined}
-                                ogImage={tab.ogImage ?? undefined}
+                                {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
+                                ogTitle={tab.ogTitle ?? null}
+                                ogDescription={tab.ogDescription ?? null}
+                                note={tab.note ?? null}
+                                ogImage={tab.ogImage ?? null}
                                 viewMode={viewMode}
                                 onDelete={deleteTab}
                                 onUpdate={updateTab}
@@ -2630,7 +2632,7 @@ export function App() {
                       />
                       <SelectMenu
                         value={memberRole}
-                        onChange={(value) => setMemberRole(value)}
+                        onChange={(value) => setMemberRole(value as MemberRole)}
                         options={memberRoleOptions}
                       />
                       <button
