@@ -42,4 +42,4 @@ This file tracks incomplete work. Keep entries short and actionable.
 - [ ] Document remaining UI refactors
 
 ## UI
-- [ ] Complete New Tab UI v0.3 stabilization (see `docs/ui-v0.3-todo.md`)
+- [x] Complete New Tab UI v0.3 stabilization (see `docs/ui-v0.3-todo.md`)
