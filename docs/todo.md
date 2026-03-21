@@ -39,7 +39,7 @@ This file tracks incomplete work. Keep entries short and actionable.
 - [x] Exclude Playwright e2e from Vitest runs
 - [x] Add minimal Playwright e2e coverage
 - [x] Add typecheck pipeline (tsc)
-- [ ] Document remaining UI refactors
+- [x] Document remaining UI refactors (`docs/ui-refactors.md`)
 
 ## UI
 - [x] Complete New Tab UI v0.3 stabilization (see `docs/ui-v0.3-todo.md`)
