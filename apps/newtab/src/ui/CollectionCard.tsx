@@ -17,6 +17,7 @@ type Props = {
   onSortAZ: () => void;
   onMove: (workspaceId: string, spaceId: string) => void;
   onExport: () => void;
+  onInvite?: () => void;
   onDelete: () => void;
   onDropWindowTab?: (tabId: number) => void;
   onDropSavedTab?: (tabId: string) => void;
@@ -51,6 +52,7 @@ export function CollectionCard({
   onSortAZ,
   onMove,
   onExport,
+  onInvite,
   onDelete,
   onDropWindowTab,
   onDropSavedTab,
@@ -327,6 +329,15 @@ export function CollectionCard({
                     }}
                   >
                     {t("collection.export")}
+                  </button>
+                  <button
+                    className="w-full rounded px-2 py-2 text-left hover:bg-slate-900"
+                    onClick={() => {
+                      onInvite?.();
+                      setMenuOpen(false);
+                    }}
+                  >
+                    {t("sidebar.invite")}
                   </button>
                   <button
                     className="w-full rounded px-2 py-2 text-left text-rose-300 hover:bg-slate-900"

@@ -202,6 +202,8 @@ export function App() {
     if (!effectiveSupabaseUrl || !effectiveSupabaseAnonKey) {
       return null;
     }
+    // Supabase types are intentionally untyped here to keep the UI demo buildable without schema bindings.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return createSupabaseClient({ url: effectiveSupabaseUrl, anonKey: effectiveSupabaseAnonKey }) as any;
   }, [effectiveSupabaseAnonKey, effectiveSupabaseUrl]);
   useEffect(() => {
@@ -2031,6 +2033,9 @@ export function App() {
                           });
                         }}
                         onExport={() => handleExportCollection(collection.id, collection.name)}
+                        onInvite={() =>
+                          showUiNotice(locale === "en" ? "Invite collection (placeholder)" : "邀請集合成員（示意）")
+                        }
                         onDelete={() => deleteCollection(collection.id)}
                         onDropWindowTab={(tabId) => handleDropWindowTabToCollection(tabId, collection.id)}
                         onDropSavedTab={(tabId) => handleDropSavedTabToCollection(tabId, collection.id)}
