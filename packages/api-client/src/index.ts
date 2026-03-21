@@ -35,3 +35,4 @@ export * from "./authClient";
 export * from "./shareClient";
 export * from "./collabClient";
 export * from "./snapshotClient";
+export * from "./membershipClient";

@@ -10,6 +10,7 @@ Two React apps share a domain layer and UI primitives:
 
 - New Tab Dashboard (`apps/newtab`)
 - Side Panel (`apps/sidepanel`)
+- Account & Billing (`apps/options`)
 
 ## Extension
 

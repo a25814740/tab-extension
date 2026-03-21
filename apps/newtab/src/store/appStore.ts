@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useStore } from "zustand";
-import { createAppStore, localSnapshotSchema, toSnapshot } from "@toby/core";
+import { createAppStore, localSnapshotSchema, migrateLocalSnapshot, toSnapshot } from "@toby/core";
 import { getLocal, setLocal } from "@toby/chrome-adapters";
 import { createHttpSyncClient, createMockSyncClient } from "@toby/api-client";
 import { getSync } from "@toby/chrome-adapters";
@@ -23,7 +23,7 @@ export function useLocalCacheSync() {
       const snapshot = await getLocal(LOCAL_SNAPSHOT_KEY, null);
       const parsed = localSnapshotSchema.safeParse(snapshot);
       if (isMounted && parsed.success) {
-        appStore.getState().hydrate(parsed.data);
+        appStore.getState().hydrate(migrateLocalSnapshot(parsed.data));
       }
     })();
 
@@ -51,7 +51,7 @@ export function useLocalCacheSync() {
       }
       const parsed = localSnapshotSchema.safeParse(change.newValue);
       if (isMounted && parsed.success) {
-        appStore.getState().hydrate(parsed.data);
+        appStore.getState().hydrate(migrateLocalSnapshot(parsed.data));
       }
     };
     if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {

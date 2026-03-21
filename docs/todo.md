@@ -17,9 +17,9 @@ This file tracks incomplete work. Keep entries short and actionable.
 
 ## Phase 3
 
-- [ ] Implement trial/entitlement core logic
-- [ ] Implement local data layer migrations (schema versioning)
-- [ ] Add minimal account/pricing/billing shells
+- [x] Implement trial/entitlement core logic
+- [x] Implement local data layer migrations (schema versioning)
+- [x] Add minimal account/pricing/billing shells
 
 ## Phase 4
 

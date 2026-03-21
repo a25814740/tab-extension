@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createSupabaseClient, getGoogleOAuthUrl, signOut } from "@toby/api-client";
+import { createSupabaseClient, ensureTrialMembership, getGoogleOAuthUrl, signOut } from "@toby/api-client";
 import { getRedirectUrl, getSync, launchWebAuthFlow, setSync, getLocal, setLocal } from "@toby/chrome-adapters";
 import { useLocale } from "../i18n";
 
@@ -18,6 +18,7 @@ export type AuthUser = {
 const CONFIG_KEY = "toby_auth_config_v1";
 const USER_KEY = "toby_auth_user_v1";
 const TOKEN_KEY = "toby_auth_token_v1";
+const MEMBERSHIP_KEY = "toby_membership_v1";
 
 export const DEFAULT_SUPABASE_URL = "https://zhfibzpgabqgqgixgisk.supabase.co";
 export const DEFAULT_SUPABASE_ANON_KEY =
@@ -152,6 +153,10 @@ export function useAuthLogic() {
 
     await setLocal(USER_KEY, authUser);
     await setLocal(TOKEN_KEY, tokens.accessToken);
+    const membershipRes = await ensureTrialMembership(client);
+    if (!membershipRes.error && membershipRes.data) {
+      await setLocal(MEMBERSHIP_KEY, membershipRes.data);
+    }
     if (authUser?.email) {
       setStatus(`${t("auth.status.signedInAs")} ${authUser.email}`);
     } else {
@@ -166,6 +171,7 @@ export function useAuthLogic() {
     await signOut(client);
     await setLocal(USER_KEY, null);
     await setLocal(TOKEN_KEY, null);
+    await setLocal(MEMBERSHIP_KEY, null);
     setStatus(t("auth.status.signedOut"));
   }, [client, t]);
 
@@ -206,11 +212,16 @@ export function useAuthLogic() {
         };
         await setLocal(USER_KEY, authUser);
         await setLocal(TOKEN_KEY, session.data.session?.access_token ?? null);
+        const membershipRes = await ensureTrialMembership(client);
+        if (!membershipRes.error && membershipRes.data) {
+          await setLocal(MEMBERSHIP_KEY, membershipRes.data);
+        }
         setStatus(`${t("auth.status.signedInAs")} ${email}`);
         return;
       }
       await setLocal(USER_KEY, null);
       await setLocal(TOKEN_KEY, null);
+      await setLocal(MEMBERSHIP_KEY, null);
       setStatus(t("auth.status.notSignedIn"));
     })();
     return () => {

@@ -17,6 +17,10 @@
     "service_worker": "service-worker.js",
     "type": "module"
   },
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  },
   "permissions": ["storage", "tabs", "sidePanel", "identity"],
   "host_permissions": ["https://*/*", "http://*/*"],
   "icons": {
