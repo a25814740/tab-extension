@@ -23,20 +23,20 @@ pnpm build
 2. Enable Developer Mode.
 3. Load the `extension` directory.
 
-## Supabase Config (Optional)
+## Environment
 
-If you want auth and sync to work, add your Supabase project URL and anon key in the New Tab sidebar under "Auth & Sync".
+Create env values from `docs/env.md` and wire them into your local setup.
 
-## Supabase Edge Function
+## Google OAuth (Drive Sync)
 
-Deploy `backend/functions/sync_ops.ts` with env vars:
+- Add Google OAuth credentials for a Chrome extension.
+- Request scope: `https://www.googleapis.com/auth/drive.appdata`.
+- Use `chrome.identity` to request tokens only when the user enables sync.
 
-- `FUNCTION_SUPABASE_URL`
-- `FUNCTION_SUPABASE_SERVICE_ROLE_KEY`
+## Supabase (Business Metadata)
 
-## Supabase Full Setup
-
-See [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
+Supabase stores business data only (trial, entitlements, payments, audit).
+See `docs/SUPABASE_SETUP.md` for schema/migration notes.
 
 ## Tests
 
