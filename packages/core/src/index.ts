@@ -1,4 +1,5 @@
 export * from "./domain/models";
+export * from "./domain/entitlements";
 export * from "./schemas/appSchemas";
 export * from "./store/appState";
 export * from "./store/appStore";

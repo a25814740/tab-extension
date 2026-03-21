@@ -4,16 +4,16 @@ This file tracks incomplete work. Keep entries short and actionable.
 
 ## Phase 1
 
-- [ ] Replace `專案計劃書.md` with planning doc source of truth
-- [ ] Rewrite `進度清單.md` to match Plan B priorities
-- [ ] Align docs to data boundaries (Supabase vs Drive vs Local)
+- [x] Replace `專案計劃書.md` with planning doc source of truth
+- [x] Rewrite `進度清單.md` to match Plan B priorities
+- [x] Align docs to data boundaries (Supabase vs Drive vs Local)
 
 ## Phase 2
 
-- [ ] Create domain enums for trial/entitlement/plan/feature flags
-- [ ] Add Google Drive sync provider interface package
-- [ ] Add Supabase schema/migrations for business metadata only
-- [ ] Add env.example
+- [x] Create domain enums for trial/entitlement/plan/feature flags
+- [x] Add Google Drive sync provider interface package
+- [x] Add Supabase schema/migrations for business metadata only
+- [x] Add env.example
 
 ## Phase 3
 
