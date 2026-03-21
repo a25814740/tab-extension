@@ -135,6 +135,20 @@ export type PendingOp = {
   createdAt: string;
 };
 
+export type DockItem = {
+  id: string;
+  type: "tab" | "collection" | "action";
+  title: string;
+  url: string | null;
+  collectionId: string | null;
+  faviconUrl: string | null;
+  createdAt: string;
+};
+
+export type DockState = {
+  pinned: DockItem[];
+};
+
 export type LocalAppCache = {
   version: number;
   currentUserId: string | null;
@@ -148,6 +162,7 @@ export type LocalAppCache = {
     viewMode: "grid" | "list" | "compact" | "image";
     sortMode: "custom" | "recent" | "name" | "createdAt";
   };
+  dock: DockState;
   pendingOps: PendingOp[];
   lastSyncAt: string | null;
   lastSyncError?: string | null | undefined;

@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import type { AppState } from "./appState";
 import { defaultAppState } from "./appState";
 import type { LocalStoreSnapshot } from "../schemas/appSchemas";
-import type { TabItem } from "../domain/models";
+import type { DockItem, TabItem } from "../domain/models";
 import { sampleWorkspaces } from "../utils/sampleData";
 import { enqueueOp, markSynced } from "../sync/pendingOps";
 import { toSnapshot } from "./snapshot";
@@ -21,6 +21,14 @@ export type TabInput = {
   screenshotUrl?: string | null;
 };
 
+export type DockItemInput = {
+  type: DockItem["type"];
+  title: string;
+  url?: string | null;
+  collectionId?: string | null;
+  faviconUrl?: string | null;
+};
+
 export type AppActions = {
   hydrate: (snapshot: LocalStoreSnapshot) => void;
   setViewMode: (mode: AppState["cache"]["ui"]["viewMode"]) => void;
@@ -36,8 +44,11 @@ export type AppActions = {
   ) => void;
   deleteWorkspace: (workspaceId: string) => void;
   addSpace: (name: string) => void;
+  updateSpace: (spaceId: string, payload: { name?: string }) => void;
+  deleteSpace: (spaceId: string) => void;
   addCollection: (name: string) => void;
   saveCollectionFromTabs: (name: string, tabs: TabInput[]) => void;
+  saveCollectionFromTabsInSpace: (name: string, tabs: TabInput[], workspaceId: string, spaceId: string) => void;
   reorderSpaces: (activeId: string, overId: string) => void;
   reorderCollections: (activeId: string, overId: string) => void;
   reorderFolders: (activeId: string, overId: string) => void;
@@ -59,6 +70,9 @@ export type AppActions = {
   moveCollectionToSpace: (collectionId: string, workspaceId: string, spaceId: string) => void;
   sortTabsInCollection: (collectionId: string) => void;
   deleteCollection: (collectionId: string) => void;
+  addDockItems: (items: DockItemInput[]) => void;
+  removeDockItem: (dockItemId: string) => void;
+  clearDockItems: () => void;
   dedupeTabs: () => void;
   setSyncRetryAt: (isoTime: string | null) => void;
 };
@@ -544,6 +558,64 @@ export function createAppStore() {
         },
       });
     },
+    updateSpace: (spaceId, payload) => {
+      const state = get();
+      const now = new Date().toISOString();
+      const updated = state.spaces.map((space) =>
+        space.id === spaceId ? { ...space, name: payload.name ?? space.name, updatedAt: now } : space
+      );
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "update",
+        entity: "space",
+        payload: { id: spaceId, name: payload.name },
+        createdAt: now,
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        spaces: updated,
+        cache: {
+          ...state.cache,
+          pendingOps,
+        },
+      });
+    },
+    deleteSpace: (spaceId) => {
+      const state = get();
+      const space = state.spaces.find((item) => item.id === spaceId);
+      if (!space) {
+        return;
+      }
+      const now = new Date().toISOString();
+      const remainingSpaces = state.spaces.filter((item) => item.id !== spaceId);
+      const remainingFolders = state.folders.filter((folder) => folder.spaceId !== spaceId);
+      const remainingCollections = state.collections.filter((collection) => collection.spaceId !== spaceId);
+      const remainingTabs = state.tabs.filter((tab) =>
+        remainingCollections.some((collection) => collection.id === tab.collectionId)
+      );
+      const nextSpace =
+        remainingSpaces.find((item) => item.workspaceId === space.workspaceId) ?? remainingSpaces[0] ?? null;
+      const pendingOps = enqueueOp(state.cache.pendingOps, {
+        id: nanoid(),
+        type: "delete",
+        entity: "space",
+        payload: { id: spaceId },
+        createdAt: now,
+      });
+      set({
+        rollbackStack: pushRollback(state),
+        spaces: remainingSpaces,
+        folders: remainingFolders,
+        collections: remainingCollections,
+        tabs: remainingTabs,
+        cache: {
+          ...state.cache,
+          selectedSpaceId: nextSpace?.id ?? null,
+          selectedCollectionId: null,
+          pendingOps,
+        },
+      });
+    },
     addCollection: (name) => {
       const state = get();
       const workspaceId = state.cache.selectedWorkspaceId ?? state.workspace?.id ?? null;
@@ -1001,17 +1073,22 @@ export function createAppStore() {
         state.cache.selectedSpaceId ??
         workspaceSpaces.sort((a, b) => a.position - b.position)[0]?.id ??
         "";
-      const collectionId = crypto.randomUUID();
-      const now = new Date().toISOString();
-
       if (!state.workspace || !workspaceId || !targetSpaceId) {
         return;
       }
-
+      get().saveCollectionFromTabsInSpace(name, tabs, workspaceId, targetSpaceId);
+    },
+    saveCollectionFromTabsInSpace: (name, tabs, workspaceId, spaceId) => {
+      const state = get();
+      if (!state.workspace || !workspaceId || !spaceId) {
+        return;
+      }
+      const collectionId = crypto.randomUUID();
+      const now = new Date().toISOString();
       const newCollection = {
         id: collectionId,
         workspaceId,
-        spaceId: targetSpaceId,
+        spaceId,
         folderId: null,
         name,
         note: null,
@@ -1040,7 +1117,6 @@ export function createAppStore() {
         updatedAt: now,
       }));
 
-      // TODO: replace with full sync pipeline once server is ready.
       const pendingOps = enqueueOp(state.cache.pendingOps, {
         id: nanoid(),
         type: "create",
@@ -1486,6 +1562,72 @@ export function createAppStore() {
         cache: {
           ...state.cache,
           pendingOps,
+        },
+      });
+    },
+    addDockItems: (items) => {
+      const state = get();
+      const now = new Date().toISOString();
+      const existing = new Set(
+        state.cache.dock.pinned.map((item) => `${item.type}:${item.url ?? item.collectionId ?? item.title}`)
+      );
+      const nextItems: DockItem[] = [];
+      items.forEach((item) => {
+        if (!item.title.trim()) {
+          return;
+        }
+        const key = `${item.type}:${item.url ?? item.collectionId ?? item.title}`;
+        if (existing.has(key)) {
+          return;
+        }
+        existing.add(key);
+        nextItems.push({
+          id: crypto.randomUUID(),
+          type: item.type,
+          title: item.title,
+          url: item.url ?? null,
+          collectionId: item.collectionId ?? null,
+          faviconUrl: item.faviconUrl ?? null,
+          createdAt: now,
+        });
+      });
+      if (nextItems.length === 0) {
+        return;
+      }
+      set({
+        cache: {
+          ...state.cache,
+          dock: {
+            ...state.cache.dock,
+            pinned: [...state.cache.dock.pinned, ...nextItems],
+          },
+        },
+      });
+    },
+    removeDockItem: (dockItemId) => {
+      const state = get();
+      set({
+        cache: {
+          ...state.cache,
+          dock: {
+            ...state.cache.dock,
+            pinned: state.cache.dock.pinned.filter((item) => item.id !== dockItemId),
+          },
+        },
+      });
+    },
+    clearDockItems: () => {
+      const state = get();
+      if (state.cache.dock.pinned.length === 0) {
+        return;
+      }
+      set({
+        cache: {
+          ...state.cache,
+          dock: {
+            ...state.cache.dock,
+            pinned: [],
+          },
         },
       });
     },

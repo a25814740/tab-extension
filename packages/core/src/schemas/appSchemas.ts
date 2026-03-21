@@ -63,6 +63,20 @@ export const workspaceSchema = z.object({
   updatedAt: z.string(),
 });
 
+export const dockItemSchema = z.object({
+  id: z.string(),
+  type: z.enum(["tab", "collection", "action"]),
+  title: z.string(),
+  url: z.string().nullable(),
+  collectionId: z.string().nullable(),
+  faviconUrl: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+export const dockSchema = z.object({
+  pinned: dockItemSchema.array(),
+});
+
 export const localCacheSchema = z.object({
   version: z.number(),
   currentUserId: z.string().nullable(),
@@ -76,6 +90,7 @@ export const localCacheSchema = z.object({
     viewMode: z.enum(["grid", "list", "compact", "image"]),
     sortMode: z.enum(["custom", "recent", "name", "createdAt"]),
   }),
+  dock: dockSchema.optional().default({ pinned: [] }),
   pendingOps: z
     .object({
       id: z.string(),

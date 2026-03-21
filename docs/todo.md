@@ -45,8 +45,8 @@ This file tracks incomplete work. Keep entries short and actionable.
 - [x] Complete New Tab UI v0.3 stabilization (see `docs/ui-v0.3-todo.md`)
 
 ## Pre-Store Blockers
-- [ ] Replace placeholder space actions (edit/delete) with real data flow
-- [ ] Wire right sidebar batch actions (add to collection / add to Dock / move to space)
-- [ ] Connect Dock items to real data + actions (remove placeholder items)
-- [ ] Implement collection invite flow (replace placeholder notice)
-- [ ] Ensure extension build artifacts are ignored and not committed
+- [x] Replace placeholder space actions (edit/delete) with real data flow
+- [x] Wire right sidebar batch actions (add to collection / add to Dock / move to space)
+- [x] Connect Dock items to real data + actions (remove placeholder items)
+- [x] Implement collection invite flow (replace placeholder notice)
+- [x] Ensure extension build artifacts are ignored and not committed

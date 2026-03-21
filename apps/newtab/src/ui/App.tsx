@@ -38,6 +38,19 @@ import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinat
 
 type MemberRole = "owner" | "admin" | "editor" | "commenter" | "viewer";
 type AddCollectionAction = "blank" | "current-window" | "selected-tabs";
+type DockEntry = {
+  id: string;
+  label: string;
+  icon: string;
+  onClick: () => void;
+  faviconUrl?: string | null;
+  onRemove?: () => void;
+};
+type DockSection = {
+  id: string;
+  label: string;
+  items: DockEntry[];
+};
 
 export function App() {
   useLocalCacheSync();
@@ -72,6 +85,8 @@ export function App() {
   const upsertWorkspace = useAppStore((state) => state.upsertWorkspace);
   const deleteWorkspace = useAppStore((state) => state.deleteWorkspace);
   const addSpace = useAppStore((state) => state.addSpace);
+  const updateSpace = useAppStore((state) => state.updateSpace);
+  const deleteSpace = useAppStore((state) => state.deleteSpace);
   const addCollection = useAppStore((state) => state.addCollection);
   const setSelectedWorkspaceId = useAppStore((state) => state.setSelectedWorkspaceId);
   const setSelectedSpaceId = useAppStore((state) => state.setSelectedSpaceId);
@@ -87,8 +102,13 @@ export function App() {
   const deleteTab = useAppStore((state) => state.deleteTab);
   const moveTabToCollection = useAppStore((state) => state.moveTabToCollection);
   const addTabToCollection = useAppStore((state) => state.addTabToCollection);
+  const saveCollectionFromTabsInSpace = useAppStore((state) => state.saveCollectionFromTabsInSpace);
+  const addDockItems = useAppStore((state) => state.addDockItems);
+  const removeDockItem = useAppStore((state) => state.removeDockItem);
+  const clearDockItems = useAppStore((state) => state.clearDockItems);
   const viewMode = useAppStore((state) => state.cache.ui.viewMode);
   const sortMode = useAppStore((state) => state.cache.ui.sortMode);
+  const dockPinnedItems = useAppStore((state) => state.cache.dock.pinned);
   const setViewMode = useAppStore((state) => state.setViewMode);
   const setSortMode = useAppStore((state) => state.setSortMode);
   const reorderSpaces = useAppStore((state) => state.reorderSpaces);
@@ -113,6 +133,10 @@ export function App() {
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
   const [bulkMoveWorkspaceId, setBulkMoveWorkspaceId] = useState("");
   const [bulkMoveSpaceId, setBulkMoveSpaceId] = useState("");
+  const [windowMoveOpen, setWindowMoveOpen] = useState(false);
+  const [windowMoveWorkspaceId, setWindowMoveWorkspaceId] = useState("");
+  const [windowMoveSpaceId, setWindowMoveSpaceId] = useState("");
+  const [windowMoveName, setWindowMoveName] = useState("");
   const [tabMoveOpen, setTabMoveOpen] = useState(false);
   const [tabMoveWorkspaceId, setTabMoveWorkspaceId] = useState("");
   const [tabMoveSpaceId, setTabMoveSpaceId] = useState("");
@@ -164,6 +188,10 @@ export function App() {
   const [linkToken, setLinkToken] = useState("");
   const [linkStatus, setLinkStatus] = useState("");
   const [shareNotice, setShareNotice] = useState("");
+  const [collectionInviteOpen, setCollectionInviteOpen] = useState(false);
+  const [collectionInviteId, setCollectionInviteId] = useState("");
+  const [collectionInviteLink, setCollectionInviteLink] = useState("");
+  const [collectionInviteStatus, setCollectionInviteStatus] = useState("");
   const importFileRef = useRef<HTMLInputElement | null>(null);
   const checkboxClass =
     "h-4 w-4 rounded border-slate-600 bg-slate-900 text-rose-400 focus:ring-rose-500/40";
@@ -523,6 +551,10 @@ export function App() {
     () => spaces.filter((space) => space.workspaceId === bulkMoveWorkspaceId),
     [spaces, bulkMoveWorkspaceId]
   );
+  const windowMoveSpaces = useMemo(
+    () => spaces.filter((space) => space.workspaceId === windowMoveWorkspaceId),
+    [spaces, windowMoveWorkspaceId]
+  );
 
   const tabMoveSpaces = useMemo(
     () => spaces.filter((space) => space.workspaceId === tabMoveWorkspaceId),
@@ -651,10 +683,15 @@ export function App() {
 
   useEffect(() => {
     if (activeWorkspaceId) {
+      setWindowMoveWorkspaceId(activeWorkspaceId);
+      const initialSpace = spaces.find((space) => space.workspaceId === activeWorkspaceId);
+      if (initialSpace) {
+        setWindowMoveSpaceId(initialSpace.id);
+      }
       setTabMoveWorkspaceId(activeWorkspaceId);
-      const firstSpace = spaces.find((space) => space.workspaceId === activeWorkspaceId);
-      if (firstSpace) {
-        setTabMoveSpaceId(firstSpace.id);
+      const tabSpace = spaces.find((space) => space.workspaceId === activeWorkspaceId);
+      if (tabSpace) {
+        setTabMoveSpaceId(tabSpace.id);
       }
     }
   }, [activeWorkspaceId, spaces]);
@@ -670,6 +707,21 @@ export function App() {
       setBulkMoveSpaceId(bulkMoveSpaces[0].id);
     }
   }, [bulkMoveSpaces, bulkMoveSpaceId]);
+
+  useEffect(() => {
+    if (windowMoveSpaces.length > 0 && !windowMoveSpaces.some((space) => space.id === windowMoveSpaceId)) {
+      setWindowMoveSpaceId(windowMoveSpaces[0].id);
+    }
+  }, [windowMoveSpaces, windowMoveSpaceId]);
+
+  useEffect(() => {
+    if (!windowMoveOpen) {
+      return;
+    }
+    if (!windowMoveName.trim()) {
+      setWindowMoveName(t("right.selectedTabs"));
+    }
+  }, [t, windowMoveName, windowMoveOpen]);
 
   useEffect(() => {
     if (!moveNotice) {
@@ -699,6 +751,14 @@ export function App() {
     setLinkId("");
     setLinkAccess("restricted");
   }, [orgSettingsOpen, workspace]);
+
+  useEffect(() => {
+    if (!collectionInviteOpen) {
+      return;
+    }
+    setCollectionInviteStatus("");
+    setCollectionInviteLink("");
+  }, [collectionInviteOpen]);
 
   useEffect(() => {
     if (!orgSettingsOpen || orgSettingsTab !== "members") {
@@ -887,55 +947,6 @@ export function App() {
     [workspaces]
   );
   const activeWorkspaceValue = activeWorkspaceId ?? orgOptions[0]?.value ?? "";
-
-  const dockSections = useMemo(
-    () => [
-      {
-        id: "core",
-        label: locale === "en" ? "Core" : "核心功能",
-        items: [
-          { id: "new-tab", label: locale === "en" ? "New Tab" : "新分頁", icon: "⌘" },
-          { id: "collections", label: locale === "en" ? "Collections" : "集合", icon: "▦" },
-          { id: "spaces", label: locale === "en" ? "Spaces" : "空間", icon: "◈" },
-        ],
-      },
-      {
-        id: "fixed",
-        label: locale === "en" ? "Pinned" : "固定捷徑",
-        items: [
-          { id: "docs", label: locale === "en" ? "Docs" : "文件", icon: "DOC" },
-          { id: "mail", label: locale === "en" ? "Mail" : "郵件", icon: "✉" },
-          { id: "calendar", label: locale === "en" ? "Calendar" : "行事曆", icon: "CAL" },
-        ],
-      },
-      {
-        id: "recent",
-        label: locale === "en" ? "Recent" : "最近使用",
-        items: [
-          { id: "recent-1", label: locale === "en" ? "Recent 1" : "最近 1", icon: "R1" },
-          { id: "recent-2", label: locale === "en" ? "Recent 2" : "最近 2", icon: "R2" },
-        ],
-      },
-      {
-        id: "temp",
-        label: locale === "en" ? "Stash & Settings" : "暫放 / 設定",
-        items: [
-          { id: "stash", label: locale === "en" ? "Stash" : "暫放", icon: "…" },
-          { id: "settings", label: locale === "en" ? "Settings" : "設定", icon: "⚙" },
-        ],
-      },
-    ],
-    [locale]
-  );
-
-  const collapsedTabIcons = useMemo(
-    () =>
-      windowGroups
-        .flatMap((window) => window.tabs.map((tab) => ({ ...tab, windowId: window.id })))
-        .slice(0, 12),
-    [windowGroups]
-  );
-
 
   const handleOpenAll = (collectionId: string) => {
     const urls = scopedTabs.filter((tab) => tab.collectionId === collectionId).map((tab) => tab.url);
@@ -1207,6 +1218,43 @@ export function App() {
       handleSaveSelectedWindowTabs();
     }
     setAddCollectionMode("blank");
+  };
+
+  const handleOpenCollectionInvite = (collectionId: string) => {
+    setCollectionInviteId(collectionId);
+    setCollectionInviteOpen(true);
+  };
+
+  const handleCreateCollectionInvite = () => {
+    if (!collectionInviteId) {
+      return;
+    }
+    if (!supabaseClient || !workspace) {
+      setCollectionInviteStatus(`${t("auth.status.missingSupabase")} (client)`);
+      return;
+    }
+    void (async () => {
+      setCollectionInviteStatus(locale === "en" ? "Creating link..." : "建立邀請連結中...");
+      const ensureRes = await ensureRemoteWorkspace();
+      if (!ensureRes.ok) {
+        setCollectionInviteStatus(ensureRes.message);
+        return;
+      }
+      const result = await createShareLink(supabaseClient, {
+        workspaceId: workspace.id,
+        resourceType: "collection",
+        resourceId: collectionInviteId,
+        permission: "view",
+        isPublic: true,
+      });
+      if (result.error) {
+        setCollectionInviteStatus(result.error.message || (locale === "en" ? "Invite failed" : "邀請失敗"));
+        return;
+      }
+      const token = result.data?.token ?? "";
+      setCollectionInviteLink(token ? `${effectiveSupabaseUrl}/functions/v1/share?token=${token}` : "");
+      setCollectionInviteStatus(locale === "en" ? "Link created" : "邀請連結已建立");
+    })();
   };
 
   const handleOrgLogoChange = (file: File) => {
@@ -1514,6 +1562,58 @@ export function App() {
     }
   };
 
+  const handleAddSelectedWindowTabsToDock = () => {
+    if (selectedWindowTabIds.size === 0) {
+      return;
+    }
+    const selectedTabs: Array<{ id: number; title: string; url: string; favIconUrl?: string }> = [];
+    windowGroups.forEach((window) => {
+      window.tabs.forEach((tab) => {
+        if (selectedWindowTabIds.has(tab.id)) {
+          selectedTabs.push(tab);
+        }
+      });
+    });
+    if (selectedTabs.length === 0) {
+      return;
+    }
+    addDockItems(
+      selectedTabs.map((tab) => ({
+        type: "tab",
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.favIconUrl ?? null,
+      }))
+    );
+    setSelectedWindowTabIds(new Set());
+    showUiNotice(locale === "en" ? "Added to Dock" : "已加入 Dock");
+  };
+
+  const handleMoveSelectedWindowTabsToSpace = () => {
+    if (!guardWrite()) {
+      return;
+    }
+    if (selectedWindowTabIds.size === 0 || !windowMoveWorkspaceId || !windowMoveSpaceId) {
+      return;
+    }
+    const selectedTabs: Array<{ id: number; title: string; url: string; favIconUrl?: string }> = [];
+    windowGroups.forEach((window) => {
+      window.tabs.forEach((tab) => {
+        if (selectedWindowTabIds.has(tab.id)) {
+          selectedTabs.push(tab);
+        }
+      });
+    });
+    if (selectedTabs.length === 0) {
+      return;
+    }
+    const name = windowMoveName.trim() || t("right.selectedTabs");
+    saveCollectionFromTabsInSpace(name, selectedTabs.map((tab) => toTabInput(tab)), windowMoveWorkspaceId, windowMoveSpaceId);
+    setSelectedWindowTabIds(new Set());
+    setWindowMoveOpen(false);
+    showUiNotice(locale === "en" ? "Moved to space" : "已移到空間");
+  };
+
   const handleDeleteSelectedTabs = () => {
     const confirmed = window.confirm(t("tab.confirmDelete"));
     if (!confirmed) {
@@ -1623,6 +1723,116 @@ export function App() {
   const showUiNotice = useCallback((message: string) => {
     setUiNotice(message);
   }, []);
+
+  const dockSections = useMemo<DockSection[]>(() => {
+    const openCollection = (collectionId: string) => {
+      const urls = scopedTabs.filter((tab) => tab.collectionId === collectionId).map((tab) => tab.url);
+      if (urls.length > 0) {
+        void openTabs(urls);
+      }
+    };
+    const coreItems: DockEntry[] = [
+      {
+        id: "new-collection",
+        label: t("toolbar.addCollection"),
+        icon: "+",
+        onClick: handleCreateCollection,
+      },
+      {
+        id: "save-window",
+        label: t("app.saveCurrentWindow"),
+        icon: "▣",
+        onClick: () => {
+          const currentWindow = windowGroups[0];
+          if (currentWindow) {
+            handleSaveWindowGroup(currentWindow.title, currentWindow.tabs);
+          }
+        },
+      },
+      {
+        id: "sync-now",
+        label: t("app.syncNow"),
+        icon: "⟳",
+        onClick: handleSync,
+      },
+    ];
+    const pinnedItems: DockEntry[] = dockPinnedItems.map((item) => ({
+      id: item.id,
+      label: item.title,
+      icon: item.title.slice(0, 2).toUpperCase(),
+      faviconUrl: item.faviconUrl ?? null,
+      onClick: () => {
+        if (item.type === "collection" && item.collectionId) {
+          openCollection(item.collectionId);
+          return;
+        }
+        if (item.type === "tab" && item.url) {
+          void openTabs([item.url]);
+        }
+      },
+      onRemove: () => {
+        removeDockItem(item.id);
+        showUiNotice(locale === "en" ? "Removed from Dock" : "已從 Dock 移除");
+      },
+    }));
+    const recentItems: DockEntry[] = scopedCollections
+      .slice()
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, 3)
+      .map((collection) => ({
+        id: collection.id,
+        label: collection.name,
+        icon: collection.name.slice(0, 2).toUpperCase(),
+        onClick: () => openCollection(collection.id),
+      }));
+    const stashItems: DockEntry[] = [
+      {
+        id: "settings",
+        label: t("sidebar.settings"),
+        icon: "⚙",
+        onClick: () => {
+          setOrgSettingsTab("preferences");
+          setOrgSettingsOpen(true);
+        },
+      },
+      {
+        id: "clear-dock",
+        label: locale === "en" ? "Clear Dock" : "清空 Dock",
+        icon: "✕",
+        onClick: () => {
+          clearDockItems();
+          showUiNotice(locale === "en" ? "Dock cleared" : "Dock 已清空");
+        },
+      },
+    ];
+    return [
+      { id: "core", label: locale === "en" ? "Core" : "核心功能", items: coreItems },
+      { id: "fixed", label: locale === "en" ? "Pinned" : "固定捷徑", items: pinnedItems },
+      { id: "recent", label: locale === "en" ? "Recent" : "最近使用", items: recentItems },
+      { id: "temp", label: locale === "en" ? "Stash & Settings" : "暫放 / 設定", items: stashItems },
+    ];
+  }, [
+    clearDockItems,
+    dockPinnedItems,
+    handleCreateCollection,
+    handleSaveWindowGroup,
+    handleSync,
+    locale,
+    removeDockItem,
+    scopedCollections,
+    scopedTabs,
+    showUiNotice,
+    t,
+    windowGroups,
+  ]);
+
+  const collapsedTabIcons = useMemo(
+    () =>
+      windowGroups
+        .flatMap((window) => window.tabs.map((tab) => ({ ...tab, windowId: window.id })))
+        .slice(0, 12),
+    [windowGroups]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1834,16 +2044,22 @@ export function App() {
                         handleCreateCollection();
                       }}
                       onEditSpace={(spaceId) => {
-                        const name = window.prompt(locale === "en" ? "Rename space (placeholder)" : "重新命名空間（示意）");
-                        if (!name) {
+                        const current = spaces.find((space) => space.id === spaceId)?.name ?? "";
+                        const name = window.prompt(locale === "en" ? "Rename space" : "重新命名空間", current);
+                        if (!name || !name.trim()) {
                           return;
                         }
-                        showUiNotice(locale === "en" ? "Space renamed (placeholder)" : "空間已重新命名（示意）");
+                        updateSpace(spaceId, { name: name.trim() });
+                        showUiNotice(locale === "en" ? "Space renamed" : "空間已重新命名");
                         setSelectedSpaceId(spaceId);
                       }}
                       onDeleteSpace={(spaceId) => {
-                        void spaceId;
-                        showUiNotice(locale === "en" ? "Delete space (placeholder)" : "刪除空間（示意）");
+                        const confirmed = window.confirm(locale === "en" ? "Delete this space?" : "確定刪除空間嗎？");
+                        if (!confirmed) {
+                          return;
+                        }
+                        deleteSpace(spaceId);
+                        showUiNotice(locale === "en" ? "Space deleted" : "空間已刪除");
                       }}
                       onInviteSpace={(spaceId) => {
                         setOrgSettingsTab("members");
@@ -2033,9 +2249,7 @@ export function App() {
                           });
                         }}
                         onExport={() => handleExportCollection(collection.id, collection.name)}
-                        onInvite={() =>
-                          showUiNotice(locale === "en" ? "Invite collection (placeholder)" : "邀請集合成員（示意）")
-                        }
+                        onInvite={() => handleOpenCollectionInvite(collection.id)}
                         onDelete={() => deleteCollection(collection.id)}
                         onDropWindowTab={(tabId) => handleDropWindowTabToCollection(tabId, collection.id)}
                         onDropSavedTab={(tabId) => handleDropSavedTabToCollection(tabId, collection.id)}
@@ -2196,13 +2410,7 @@ export function App() {
                   </button>
                   <button
                     className="rounded border border-slate-700 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
-                    onClick={() => {
-                      if (selectedWindowTabIds.size === 0) {
-                        return;
-                      }
-                      showUiNotice(locale === "en" ? "Added to Dock (placeholder)" : "已加入 Dock（示意）");
-                      setSelectedWindowTabIds(new Set());
-                    }}
+                    onClick={handleAddSelectedWindowTabsToDock}
                     disabled={selectedWindowTabIds.size === 0}
                   >
                     {locale === "en" ? "Add to Dock" : "加入 Dock"}
@@ -2213,7 +2421,7 @@ export function App() {
                       if (selectedWindowTabIds.size === 0) {
                         return;
                       }
-                      showUiNotice(locale === "en" ? "Move to space (placeholder)" : "移到空間（示意）");
+                      setWindowMoveOpen(true);
                     }}
                     disabled={selectedWindowTabIds.size === 0}
                   >
@@ -2324,8 +2532,20 @@ export function App() {
                       key={item.id}
                       className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 text-[11px] hover:border-rose-400"
                       title={item.label}
+                      onClick={item.onClick}
+                      onContextMenu={(event) => {
+                        if (!("onRemove" in item) || !item.onRemove) {
+                          return;
+                        }
+                        event.preventDefault();
+                        item.onRemove();
+                      }}
                     >
-                      {item.icon}
+                      {"faviconUrl" in item && item.faviconUrl ? (
+                        <img src={item.faviconUrl} alt={item.label} className="h-4 w-4 object-contain" />
+                      ) : (
+                        item.icon
+                      )}
                     </button>
                   ))}
                   {index < dockSections.length - 1 ? <div className="h-6 w-px bg-slate-700/70" /> : null}
@@ -2458,6 +2678,53 @@ export function App() {
                   {t("tab.cancel")}
                 </button>
                 <button className="rounded-lg bg-rose-500 px-3 py-2 text-xs font-semibold text-white" onClick={handleBulkMove}>
+                  {t("tab.save")}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {windowMoveOpen ? (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setWindowMoveOpen(false)}>
+            <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
+              <div className="text-sm font-semibold">{locale === "en" ? "Move tabs to space" : "移動分頁到空間"}</div>
+              <div className="mt-3 space-y-3 text-xs">
+                <label className="block">
+                  <div className="mb-1 text-slate-400">{locale === "en" ? "Collection name" : "集合名稱"}</div>
+                  <input
+                    className="w-full rounded-md border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+                    value={windowMoveName}
+                    onChange={(event) => setWindowMoveName(event.target.value)}
+                  />
+                </label>
+                <label className="block">
+                  <div className="mb-1 text-slate-400">{locale === "en" ? "Organization" : "組織"}</div>
+                  <SelectMenu
+                    value={windowMoveWorkspaceId}
+                    onChange={(value) => setWindowMoveWorkspaceId(value)}
+                    options={workspaces.map((workspace) => ({ value: workspace.id, label: workspace.name }))}
+                    label={locale === "en" ? "Organization" : "組織"}
+                    searchable
+                    searchPlaceholder={locale === "en" ? "Search organizations" : "搜尋組織"}
+                  />
+                </label>
+                <label className="block">
+                  <div className="mb-1 text-slate-400">{locale === "en" ? "Space" : "空間"}</div>
+                  <SelectMenu
+                    value={windowMoveSpaceId}
+                    onChange={(value) => setWindowMoveSpaceId(value)}
+                    options={windowMoveSpaces.map((space) => ({ value: space.id, label: space.name }))}
+                    label={locale === "en" ? "Space" : "空間"}
+                    searchable
+                    searchPlaceholder={locale === "en" ? "Search spaces" : "搜尋空間"}
+                  />
+                </label>
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setWindowMoveOpen(false)}>
+                  {t("tab.cancel")}
+                </button>
+                <button className="rounded-lg bg-rose-500 px-3 py-2 text-xs font-semibold text-white" onClick={handleMoveSelectedWindowTabsToSpace}>
                   {t("tab.save")}
                 </button>
               </div>
@@ -2640,6 +2907,53 @@ export function App() {
                 </button>
                 <button className="rounded-lg bg-rose-500 px-3 py-2 text-xs font-semibold text-white" onClick={handleMoveSelectedTabs}>
                   {t("tab.save")}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {collectionInviteOpen ? (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setCollectionInviteOpen(false)}>
+            <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
+              <div className="text-sm font-semibold">{locale === "en" ? "Invite to collection" : "邀請加入集合"}</div>
+              <div className="mt-3 space-y-3 text-xs">
+                <div className="rounded border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs">
+                  {collections.find((collection) => collection.id === collectionInviteId)?.name ?? t("app.loading")}
+                </div>
+                <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={handleCreateCollectionInvite}>
+                  {locale === "en" ? "Create invite link" : "建立邀請連結"}
+                </button>
+                {collectionInviteLink ? (
+                  <div className="space-y-2">
+                    <div className="text-[11px] text-slate-400">{locale === "en" ? "Invite link" : "邀請連結"}</div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="w-full rounded-md border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-100"
+                        value={collectionInviteLink}
+                        readOnly
+                      />
+                      <button
+                        className="rounded border border-slate-700 px-2 py-2 text-xs"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(collectionInviteLink);
+                            setCollectionInviteStatus(locale === "en" ? "Copied" : "已複製");
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                      >
+                        {t("org.link.copy")}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {collectionInviteStatus ? <div className="text-xs text-slate-400">{collectionInviteStatus}</div> : null}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setCollectionInviteOpen(false)}>
+                  {t("tab.cancel")}
                 </button>
               </div>
             </div>

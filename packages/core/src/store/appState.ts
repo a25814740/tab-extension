@@ -13,7 +13,7 @@ export type AppState = {
 };
 
 export const defaultCache: LocalAppCache = {
-  version: 1,
+  version: 2,
   currentUserId: null,
   selectedWorkspaceId: null,
   selectedSpaceId: null,
@@ -24,6 +24,9 @@ export const defaultCache: LocalAppCache = {
     sidebarCollapsed: false,
     viewMode: "grid",
     sortMode: "custom",
+  },
+  dock: {
+    pinned: [],
   },
   pendingOps: [],
   lastSyncAt: null,
