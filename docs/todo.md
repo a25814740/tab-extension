@@ -50,3 +50,6 @@ This file tracks incomplete work. Keep entries short and actionable.
 - [x] Connect Dock items to real data + actions (remove placeholder items)
 - [x] Implement collection invite flow (replace placeholder notice)
 - [x] Ensure extension build artifacts are ignored and not committed
+
+## Ops / Access
+- [ ] Provide Supabase service role access to extend `a25814740@gmail.com` trial by 10 years

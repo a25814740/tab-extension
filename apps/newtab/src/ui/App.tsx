@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { getAllWindowsWithTabs, openTabs, focusTab, closeTabs, getLocal, setLocal } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
 import { CollectionCard } from "./CollectionCard";
@@ -177,6 +177,7 @@ export function App() {
   const [dedupeKeepIds, setDedupeKeepIds] = useState<Set<string>>(new Set());
   const [dedupeQuery, setDedupeQuery] = useState("");
   const [dragOverCollectionId, setDragOverCollectionId] = useState<string | null>(null);
+  const [dockDropActive, setDockDropActive] = useState(false);
   const [moveNotice, setMoveNotice] = useState<{
     message: string;
     workspaceId: string;
@@ -1251,6 +1252,66 @@ export function App() {
     setDragOverCollectionId(null);
   };
 
+  const addDockItemsFromTabs = (items: Array<{ title: string; url: string; faviconUrl?: string | null }>) => {
+    if (items.length === 0) {
+      return;
+    }
+    addDockItems(
+      items.map((tab) => ({
+        type: "tab",
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.faviconUrl ?? null,
+      }))
+    );
+    showUiNotice(locale === "en" ? "Added to Dock" : "已加入 Dock");
+  };
+
+  const handleDropToDock = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDockDropActive(false);
+    const savedRaw = event.dataTransfer.getData("application/x-toby-saved-tab");
+    if (savedRaw) {
+      const selectedTabs = selectedTabIds.has(savedRaw)
+        ? tabs.filter((tab) => selectedTabIds.has(tab.id))
+        : tabs.filter((tab) => tab.id === savedRaw);
+      if (selectedTabs.length > 0) {
+        addDockItemsFromTabs(
+          selectedTabs.map((tab) => ({
+            title: tab.title,
+            url: tab.url,
+            faviconUrl: tab.faviconUrl,
+          }))
+        );
+      }
+      return;
+    }
+
+    const windowRaw =
+      event.dataTransfer.getData("application/x-toby-window-tab") ||
+      event.dataTransfer.getData("application/x-toby-tab") ||
+      event.dataTransfer.getData("text/plain");
+    const tabId = Number(windowRaw);
+    if (!Number.isFinite(tabId)) {
+      return;
+    }
+    if (selectedWindowTabIds.has(tabId) && selectedWindowTabIds.size > 0) {
+      handleAddSelectedWindowTabsToDock();
+      return;
+    }
+    const tab = openTabList.find((item) => item.id === tabId);
+    if (!tab) {
+      return;
+    }
+    addDockItemsFromTabs([
+      {
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.favIconUrl ?? null,
+      },
+    ]);
+  };
+
   const handleOpenWindowTab = (tabId: number, windowId: number) => {
     void focusTab(tabId, windowId);
   };
@@ -2007,7 +2068,7 @@ export function App() {
     <div className="h-[100vh] w-full overflow-x-auto bg-zinc-100 p-4 text-zinc-900">
       <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
         <main
-          className={`grid min-h-full min-w-[1280px] gap-4 pb-24 ${
+          className={`grid h-full min-h-full min-w-[1280px] gap-4 pb-24 ${
             leftCollapsed
               ? "grid-cols-[84px_minmax(420px,1fr)_360px]"
               : rightCollapsed
@@ -2214,7 +2275,7 @@ export function App() {
             </div>
           </aside>
 
-          <main className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+          <main className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-200 px-6 py-5">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="text-sm font-semibold text-zinc-500">
@@ -2515,10 +2576,17 @@ export function App() {
                       openTabList.map((tab) => {
                         const selected = selectedWindowTabIds.has(tab.id);
                         return (
-                          <button
+                          <div
                             key={tab.id}
+                            role="button"
+                            tabIndex={0}
                             onClick={() => handleOpenWindowTab(tab.id, tab.windowId)}
-                            onMouseDown={() => toggleWindowTabSelected(tab.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                handleOpenWindowTab(tab.id, tab.windowId);
+                              }
+                            }}
                             draggable
                             onDragStart={(event) => {
                               event.dataTransfer.setData("application/x-toby-window-tab", String(tab.id));
@@ -2533,7 +2601,8 @@ export function App() {
                             }`}
                           >
                             <div className="pt-1">
-                              <div
+                              <button
+                                type="button"
                                 className={`flex h-4 w-4 items-center justify-center rounded border ${
                                   selected
                                     ? "border-zinc-900 bg-zinc-900 text-white"
@@ -2541,9 +2610,15 @@ export function App() {
                                       ? "border-white/40 bg-white/10 text-white"
                                       : "border-zinc-300 bg-white text-transparent"
                                 }`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleWindowTabSelected(tab.id);
+                                }}
+                                onMouseDown={(event) => event.stopPropagation()}
+                                aria-label={selected ? "取消選取" : "選取分頁"}
                               >
                                 <Check className="h-3 w-3" />
-                              </div>
+                              </button>
                             </div>
                             <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tab.active ? "bg-white/10" : "bg-white"}`}>
                               {tab.favIconUrl ? (
@@ -2562,7 +2637,7 @@ export function App() {
                               </div>
                             </div>
                             <ChevronRight className={`mt-1 h-4 w-4 shrink-0 ${tab.active ? "text-zinc-300" : "text-zinc-400"}`} />
-                          </button>
+                          </div>
                         );
                       })
                     )}
@@ -2612,7 +2687,24 @@ export function App() {
           </div>
         ) : null}
         <div className="fixed inset-x-0 bottom-4 z-[999] px-4">
-          <div className="mx-auto flex max-w-5xl items-end gap-4 overflow-visible rounded-[30px] border border-zinc-200 bg-white/85 px-5 py-4 shadow-2xl backdrop-blur-xl">
+          <div
+            className={`mx-auto flex max-w-5xl items-end gap-4 overflow-visible rounded-[30px] border border-zinc-200 bg-white/85 px-5 py-4 shadow-2xl backdrop-blur-xl ${
+              dockDropActive ? "ring-2 ring-zinc-300" : ""
+            }`}
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "copy";
+              setDockDropActive(true);
+            }}
+            onDragEnter={() => setDockDropActive(true)}
+            onDragLeave={(event) => {
+              if (event.currentTarget.contains(event.relatedTarget as Node)) {
+                return;
+              }
+              setDockDropActive(false);
+            }}
+            onDrop={handleDropToDock}
+          >
             {dockSections.map((section, index) => (
               <div key={section.id} className="flex items-end gap-4 overflow-visible">
                 {section.items.map((item) => {

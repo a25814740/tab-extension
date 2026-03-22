@@ -85,6 +85,15 @@ export function TabRow({
     void openTabs([url]);
   };
 
+  const shouldIgnoreOpen = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) {
+      return false;
+    }
+    return Boolean(
+      target.closest("button, input, textarea, select, a, [data-prevent-open='true']")
+    );
+  };
+
   const handleDelete = () => {
     const confirmed = window.confirm(t("tab.confirmDelete"));
     if (!confirmed) {
@@ -164,13 +173,12 @@ export function TabRow({
           : "rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm"
       }
       style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}
-      draggable
-      onDragStart={(event) => {
-        // Custom mime type enables cross-collection drag/drop without backend calls.
-        event.dataTransfer.setData("application/x-toby-saved-tab", id);
-        event.dataTransfer.effectAllowed = "move";
+      onClick={(event) => {
+        if (shouldIgnoreOpen(event.target)) {
+          return;
+        }
+        handleOpen();
       }}
-      onClick={handleOpen}
       onKeyDown={(event) => {
         if (event.key === "Enter") {
           handleOpen();
@@ -187,6 +195,7 @@ export function TabRow({
               event.stopPropagation();
               handleDelete();
             }}
+            onMouseDown={(event) => event.stopPropagation()}
             aria-label={t("tab.delete")}
           >
             <span className={actionButtonInner}>✕</span>
@@ -197,6 +206,7 @@ export function TabRow({
               event.stopPropagation();
               handleStartEdit();
             }}
+            onMouseDown={(event) => event.stopPropagation()}
             aria-label={t("tab.edit")}
           >
             <span className={actionButtonInner}>✎</span>
@@ -207,6 +217,14 @@ export function TabRow({
             {...sortable.attributes}
             {...sortable.listeners}
             onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            draggable
+            onDragStart={(event) => {
+              event.stopPropagation();
+              // Custom mime type enables cross-collection drag/drop without backend calls.
+              event.dataTransfer.setData("application/x-toby-saved-tab", id);
+              event.dataTransfer.effectAllowed = "move";
+            }}
           >
             <span className={actionButtonInner}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon icon-tabler icon-tabler-drag-drop">
@@ -233,6 +251,7 @@ export function TabRow({
                 event.stopPropagation();
                 handleDelete();
               }}
+              onMouseDown={(event) => event.stopPropagation()}
               aria-label={t("tab.delete")}
             >
               <span className={actionButtonInner}>✕</span>
@@ -245,6 +264,14 @@ export function TabRow({
               {...sortable.attributes}
               {...sortable.listeners}
               onClick={(event) => event.stopPropagation()}
+              onMouseDown={(event) => event.stopPropagation()}
+              draggable
+              onDragStart={(event) => {
+                event.stopPropagation();
+                // Custom mime type enables cross-collection drag/drop without backend calls.
+                event.dataTransfer.setData("application/x-toby-saved-tab", id);
+                event.dataTransfer.effectAllowed = "move";
+              }}
             >
               <span className={actionButtonInner}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon icon-tabler icon-tabler-drag-drop">
@@ -267,6 +294,7 @@ export function TabRow({
                 event.stopPropagation();
                 handleStartEdit();
               }}
+              onMouseDown={(event) => event.stopPropagation()}
               aria-label={t("tab.edit")}
             >
               <span className={actionButtonInner}>✎</span>
