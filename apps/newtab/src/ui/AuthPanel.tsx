@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, SectionTitle } from "@toby/shared-ui";
 import { useLocale } from "../i18n";
 import { useAuthLogic, useAuthUser } from "../auth/useAuth";
 import { useAppStore } from "../store/appStore";
+import { getLocal } from "@toby/chrome-adapters";
+import type { Membership } from "@toby/core";
 
 export function AuthPanel() {
   const { t } = useLocale();
@@ -44,6 +46,47 @@ export function AuthMiniPanel() {
   const [faqOpen, setFaqOpen] = useState(false);
   const [updatesOpen, setUpdatesOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [membership, setMembership] = useState<Membership | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const MEMBERSHIP_KEY = "toby_membership_v1";
+    void (async () => {
+      const stored = await getLocal<Membership | null>(MEMBERSHIP_KEY, null);
+      if (isMounted) {
+        setMembership(stored);
+      }
+    })();
+    const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area !== "local" || !changes[MEMBERSHIP_KEY]) {
+        return;
+      }
+      setMembership((changes[MEMBERSHIP_KEY].newValue as Membership | null) ?? null);
+    };
+    if (chrome?.storage?.onChanged) {
+      chrome.storage.onChanged.addListener(onChanged);
+    }
+    return () => {
+      isMounted = false;
+      if (chrome?.storage?.onChanged) {
+        chrome.storage.onChanged.removeListener(onChanged);
+      }
+    };
+  }, []);
+
+  const planLabel = useMemo(() => {
+    if (!membership?.planType) {
+      return locale === "en" ? "-" : "—";
+    }
+    const labels: Record<string, string> = {
+      trial: locale === "en" ? "Trial" : "試用",
+      personal_yearly: locale === "en" ? "Personal (Yearly)" : "個人年費",
+      pro_monthly: locale === "en" ? "Pro (Monthly)" : "進階月付",
+      team: locale === "en" ? "Team" : "團隊",
+      enterprise: locale === "en" ? "Enterprise" : "企業",
+    };
+    return labels[membership.planType] ?? membership.planType;
+  }, [locale, membership?.planType]);
 
   return (
     <div className="w-full">
@@ -82,6 +125,9 @@ export function AuthMiniPanel() {
                   {user?.name ?? t("app.signIn")}
                 </div>
                 <div className="text-[11px] text-slate-500">{user?.email ?? "-"}</div>
+                <div className="text-[11px] text-slate-500">
+                  {locale === "en" ? "Plan" : "方案"}：{planLabel}
+                </div>
               <div className="mt-2 w-full">
                 {!user ? (
                   <button className="w-full rounded-lg border border-slate-700 px-2 py-2 text-xs hover:bg-slate-900/60" onClick={handleGoogle}>
