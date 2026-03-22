@@ -79,7 +79,7 @@ export function CollectionCard({
   const [moveWorkspaceId, setMoveWorkspaceId] = useState(activeWorkspaceId ?? "");
   const [moveSpaceId, setMoveSpaceId] = useState(spaceId);
   const checkboxClass =
-    "h-4 w-4 rounded border-slate-600 bg-slate-900 text-rose-400 focus:ring-rose-500/40";
+    "h-4 w-4 rounded border-zinc-300 bg-white text-zinc-900 focus:ring-zinc-300/40";
   const menuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const handler = (event: MouseEvent) => {
@@ -109,10 +109,10 @@ export function CollectionCard({
     <Card
       className={
         isActive
-          ? "group relative w-full rounded-none border-transparent bg-transparent p-4 shadow-none"
+          ? "group relative w-full rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 shadow-sm"
           : isDropTarget
-          ? "group relative w-full rounded-none border-transparent bg-slate-900/60 p-4 ring-1 ring-rose-400/50 shadow-none"
-          : "group relative w-full rounded-none border-transparent bg-transparent p-4 shadow-none hover:bg-slate-900/40"
+          ? "group relative w-full rounded-[24px] border border-zinc-200 bg-zinc-100 p-4 ring-1 ring-zinc-300 shadow-sm"
+          : "group relative w-full rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 shadow-sm hover:bg-zinc-100"
       }
       onDragOver={(event) => {
         if (onDropWindowTab || onDropSavedTab) {
@@ -143,10 +143,10 @@ export function CollectionCard({
         }
       }}
     >
-      <div className="border-b border-slate-800/60 pb-4">
+      <div className="border-b border-zinc-200 pb-4">
         {isDropTarget ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="rounded-full bg-slate-900/90 px-4 py-2 text-xs text-slate-100 shadow-lg">
+            <div className="rounded-full bg-zinc-900/90 px-4 py-2 text-xs text-white shadow-lg">
               {t("drag.dropToAdd")}
             </div>
           </div>
@@ -174,7 +174,7 @@ export function CollectionCard({
               {starred ? " *" : ""}
             </button>
             <button
-              className="text-slate-400 hover:text-slate-200"
+              className="text-zinc-400 hover:text-zinc-600"
               onClick={onToggleCollapse}
               aria-label={collapsed ? t("toolbar.expand") : t("toolbar.collapse")}
             >
@@ -191,7 +191,7 @@ export function CollectionCard({
           </div>
           <div className="flex items-center gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
             <button
-              className="text-slate-400 hover:text-slate-100"
+              className="text-zinc-500 hover:text-zinc-700"
               onClick={onOpenAll}
               aria-label={t("collection.openTabs")}
             >
@@ -214,7 +214,7 @@ export function CollectionCard({
               </svg>
             </button>
             <button
-              className="text-slate-400 hover:text-slate-100"
+              className="text-zinc-500 hover:text-zinc-700"
               onClick={onMoveUp}
               disabled={!canMoveUp}
               aria-label={t("collection.moveUp")}
@@ -238,7 +238,7 @@ export function CollectionCard({
               </svg>
             </button>
             <button
-              className="text-slate-400 hover:text-slate-100"
+              className="text-zinc-500 hover:text-zinc-700"
               onClick={onMoveDown}
               disabled={!canMoveDown}
               aria-label={t("collection.moveDown")}
@@ -262,7 +262,7 @@ export function CollectionCard({
               </svg>
             </button>
             <div className="relative" ref={menuRef}>
-              <button className="text-slate-400 hover:text-slate-100" onClick={() => setMenuOpen((prev) => !prev)} aria-label={t("collection.more")}>
+              <button className="text-zinc-500 hover:text-zinc-700" onClick={() => setMenuOpen((prev) => !prev)} aria-label={t("collection.more")}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -281,9 +281,9 @@ export function CollectionCard({
                 </svg>
               </button>
               {menuOpen ? (
-                <div className="absolute right-0 top-6 z-20 w-48 rounded border border-slate-800 bg-slate-950 p-2 text-xs">
+                <div className="absolute right-0 top-6 z-20 w-48 rounded-2xl border border-zinc-200 bg-white p-2 text-xs text-zinc-700 shadow-xl">
                   <button
-                    className="w-full rounded px-2 py-2 text-left hover:bg-slate-900"
+                    className="w-full rounded-xl px-2 py-2 text-left hover:bg-zinc-50"
                     onClick={() => {
                       const next = window.prompt(t("collection.editTitlePrompt"), name);
                       if (next && next.trim()) {
@@ -295,7 +295,7 @@ export function CollectionCard({
                     {t("collection.editTitle")}
                   </button>
                   <button
-                    className="w-full rounded px-2 py-2 text-left hover:bg-slate-900"
+                    className="w-full rounded-xl px-2 py-2 text-left hover:bg-zinc-50"
                     onClick={() => {
                       onToggleStar();
                       setMenuOpen(false);
@@ -304,7 +304,7 @@ export function CollectionCard({
                     {t("collection.star")}
                   </button>
                   <button
-                    className="w-full rounded px-2 py-2 text-left hover:bg-slate-900"
+                    className="w-full rounded-xl px-2 py-2 text-left hover:bg-zinc-50"
                     onClick={() => {
                       onSortAZ();
                       setMenuOpen(false);
@@ -313,7 +313,7 @@ export function CollectionCard({
                     {t("collection.sortAZ")}
                   </button>
                   <button
-                    className="w-full rounded px-2 py-2 text-left hover:bg-slate-900"
+                    className="w-full rounded-xl px-2 py-2 text-left hover:bg-zinc-50"
                     onClick={() => {
                       setMoveOpen(true);
                       setMenuOpen(false);
@@ -322,7 +322,7 @@ export function CollectionCard({
                     {t("collection.move")}
                   </button>
                   <button
-                    className="w-full rounded px-2 py-2 text-left hover:bg-slate-900"
+                    className="w-full rounded-xl px-2 py-2 text-left hover:bg-zinc-50"
                     onClick={() => {
                       onExport();
                       setMenuOpen(false);
@@ -331,7 +331,7 @@ export function CollectionCard({
                     {t("collection.export")}
                   </button>
                   <button
-                    className="w-full rounded px-2 py-2 text-left hover:bg-slate-900"
+                    className="w-full rounded-xl px-2 py-2 text-left hover:bg-zinc-50"
                     onClick={() => {
                       onInvite?.();
                       setMenuOpen(false);
@@ -340,7 +340,7 @@ export function CollectionCard({
                     {t("sidebar.invite")}
                   </button>
                   <button
-                    className="w-full rounded px-2 py-2 text-left text-rose-300 hover:bg-slate-900"
+                    className="w-full rounded-xl px-2 py-2 text-left text-rose-500 hover:bg-zinc-50"
                     onClick={() => {
                       const confirmed = window.confirm(t("collection.confirmDelete"));
                       if (confirmed) {
@@ -356,15 +356,15 @@ export function CollectionCard({
             </div>
           </div>
         </div>
-        <div className="mt-2 ml-7 text-xs text-slate-400">
+        <div className="mt-2 ml-7 text-xs text-zinc-500">
           {tabCount} {t("collection.tabs")}
         </div>
-        {summary ? <div className="mt-2 ml-7 text-xs text-slate-300">{summary}</div> : null}
+        {summary ? <div className="mt-2 ml-7 text-xs text-zinc-500">{summary}</div> : null}
         {collapsed ? null : children}
       </div>
       {moveOpen ? (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded border border-slate-800 bg-slate-950 p-4 shadow-xl">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl">
             <div className="text-sm font-semibold">{t("collection.moveTitle")}</div>
             <div className="mt-3 space-y-3 text-xs">
               <label className="block">
@@ -394,7 +394,7 @@ export function CollectionCard({
             </div>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button
-                className="rounded border border-slate-700 px-3 py-2 text-xs text-slate-200"
+                className="rounded-xl border border-zinc-200 px-3 py-2 text-xs text-zinc-700"
                 onClick={() => setMoveOpen(false)}
               >
                 {t("tab.cancel")}

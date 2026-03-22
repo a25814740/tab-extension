@@ -75,12 +75,11 @@ export function TabRow({
   const showImageBlock = viewMode === "image";
   const displayTitle = ogTitle ?? title;
   const displayDescription = note ?? ogDescription ?? url;
-  const actionButtonBase =
-    "text-slate-200 transition-colors duration-150 hover:text-white";
+  const actionButtonBase = "text-zinc-500 transition-colors duration-150 hover:text-zinc-900";
   const actionButtonInner =
-    "flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/80 text-[11px] shadow-sm transition-colors duration-150 hover:bg-slate-700/80";
+    "flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-[11px] text-zinc-600 shadow-sm transition-colors duration-150 hover:bg-zinc-200";
   const checkboxClass =
-    "h-4 w-4 rounded border-slate-600 bg-slate-900 text-rose-400 focus:ring-rose-500/40";
+    "h-4 w-4 rounded border-zinc-300 bg-white text-zinc-900 focus:ring-zinc-300/40";
 
   const handleOpen = () => {
     void openTabs([url]);
@@ -159,10 +158,10 @@ export function TabRow({
       ref={sortable.setNodeRef}
       className={
         sortable.isDragging
-          ? "rounded-lg border border-slate-800/70 bg-slate-900/70 p-3 opacity-70 shadow-sm backdrop-blur-sm"
+          ? "rounded-2xl border border-zinc-200 bg-zinc-100 p-3 opacity-70 shadow-sm"
           : sortable.isOver
-          ? "rounded-lg border border-slate-800/70 bg-slate-900/70 p-3 ring-1 ring-slate-500 shadow-sm backdrop-blur-sm"
-          : "rounded-lg border border-slate-800/70 bg-slate-900/70 p-3 shadow-sm backdrop-blur-sm"
+          ? "rounded-2xl border border-zinc-200 bg-zinc-100 p-3 ring-1 ring-zinc-300 shadow-sm"
+          : "rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm"
       }
       style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}
       draggable
@@ -276,11 +275,11 @@ export function TabRow({
         </>
       )}
       {showImageBlock ? (
-        <div className="mb-2 aspect-video w-full overflow-hidden rounded bg-slate-800">
+        <div className="mb-2 aspect-video w-full overflow-hidden rounded bg-zinc-100">
           {ogImage ? (
             <img src={ogImage} alt="preview" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-500">
+            <div className="flex h-full w-full items-center justify-center text-[10px] text-zinc-500">
               {t("tab.noImage")}
             </div>
           )}
@@ -290,7 +289,7 @@ export function TabRow({
         {isList ? (
           // 清單模式使用固定欄寬，避免不同長度造成排版不一致
           <div className="grid min-w-0 flex-1 grid-cols-[24px_220px_1fr] items-center gap-3">
-            <div className="flex h-5 w-5 flex-none items-center justify-center overflow-hidden rounded bg-slate-800">
+            <div className="flex h-5 w-5 flex-none items-center justify-center overflow-hidden rounded bg-zinc-100">
               {faviconUrl ? (
                 <img
                   src={faviconUrl}
@@ -312,13 +311,13 @@ export function TabRow({
                 aria-label={t("tab.select")}
               />
             </div>
-            <span className="truncate font-medium text-slate-100">{displayTitle}</span>
-            <span className="truncate text-slate-400">{displayDescription}</span>
+            <span className="truncate font-medium text-zinc-900">{displayTitle}</span>
+            <span className="truncate text-zinc-500">{displayDescription}</span>
           </div>
         ) : (
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-2 py-1">
-            <div className="flex h-5 w-5 flex-none items-center justify-center overflow-hidden rounded bg-slate-800">
+            <div className="flex h-5 w-5 flex-none items-center justify-center overflow-hidden rounded bg-zinc-100">
               {faviconUrl ? (
                 <img
                   src={faviconUrl}
@@ -340,12 +339,12 @@ export function TabRow({
                 aria-label={t("tab.select")}
               />
             </div>
-              <span className="truncate font-medium text-slate-100">{displayTitle}</span>
+              <span className="truncate font-medium text-zinc-900">{displayTitle}</span>
             </div>
             {isCompact ? null : (
               <>
-                <div className="my-1 h-px w-full bg-slate-700/60" />
-                <span className="truncate text-slate-400">{displayDescription}</span>
+                <div className="my-1 h-px w-full bg-zinc-200" />
+                <span className="truncate text-zinc-500">{displayDescription}</span>
               </>
             )}
           </div>
@@ -354,47 +353,47 @@ export function TabRow({
       {isCompact ? null : (
         <div className="mt-2 flex items-center gap-2">
           <div
-            className={`h-1 flex-1 rounded ${sortableBefore.isOver ? "bg-slate-400" : "bg-slate-800"}`}
+            className={`h-1 flex-1 rounded ${sortableBefore.isOver ? "bg-zinc-400" : "bg-zinc-200"}`}
             ref={sortableBefore.setNodeRef}
             {...sortableBefore.attributes}
             {...sortableBefore.listeners}
           />
-          <div className={`h-1 flex-1 rounded ${sortable.isOver ? "bg-slate-400" : "bg-slate-800"}`} />
+          <div className={`h-1 flex-1 rounded ${sortable.isOver ? "bg-zinc-400" : "bg-zinc-200"}`} />
         </div>
       )}
 
       {isEditing
         ? createPortal(
             <div
-              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4"
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4"
               onClick={handleCancel}
             >
               <div
-                className="modal-enter w-full max-w-lg rounded border border-slate-800 bg-slate-950 p-4 shadow-xl"
+                className="modal-enter w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl"
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="text-sm font-semibold">{t("tab.editTitle")}</div>
                 <div className="mt-3 space-y-3 text-xs">
                   <label className="block">
-                    <div className="mb-1 text-slate-400">{t("tab.field.title")}</div>
+                    <div className="mb-1 text-zinc-500">{t("tab.field.title")}</div>
                     <input
-                      className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700"
                       value={draftTitle}
                       onChange={(event) => setDraftTitle(event.target.value)}
                     />
                   </label>
                   <label className="block">
-                    <div className="mb-1 text-slate-400">{t("tab.field.description")}</div>
+                    <div className="mb-1 text-zinc-500">{t("tab.field.description")}</div>
                     <textarea
-                      className="min-h-[80px] w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100"
+                      className="min-h-[80px] w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700"
                       value={draftDescription}
                       onChange={(event) => setDraftDescription(event.target.value)}
                     />
                   </label>
                   <label className="block">
-                    <div className="mb-1 text-slate-400">{t("tab.field.url")}</div>
+                    <div className="mb-1 text-zinc-500">{t("tab.field.url")}</div>
                     <input
-                      className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700"
                       value={draftUrl}
                       onChange={(event) => setDraftUrl(event.target.value)}
                     />
@@ -434,14 +433,14 @@ export function TabRow({
                 </div>
                 <div className="mt-4 flex items-center justify-between">
                   <button
-                    className="rounded border border-rose-500 px-3 py-2 text-xs text-rose-300"
+                    className="rounded-xl border border-rose-200 px-3 py-2 text-xs text-rose-600"
                     onClick={handleDelete}
                   >
                     {t("tab.delete")}
                   </button>
                   <div className="flex items-center gap-2">
                     <button
-                      className="rounded border border-slate-700 px-3 py-2 text-xs text-slate-200"
+                      className="rounded-xl border border-zinc-200 px-3 py-2 text-xs text-zinc-700"
                       onClick={handleCancel}
                     >
                       {t("tab.cancel")}

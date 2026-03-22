@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SectionTitle } from "@toby/shared-ui";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getAllWindowsWithTabs, openTabs, focusTab, closeTabs, getLocal, setLocal } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
-import { Tree } from "./Tree";
 import { CollectionCard } from "./CollectionCard";
+import { CollectionRow } from "./CollectionRow";
 import { TabRow } from "./TabRow";
 import { createRuleBasedProvider } from "@toby/ai";
 import { AuthMiniPanel } from "./AuthPanel";
@@ -24,6 +23,37 @@ import { DEFAULT_SUPABASE_ANON_KEY, DEFAULT_SUPABASE_URL, useAuthLogic, useAuthU
 import { fetchOgMetadata } from "../utils/og";
 import { SelectMenu } from "./SelectMenu";
 import { manualDriveSync, startupDriveSync } from "../sync/driveSync";
+import { DockIconButton } from "./DockIconButton";
+import { EntityMenuButton } from "./EntityMenuButton";
+import {
+  ArrowUpDown,
+  Building2,
+  Check,
+  ChevronRight,
+  ChevronsUpDown,
+  CircleDot,
+  Clock3,
+  Columns3,
+  FolderPlus,
+  Grid2X2,
+  Inbox,
+  LayoutGrid,
+  Layers2,
+  Layers3,
+  Link2,
+  List,
+  PanelRightClose,
+  PanelRightOpen,
+  Pin,
+  Plus,
+  Search,
+  Settings,
+  Sparkles,
+  Trash2,
+  X,
+  UserPlus,
+  Pencil,
+} from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -31,7 +61,6 @@ import {
   closestCenter,
   useSensor,
   useSensors,
-  useDndMonitor,
   DragEndEvent,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
@@ -41,7 +70,8 @@ type AddCollectionAction = "blank" | "current-window" | "selected-tabs";
 type DockEntry = {
   id: string;
   label: string;
-  icon: string;
+  icon?: ReactNode;
+  text?: string;
   onClick: () => void;
   faviconUrl?: string | null;
   onRemove?: () => void;
@@ -105,7 +135,6 @@ export function App() {
   const saveCollectionFromTabsInSpace = useAppStore((state) => state.saveCollectionFromTabsInSpace);
   const addDockItems = useAppStore((state) => state.addDockItems);
   const removeDockItem = useAppStore((state) => state.removeDockItem);
-  const clearDockItems = useAppStore((state) => state.clearDockItems);
   const viewMode = useAppStore((state) => state.cache.ui.viewMode);
   const sortMode = useAppStore((state) => state.cache.ui.sortMode);
   const dockPinnedItems = useAppStore((state) => state.cache.dock.pinned);
@@ -117,14 +146,10 @@ export function App() {
   const reorderFolders = useAppStore((state) => state.reorderFolders);
   const reorderTabs = useAppStore((state) => state.reorderTabs);
   const reorderTabsWithIndex = useAppStore((state) => state.reorderTabsWithIndex);
-  const expandedFolderIds = useAppStore((state) => state.cache.expandedFolderIds);
   const selectedSpaceId = useAppStore((state) => state.cache.selectedSpaceId);
   const selectedWorkspaceId = useAppStore((state) => state.cache.selectedWorkspaceId);
-  const toggleFolderExpanded = useAppStore((state) => state.toggleFolderExpanded);
-  const expandFolder = useAppStore((state) => state.expandFolder);
   const tabs = useAppStore((state) => state.tabs);
   const selectedCollectionId = useAppStore((state) => state.cache.selectedCollectionId ?? null);
-  const [overId, setOverId] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(new Set());
@@ -144,7 +169,6 @@ export function App() {
   const [dedupeOpen, setDedupeOpen] = useState(false);
   const [dedupeKeepIds, setDedupeKeepIds] = useState<Set<string>>(new Set());
   const [dedupeQuery, setDedupeQuery] = useState("");
-  const [draggingWindowTabId, setDraggingWindowTabId] = useState<number | null>(null);
   const [dragOverCollectionId, setDragOverCollectionId] = useState<string | null>(null);
   const [moveNotice, setMoveNotice] = useState<{
     message: string;
@@ -155,12 +179,13 @@ export function App() {
   const [collapsedCollections, setCollapsedCollections] = useState<Record<string, boolean>>({});
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-  const [addCollectionMode, setAddCollectionMode] = useState<AddCollectionAction>("blank");
+  const [orgMenuOpen, setOrgMenuOpen] = useState(false);
+  const [createCollectionMenuOpen, setCreateCollectionMenuOpen] = useState(false);
+  const [entityMenu, setEntityMenu] = useState<{ type: string; id: string } | null>(null);
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
   const [windowGroups, setWindowGroups] = useState<
     Array<{ id: number; title: string; tabs: Array<{ id: number; title: string; url: string; favIconUrl?: string }> }>
   >([]);
-  const [collapsedWindows, setCollapsedWindows] = useState<Record<number, boolean>>({});
   const [orgSettingsOpen, setOrgSettingsOpen] = useState(false);
   const [orgSettingsTab, setOrgSettingsTab] = useState<"preferences" | "members">("preferences");
   const [orgNameDraft, setOrgNameDraft] = useState("");
@@ -193,8 +218,9 @@ export function App() {
   const [collectionInviteLink, setCollectionInviteLink] = useState("");
   const [collectionInviteStatus, setCollectionInviteStatus] = useState("");
   const importFileRef = useRef<HTMLInputElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const checkboxClass =
-    "h-4 w-4 rounded border-slate-600 bg-slate-900 text-rose-400 focus:ring-rose-500/40";
+    "h-4 w-4 rounded border-zinc-300 bg-white text-zinc-900 focus:ring-zinc-300/40";
   const pulledWorkspacesRef = useRef<Set<string>>(new Set());
   const AUTH_USER_KEY = "toby_auth_user_v1";
 
@@ -326,10 +352,6 @@ export function App() {
     [activeWorkspaceId, spaces]
   );
   const activeSpaceId = selectedSpaceId ?? scopedSpaces[0]?.id ?? null;
-  const scopedFolders = useMemo(
-    () => (activeWorkspaceId ? folders.filter((folder) => folder.workspaceId === activeWorkspaceId) : []),
-    [activeWorkspaceId, folders]
-  );
   const scopedCollections = useMemo(
     () =>
       activeWorkspaceId
@@ -370,6 +392,18 @@ export function App() {
         chrome.storage.onChanged.removeListener(onChanged);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOrgMenuOpen(false);
+        setEntityMenu(null);
+        setCreateCollectionMenuOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   useEffect(() => {
@@ -565,27 +599,6 @@ export function App() {
     [collections, tabMoveSpaceId]
   );
 
-  const addCollectionOptions = useMemo(
-    () => [
-      {
-        value: "blank",
-        label: locale === "en" ? "Blank collection" : "空白集合",
-        group: locale === "en" ? "Add collection" : "新增集合",
-      },
-      {
-        value: "current-window",
-        label: locale === "en" ? "From current window" : "從目前視窗",
-        group: locale === "en" ? "Add collection" : "新增集合",
-      },
-      {
-        value: "selected-tabs",
-        label: locale === "en" ? "From selected tabs" : "從已選分頁",
-        group: locale === "en" ? "Add collection" : "新增集合",
-      },
-    ],
-    [locale]
-  );
-
   const tabCountByCollection = useMemo(() => {
     const map = new Map<string, number>();
     scopedTabs.forEach((tab) => {
@@ -593,6 +606,14 @@ export function App() {
     });
     return map;
   }, [scopedTabs]);
+
+  const collectionCountBySpace = useMemo(() => {
+    const map = new Map<string, number>();
+    scopedCollections.forEach((collection) => {
+      map.set(collection.spaceId, (map.get(collection.spaceId) ?? 0) + 1);
+    });
+    return map;
+  }, [scopedCollections]);
 
   const orderBySpace = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -933,21 +954,6 @@ export function App() {
     return base;
   }, [canAssignOwner, t]);
 
-  const orgOptions = useMemo(
-    () =>
-      workspaces.map((item) => ({
-        value: item.id,
-        label: item.name,
-        icon: item.logoUrl ? (
-          <img src={item.logoUrl} alt={item.name} className="h-4 w-4 rounded-full object-cover" />
-        ) : (
-          <span className="text-[10px] font-semibold">{item.name.slice(0, 2).toUpperCase()}</span>
-        ),
-      })),
-    [workspaces]
-  );
-  const activeWorkspaceValue = activeWorkspaceId ?? orgOptions[0]?.value ?? "";
-
   const handleOpenAll = (collectionId: string) => {
     const urls = scopedTabs.filter((tab) => tab.collectionId === collectionId).map((tab) => tab.url);
     if (urls.length > 0) {
@@ -1006,6 +1012,24 @@ export function App() {
         return list.sort((a, b) => a.position - b.position);
     }
   }, [filteredCollections, sortMode]);
+
+  const sortLabel = useMemo(() => {
+    if (sortMode === "recent") {
+      return `排序：${t("app.sort.recent")}`;
+    }
+    if (sortMode === "name") {
+      return `排序：${t("app.sort.name")}`;
+    }
+    if (sortMode === "createdAt") {
+      return `排序：${t("app.sort.createdAt")}`;
+    }
+    return `排序：${t("app.sort.custom")}`;
+  }, [sortMode, t]);
+
+  const handleCycleSortMode = () => {
+    const next = sortMode === "recent" ? "name" : sortMode === "name" ? "createdAt" : "recent";
+    setSortMode(next);
+  };
 
   useEffect(() => {
     const provider = createRuleBasedProvider();
@@ -1112,6 +1136,43 @@ export function App() {
     addCollection(name.trim());
   };
 
+  const handleAddCollectionInSpace = (spaceId: string) => {
+    setSelectedSpaceId(spaceId);
+    handleCreateCollection();
+  };
+
+  const handleRenameSpace = (spaceId: string) => {
+    if (!guardWrite()) {
+      return;
+    }
+    const current = spaces.find((space) => space.id === spaceId)?.name ?? "";
+    const name = window.prompt(locale === "en" ? "Rename space" : "重新命名空間", current);
+    if (!name || !name.trim()) {
+      return;
+    }
+    updateSpace(spaceId, { name: name.trim() });
+    showUiNotice(locale === "en" ? "Space renamed" : "空間已重新命名");
+    setSelectedSpaceId(spaceId);
+  };
+
+  const handleDeleteSpace = (spaceId: string) => {
+    if (!guardWrite()) {
+      return;
+    }
+    const confirmed = window.confirm(locale === "en" ? "Delete this space?" : "確定刪除空間嗎？");
+    if (!confirmed) {
+      return;
+    }
+    deleteSpace(spaceId);
+    showUiNotice(locale === "en" ? "Space deleted" : "空間已刪除");
+  };
+
+  const handleInviteSpace = (spaceId: string) => {
+    setOrgSettingsTab("members");
+    setOrgSettingsOpen(true);
+    setSelectedSpaceId(spaceId);
+  };
+
   const toTabInput = (tab: { title: string; url: string; favIconUrl?: string }) => {
     const input: { title: string; url: string; pinned: boolean; favIconUrl?: string } = {
       title: tab.title,
@@ -1205,8 +1266,19 @@ export function App() {
     setSelectedWindowTabIds(new Set());
   };
 
+  const toggleWindowTabSelected = (tabId: number) => {
+    setSelectedWindowTabIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(tabId)) {
+        next.delete(tabId);
+      } else {
+        next.add(tabId);
+      }
+      return next;
+    });
+  };
+
   const handleAddCollectionAction = (value: AddCollectionAction) => {
-    setAddCollectionMode(value);
     if (value === "blank") {
       handleCreateCollection();
     } else if (value === "current-window") {
@@ -1217,7 +1289,6 @@ export function App() {
     } else if (value === "selected-tabs") {
       handleSaveSelectedWindowTabs();
     }
-    setAddCollectionMode("blank");
   };
 
   const handleOpenCollectionInvite = (collectionId: string) => {
@@ -1707,13 +1778,6 @@ export function App() {
     }));
   };
 
-  const toggleWindowCollapse = (windowId: number) => {
-    setCollapsedWindows((prev) => ({
-      ...prev,
-      [windowId]: !prev[windowId],
-    }));
-  };
-
   const handleSync = async () => {
     const result = await manualDriveSync();
     if (!result.ok && result.error === "membership_inactive") {
@@ -1731,35 +1795,53 @@ export function App() {
         void openTabs(urls);
       }
     };
+
     const coreItems: DockEntry[] = [
       {
-        id: "new-collection",
-        label: t("toolbar.addCollection"),
-        icon: "+",
-        onClick: handleCreateCollection,
+        id: "home",
+        label: locale === "en" ? "Home" : "首頁",
+        icon: <LayoutGrid className="h-5 w-5" />,
+        onClick: () => setSelectedCollectionId(null),
       },
       {
-        id: "save-window",
-        label: t("app.saveCurrentWindow"),
-        icon: "▣",
+        id: "org",
+        label: locale === "en" ? "Organization" : "組織",
+        icon: <Building2 className="h-5 w-5" />,
         onClick: () => {
-          const currentWindow = windowGroups[0];
-          if (currentWindow) {
-            handleSaveWindowGroup(currentWindow.title, currentWindow.tabs);
-          }
+          setOrgSettingsTab("preferences");
+          setOrgSettingsOpen(true);
         },
       },
       {
-        id: "sync-now",
-        label: t("app.syncNow"),
-        icon: "⟳",
-        onClick: handleSync,
+        id: "space",
+        label: locale === "en" ? "Spaces" : "空間",
+        icon: <Layers3 className="h-5 w-5" />,
+        onClick: () => setLeftCollapsed(false),
+      },
+      {
+        id: "inbox",
+        label: locale === "en" ? "Inbox" : "收件匣",
+        icon: <Inbox className="h-5 w-5" />,
+        onClick: () => showUiNotice(locale === "en" ? "Inbox is coming soon." : "收件匣功能開發中"),
+      },
+      {
+        id: "search",
+        label: locale === "en" ? "Search" : "搜尋",
+        icon: <Search className="h-5 w-5" />,
+        onClick: () => searchInputRef.current?.focus(),
+      },
+      {
+        id: "ai",
+        label: "AI",
+        icon: <Sparkles className="h-5 w-5" />,
+        onClick: () => showUiNotice(locale === "en" ? "AI shortcuts are coming soon." : "AI 入口準備中"),
       },
     ];
+
     const pinnedItems: DockEntry[] = dockPinnedItems.map((item) => ({
       id: item.id,
       label: item.title,
-      icon: item.title.slice(0, 2).toUpperCase(),
+      text: item.title.slice(0, 2).toUpperCase(),
       faviconUrl: item.faviconUrl ?? null,
       onClick: () => {
         if (item.type === "collection" && item.collectionId) {
@@ -1775,6 +1857,7 @@ export function App() {
         showUiNotice(locale === "en" ? "Removed from Dock" : "已從 Dock 移除");
       },
     }));
+
     const recentItems: DockEntry[] = scopedCollections
       .slice()
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
@@ -1782,29 +1865,34 @@ export function App() {
       .map((collection) => ({
         id: collection.id,
         label: collection.name,
-        icon: collection.name.slice(0, 2).toUpperCase(),
+        text: collection.name.slice(0, 2).toUpperCase(),
         onClick: () => openCollection(collection.id),
       }));
+
     const stashItems: DockEntry[] = [
+      {
+        id: "pin",
+        label: locale === "en" ? "Stash" : "暫放",
+        icon: <Pin className="h-5 w-5" />,
+        onClick: () => showUiNotice(locale === "en" ? "Stash is coming soon." : "暫放功能準備中"),
+      },
+      {
+        id: "recent",
+        label: locale === "en" ? "Recent" : "最近使用",
+        icon: <Clock3 className="h-5 w-5" />,
+        onClick: () => showUiNotice(locale === "en" ? "Recent shortcuts are coming soon." : "最近使用入口準備中"),
+      },
       {
         id: "settings",
         label: t("sidebar.settings"),
-        icon: "⚙",
+        icon: <Settings className="h-5 w-5" />,
         onClick: () => {
           setOrgSettingsTab("preferences");
           setOrgSettingsOpen(true);
         },
       },
-      {
-        id: "clear-dock",
-        label: locale === "en" ? "Clear Dock" : "清空 Dock",
-        icon: "✕",
-        onClick: () => {
-          clearDockItems();
-          showUiNotice(locale === "en" ? "Dock cleared" : "Dock 已清空");
-        },
-      },
     ];
+
     return [
       { id: "core", label: locale === "en" ? "Core" : "核心功能", items: coreItems },
       { id: "fixed", label: locale === "en" ? "Pinned" : "固定捷徑", items: pinnedItems },
@@ -1812,27 +1900,25 @@ export function App() {
       { id: "temp", label: locale === "en" ? "Stash & Settings" : "暫放 / 設定", items: stashItems },
     ];
   }, [
-    clearDockItems,
     dockPinnedItems,
-    handleCreateCollection,
-    handleSaveWindowGroup,
-    handleSync,
     locale,
     removeDockItem,
     scopedCollections,
     scopedTabs,
     showUiNotice,
+    setLeftCollapsed,
+    setOrgSettingsOpen,
+    setOrgSettingsTab,
+    setSelectedCollectionId,
     t,
-    windowGroups,
   ]);
 
-  const collapsedTabIcons = useMemo(
-    () =>
-      windowGroups
-        .flatMap((window) => window.tabs.map((tab) => ({ ...tab, windowId: window.id })))
-        .slice(0, 12),
+  const openTabList = useMemo(
+    () => windowGroups.flatMap((window) => window.tabs.map((tab) => ({ ...tab, windowId: window.id }))),
     [windowGroups]
   );
+
+  const collapsedTabIcons = useMemo(() => openTabList.slice(0, 8), [openTabList]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1884,202 +1970,222 @@ export function App() {
     }
   };
 
-  const DndMonitorBridge = () => {
-    // Dnd monitor must be used inside DndContext provider.
-    useDndMonitor({
-      onDragOver: (event) => {
-        setOverId(event.over ? String(event.over.id) : null);
-      },
-      onDragEnd: () => setOverId(null),
-      onDragCancel: () => setOverId(null),
-    });
-    return null;
-  };
-
   // Layout mirrors a Toby-like information hierarchy while keeping data wiring intact.
   if (!authUser) {
     return (
-      <div className="flex h-screen w-full min-w-[1280px] items-center justify-center overflow-x-auto bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 text-slate-100">
-        <div className="w-full max-w-sm rounded border border-slate-800 bg-slate-900/70 p-6 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500 text-lg font-semibold">
+      <div className="flex h-[100vh] w-full min-w-[1280px] items-center justify-center overflow-x-auto bg-zinc-100 p-4 text-zinc-900">
+        <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500 text-lg font-semibold text-white">
             OO
           </div>
           <div className="text-lg font-semibold">{t("login.title")}</div>
-          <div className="mt-2 text-sm text-slate-400">{t("login.subtitle")}</div>
+          <div className="mt-2 text-sm text-zinc-500">{t("login.subtitle")}</div>
           <button
-            className="mt-4 w-full rounded bg-rose-500 px-4 py-2 text-sm font-semibold text-white"
+            className="mt-4 w-full rounded-xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white"
             onClick={handleGoogle}
           >
             {t("login.google")}
           </button>
-          <div className="mt-3 text-xs text-slate-500">{status || t("login.required")}</div>
+          <div className="mt-3 text-xs text-zinc-500">{status || t("login.required")}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-full overflow-x-auto bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 text-slate-100">
+    <div className="h-[100vh] w-full overflow-x-auto bg-zinc-100 p-4 text-zinc-900">
       <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
-        <DndMonitorBridge />
-        <main className="flex h-full min-w-[1280px]">
+        <main
+          className={`grid min-h-full min-w-[1280px] gap-4 pb-24 ${
+            leftCollapsed
+              ? "grid-cols-[84px_minmax(420px,1fr)_360px]"
+              : rightCollapsed
+                ? "grid-cols-[280px_minmax(420px,1fr)_72px]"
+                : "grid-cols-[280px_minmax(420px,1fr)_360px]"
+          }`}
+        >
           {shareNotice ? (
-            <div className="fixed left-1/2 top-4 z-[9999] -translate-x-1/2 rounded-full border border-slate-800 bg-slate-900/90 px-4 py-2 text-xs text-slate-200 shadow-lg backdrop-blur">
+            <div className="fixed left-1/2 top-4 z-[9999] -translate-x-1/2 rounded-full border border-zinc-200 bg-white/90 px-4 py-2 text-xs text-zinc-700 shadow-lg backdrop-blur">
               {shareNotice}
             </div>
           ) : null}
           {upgradeNotice ? (
-            <div className="fixed left-1/2 top-12 z-[9999] -translate-x-1/2 rounded-full border border-rose-700/60 bg-rose-900/60 px-4 py-2 text-xs text-rose-100 shadow-lg backdrop-blur">
+            <div className="fixed left-1/2 top-12 z-[9999] -translate-x-1/2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700 shadow-lg backdrop-blur">
               {upgradeNotice}
             </div>
           ) : null}
           {uiNotice ? (
-            <div className="fixed left-1/2 top-20 z-[9999] -translate-x-1/2 rounded-full border border-slate-800 bg-slate-900/90 px-4 py-2 text-xs text-slate-100 shadow-lg backdrop-blur">
+            <div className="fixed left-1/2 top-20 z-[9999] -translate-x-1/2 rounded-full border border-zinc-200 bg-white/90 px-4 py-2 text-xs text-zinc-700 shadow-lg backdrop-blur">
               {uiNotice}
             </div>
           ) : null}
-          <aside
-            className={`flex h-full flex-col border-r border-slate-800 px-4 py-4 ${
-              leftCollapsed ? "w-16" : "w-72"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="text-[10px] uppercase tracking-wide text-slate-500">
-                {leftCollapsed ? "ORG" : t("app.workspace")}
+          <aside className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+            <div className="border-b border-zinc-200 px-4 py-4">
+              <div className="flex items-center justify-between gap-2">
+                {!leftCollapsed ? <div className="text-xs font-semibold tracking-wide text-zinc-500">組織</div> : null}
+                <button
+                  onClick={() => setLeftCollapsed((prev) => !prev)}
+                  className="rounded-xl p-2 text-zinc-500 hover:bg-zinc-100"
+                  aria-label={leftCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                  <Columns3 className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                className="rounded border border-slate-700 px-2 py-1 text-[10px]"
-                onClick={() => setLeftCollapsed((prev) => !prev)}
-                aria-label={leftCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                {leftCollapsed ? "»" : "«"}
-              </button>
-            </div>
-            {leftCollapsed ? (
-              <div className="mt-4 flex flex-1 flex-col items-center gap-3 overflow-y-auto scrollbar-hide">
-                {workspaces.map((item) => (
+              {!leftCollapsed ? (
+                <div className="relative mt-3">
                   <button
-                    key={item.id}
-                    className={`flex h-10 w-10 items-center justify-center rounded-full text-xs font-semibold ${
-                      item.id === activeWorkspaceId ? "bg-rose-500 text-white" : "border border-slate-700 text-slate-200"
-                    }`}
-                    onClick={() => setSelectedWorkspaceId(item.id)}
-                    title={item.name}
+                    onClick={() => setOrgMenuOpen((prev) => !prev)}
+                    className="flex w-full items-center justify-between rounded-2xl bg-zinc-50 p-4 pr-4 text-left"
                   >
-                    {item.logoUrl ? (
-                      <img src={item.logoUrl} alt={item.name} className="h-full w-full rounded-full object-cover" />
-                    ) : (
-                      item.name.slice(0, 2).toUpperCase()
-                    )}
+                    <div>
+                      <div className="text-lg font-semibold">{workspace?.name ?? t("app.loading")}</div>
+                      <div className="mt-1 text-sm text-zinc-500">{scopedSpaces.length} 個空間</div>
+                    </div>
+                    <ChevronsUpDown className="h-4 w-4 text-zinc-500" />
                   </button>
-                ))}
-                <div className="h-px w-8 bg-slate-800" />
-                {scopedSpaces.map((space) => (
-                  <button
-                    key={space.id}
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 text-[10px]"
-                    title={space.name}
-                    onClick={() => setSelectedSpaceId(space.id)}
-                  >
-                    {space.name.slice(0, 1).toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <>
-                <div className="relative mt-4">
-                  <SelectMenu
-                    value={activeWorkspaceValue}
-                    onChange={(value) => setSelectedWorkspaceId(value)}
-                    options={orgOptions}
-                    buttonClassName="pr-4"
-                    searchable
-                    searchPlaceholder={t("org.members.search")}
-                  />
-                  <div className="absolute right-2 top-[85%] -translate-y-1/2 [bottom:auto] flex items-center gap-2">
-                    <button
-                      className="rounded border border-slate-700 p-1 text-[10px] hover:border-rose-400"
-                      onClick={handleCreateWorkspace}
-                      aria-label="新增組織"
-                    >
-                      +
+
+                  <div className="absolute right-2 top-[85%] z-10 flex -translate-y-1/2 items-center gap-1 [bottom:auto]">
+                    <button className="rounded-xl p-2 text-zinc-500 transition hover:bg-white" onClick={handleCreateWorkspace}>
+                      <Plus className="h-4 w-4" />
+                    </button>
+                    <button className="rounded-xl p-2 text-zinc-500 transition hover:bg-white" onClick={() => setOrgSettingsOpen(true)}>
+                      <Settings className="h-4 w-4" />
                     </button>
                     <button
-                      className="rounded border border-slate-700 p-1 text-[10px] hover:border-rose-400"
-                      onClick={() => setOrgSettingsOpen(true)}
-                      aria-label="編輯組織"
-                    >
-                      ⚙
-                    </button>
-                    <button
-                      className="rounded border border-slate-700 p-1 text-[10px] hover:border-rose-400"
+                      className="rounded-xl p-2 text-zinc-500 transition hover:bg-white"
                       onClick={() => {
                         setOrgSettingsTab("members");
                         setOrgSettingsOpen(true);
                       }}
-                      aria-label="邀請好友"
                     >
-                      👥
+                      <UserPlus className="h-4 w-4" />
                     </button>
                   </div>
+
+                  {orgMenuOpen ? (
+                    <div className="absolute left-0 right-0 top-full z-30 mt-2 rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
+                      {workspaces.map((org) => {
+                        const spaceCount = spaces.filter((space) => space.workspaceId === org.id).length;
+                        return (
+                          <button
+                            key={org.id}
+                            onClick={() => {
+                              setSelectedWorkspaceId(org.id);
+                              const firstSpace = spaces.find((space) => space.workspaceId === org.id);
+                              if (firstSpace) {
+                                setSelectedSpaceId(firstSpace.id);
+                              }
+                              setOrgMenuOpen(false);
+                            }}
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm hover:bg-zinc-50"
+                          >
+                            <div>
+                              <div className="font-medium text-zinc-900">{org.name}</div>
+                              <div className="text-xs text-zinc-500">{spaceCount} 個空間</div>
+                            </div>
+                            {activeWorkspaceId === org.id ? <Check className="h-4 w-4 text-zinc-700" /> : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </div>
-                <div className="mt-5 flex min-h-0 flex-1 flex-col">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <SectionTitle title={t("app.spaces")} />
-                    <button className="rounded border border-slate-700 px-2 py-1 text-xs" onClick={handleCreateSpace}>
-                      +
+              ) : (
+                <div className="mt-3 flex justify-center">
+                  <button className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-white">
+                    <Building2 className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {!leftCollapsed ? (
+              <div className="flex items-center justify-between px-5 pt-4">
+                <div className="text-sm font-semibold text-zinc-600">空間</div>
+                <div className="flex items-center gap-1">
+                  <button className="rounded-xl bg-zinc-100 px-3 py-1.5 text-xs text-zinc-500" onClick={handleCreateSpace}>
+                    新增空間
+                  </button>
+                  <EntityMenuButton
+                    type="space-global"
+                    id={activeWorkspaceId ?? "space"}
+                    entityMenu={entityMenu}
+                    setEntityMenu={setEntityMenu}
+                    items={[
+                      { label: "新增空間", icon: Layers2, onClick: handleCreateSpace },
+                      { label: "編輯目前空間", icon: Pencil, onClick: () => activeSpaceId && handleRenameSpace(activeSpaceId) },
+                      { label: "刪除目前空間", icon: Trash2, onClick: () => activeSpaceId && handleDeleteSpace(activeSpaceId) },
+                      { label: "邀請好友", icon: UserPlus, onClick: () => activeSpaceId && handleInviteSpace(activeSpaceId) },
+                    ]}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-3">
+              <div className="space-y-2">
+                {scopedSpaces.map((space) => (
+                  <div
+                    key={space.id}
+                    className={`group flex items-center gap-2 rounded-2xl ${
+                      space.id === activeSpaceId ? "bg-zinc-900" : "bg-zinc-50 hover:bg-zinc-100"
+                    }`}
+                  >
+                    <button
+                      onClick={() => setSelectedSpaceId(space.id)}
+                      className={`flex min-w-0 flex-1 items-center justify-between px-4 py-3 text-left ${
+                        space.id === activeSpaceId ? "text-white" : "text-zinc-700"
+                      }`}
+                    >
+                      <span className={`text-sm font-medium ${leftCollapsed ? "mx-auto" : ""}`}>
+                        {leftCollapsed ? space.name.slice(0, 1) : space.name}
+                      </span>
+                      {!leftCollapsed ? (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs ${
+                            space.id === activeSpaceId ? "bg-white/15 text-white" : "bg-white text-zinc-500"
+                          }`}
+                        >
+                          {collectionCountBySpace.get(space.id) ?? 0}
+                        </span>
+                      ) : null}
                     </button>
+                    {!leftCollapsed ? (
+                      <div className="pr-2 opacity-0 transition group-hover:opacity-100">
+                        <EntityMenuButton
+                          type="space"
+                          id={space.id}
+                          entityMenu={entityMenu}
+                          setEntityMenu={setEntityMenu}
+                          items={[
+                            { label: "新增集合", icon: FolderPlus, onClick: () => handleAddCollectionInSpace(space.id) },
+                            { label: "編輯空間", icon: Pencil, onClick: () => handleRenameSpace(space.id) },
+                            { label: "刪除空間", icon: Trash2, onClick: () => handleDeleteSpace(space.id) },
+                            { label: "邀請好友", icon: UserPlus, onClick: () => handleInviteSpace(space.id) },
+                          ]}
+                          className={space.id === activeSpaceId ? "text-white hover:bg-white/10" : ""}
+                        />
+                      </div>
+                    ) : null}
                   </div>
-                  <div className="mt-2 min-h-0 flex-1 overflow-y-auto scrollbar-hide">
-                    <Tree
-                      spaces={scopedSpaces}
-                      folders={scopedFolders}
-                      onSelectSpace={setSelectedSpaceId}
-                      expandedFolderIds={expandedFolderIds}
-                      onToggleFolder={toggleFolderExpanded}
-                      onExpandFolder={expandFolder}
-                      overId={overId}
-                      onAddCollection={(spaceId) => {
-                        setSelectedSpaceId(spaceId);
-                        handleCreateCollection();
-                      }}
-                      onEditSpace={(spaceId) => {
-                        const current = spaces.find((space) => space.id === spaceId)?.name ?? "";
-                        const name = window.prompt(locale === "en" ? "Rename space" : "重新命名空間", current);
-                        if (!name || !name.trim()) {
-                          return;
-                        }
-                        updateSpace(spaceId, { name: name.trim() });
-                        showUiNotice(locale === "en" ? "Space renamed" : "空間已重新命名");
-                        setSelectedSpaceId(spaceId);
-                      }}
-                      onDeleteSpace={(spaceId) => {
-                        const confirmed = window.confirm(locale === "en" ? "Delete this space?" : "確定刪除空間嗎？");
-                        if (!confirmed) {
-                          return;
-                        }
-                        deleteSpace(spaceId);
-                        showUiNotice(locale === "en" ? "Space deleted" : "空間已刪除");
-                      }}
-                      onInviteSpace={(spaceId) => {
-                        setOrgSettingsTab("members");
-                        setOrgSettingsOpen(true);
-                        setSelectedSpaceId(spaceId);
-                      }}
-                    />
-                  </div>
+                ))}
+              </div>
+
+              {!leftCollapsed ? (
+                <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500">
+                  拖曳頁籤到空白處，快速建立新集合
                 </div>
-              </>
-            )}
-            <div className="mt-auto space-y-2 border-t border-slate-800/60 pt-3 text-xs text-slate-400">
+              ) : null}
+            </div>
+            <div className="mt-auto space-y-2 border-t border-zinc-200 px-4 pb-4 pt-3 text-xs text-zinc-500">
               {!leftCollapsed ? <div>{t("rail.account")}</div> : null}
               <div className={`flex items-center ${leftCollapsed ? "justify-center" : "justify-between"}`}>
-                <button className="rounded border border-slate-700 px-2 py-1 text-[10px]" onClick={handleSync}>
+                <button className="rounded-xl bg-zinc-100 px-2 py-1 text-[10px] text-zinc-600" onClick={handleSync}>
                   {leftCollapsed ? "⟳" : t("app.syncNow")}
                 </button>
                 {!leftCollapsed ? (
                   <button
-                    className="rounded border border-slate-700 px-2 py-1 text-[10px]"
+                    className="rounded-xl bg-zinc-100 px-2 py-1 text-[10px] text-zinc-600"
                     onClick={() => {
                       setOrgSettingsTab("preferences");
                       setOrgSettingsOpen(true);
@@ -2097,469 +2203,433 @@ export function App() {
             </div>
           </aside>
 
-          <section className="flex h-full flex-1 flex-col px-6 py-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="text-sm text-slate-400">
-                {workspace?.name ?? t("app.loading")} / {activeSpaceName}
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center gap-3">
-              <div className="flex items-center gap-3 text-xs text-slate-400">
-                <div className="w-44">
-                  <SelectMenu
-                    value={addCollectionMode}
-                    onChange={(value) => handleAddCollectionAction(value as AddCollectionAction)}
-                    size="sm"
-                    options={addCollectionOptions}
-                    showSelectedIcon={false}
-                  />
+          <main className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+            <div className="border-b border-zinc-200 px-6 py-5">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="text-sm font-semibold text-zinc-500">
+                  {workspace?.name ?? t("app.loading")} / {activeSpaceName}
                 </div>
-                <div className="w-40">
-                  <SelectMenu
-                    value={viewMode}
-                    onChange={(value) => setViewMode(value)}
-                    size="sm"
-                    options={[
-                      {
-                        value: "grid",
-                        label: t("toolbar.view.card"),
-                        icon: (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="3" width="7" height="7" />
-                            <rect x="14" y="3" width="7" height="7" />
-                            <rect x="14" y="14" width="7" height="7" />
-                            <rect x="3" y="14" width="7" height="7" />
-                          </svg>
-                        ),
-                      },
-                      {
-                        value: "list",
-                        label: t("toolbar.view.list"),
-                        icon: (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="8" y1="6" x2="21" y2="6" />
-                            <line x1="8" y1="12" x2="21" y2="12" />
-                            <line x1="8" y1="18" x2="21" y2="18" />
-                            <circle cx="4" cy="6" r="1" />
-                            <circle cx="4" cy="12" r="1" />
-                            <circle cx="4" cy="18" r="1" />
-                          </svg>
-                        ),
-                      },
-                      {
-                        value: "compact",
-                        label: t("toolbar.view.compact"),
-                        icon: (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="4" y="6" width="16" height="4" />
-                            <rect x="4" y="14" width="16" height="4" />
-                          </svg>
-                        ),
-                      },
-                      {
-                        value: "image",
-                        label: t("toolbar.view.image"),
-                        icon: (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="5" width="18" height="14" rx="2" />
-                            <path d="M3 15l4 -4a3 3 0 0 1 4 0l4 4" />
-                            <path d="M14 13l2 -2a3 3 0 0 1 4 0l1 1" />
-                            <circle cx="8" cy="9" r="1" />
-                          </svg>
-                        ),
-                      },
-                    ]}
-                  />
-                </div>
-                <div className="w-48">
-                  <SelectMenu
-                    value={sortMode}
-                    onChange={(value) => setSortMode(value)}
-                    size="sm"
-                    options={[
-                      { value: "custom", label: `排序: ${t("app.sort.custom")}` },
-                      { value: "recent", label: `排序: ${t("app.sort.recent")}` },
-                      { value: "name", label: `排序: ${t("app.sort.name")}` },
-                      { value: "createdAt", label: `排序: ${t("app.sort.createdAt")}` },
-                    ]}
-                  />
-                </div>
-              </div>
-              <div className="ml-auto w-64">
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center text-slate-400">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <button
+                      onClick={() => setCreateCollectionMenuOpen((prev) => !prev)}
+                      className="flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white"
                     >
-                      <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path>
-                      <path d="M21 21l-6 -6"></path>
-                    </svg>
+                      <Plus className="h-4 w-4" />
+                      <span>新增集合</span>
+                    </button>
+                    {createCollectionMenuOpen ? (
+                      <div className="absolute left-0 top-full z-20 mt-2 w-56 rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
+                        <button
+                          className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
+                          onClick={() => {
+                            handleAddCollectionAction("blank");
+                            setCreateCollectionMenuOpen(false);
+                          }}
+                        >
+                          空白集合
+                        </button>
+                        <button
+                          className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
+                          onClick={() => {
+                            handleAddCollectionAction("current-window");
+                            setCreateCollectionMenuOpen(false);
+                          }}
+                        >
+                          從目前開啟分頁建立
+                        </button>
+                        <button
+                          className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
+                          onClick={() => {
+                            handleAddCollectionAction("selected-tabs");
+                            setCreateCollectionMenuOpen(false);
+                          }}
+                        >
+                          從拖放內容建立
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
-                  <input
-                    className="w-full rounded border border-slate-800 bg-slate-900/70 px-3 py-2 pl-6 text-xs text-slate-100 placeholder:text-slate-500"
-                    placeholder={t("app.searchPlaceholder")}
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                  />
+
+                  <button
+                    onClick={handleCycleSortMode}
+                    className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-700"
+                  >
+                    <ArrowUpDown className="h-4 w-4" />
+                    <span>{sortLabel}</span>
+                  </button>
+
+                  <div className="flex items-center rounded-2xl border border-zinc-200 bg-white p-1">
+                    <button
+                      onClick={() => setViewMode("grid")}
+                      className={`rounded-xl p-2 ${viewMode === "grid" ? "bg-zinc-900 text-white" : "text-zinc-500"}`}
+                    >
+                      <Grid2X2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode("list")}
+                      className={`rounded-xl p-2 ${viewMode === "list" ? "bg-zinc-900 text-white" : "text-zinc-500"}`}
+                    >
+                      <List className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex min-w-[260px] items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-500">
+                    <Search className="h-4 w-4" />
+                    <input
+                      ref={searchInputRef}
+                      className="w-full bg-transparent text-sm text-zinc-700 outline-none placeholder:text-zinc-400"
+                      placeholder={t("app.searchPlaceholder")}
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-4 flex-1 overflow-y-auto pr-2 scrollbar-hide">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
               <SortableContext
                 items={sortedCollections.map((collection) => collection.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="flex flex-col gap-4">
-                  {sortedCollections.map((collection) => {
-                    const list = orderBySpace.get(collection.spaceId) ?? [];
-                    const index = list.indexOf(collection.id);
-                    const canMoveUp = index > 0;
-                    const canMoveDown = index >= 0 && index < list.length - 1;
-                    return (
-                      <CollectionCard
+                {viewMode === "list" ? (
+                  <div className="space-y-3">
+                    {sortedCollections.map((collection) => (
+                      <CollectionRow
                         key={collection.id}
+                        id={collection.id}
                         name={collection.name}
                         tabCount={tabCountByCollection.get(collection.id) ?? 0}
-                        summary={summaries[collection.id]}
-                        onOpenAll={() => handleOpenAll(collection.id)}
-                        onMoveUp={() => moveCollectionWithinSpace(collection.id, "up")}
-                        onMoveDown={() => moveCollectionWithinSpace(collection.id, "down")}
-                        canMoveUp={canMoveUp}
-                        canMoveDown={canMoveDown}
-                        onEditTitle={(name) => handleEditCollectionTitle(collection.id, name)}
-                        onToggleStar={() => toggleCollectionStar(collection.id)}
-                        onSortAZ={() => sortTabsInCollection(collection.id)}
-                        onMove={(workspaceId, spaceId) => {
-                          moveCollectionToSpace(collection.id, workspaceId, spaceId);
-                          setMoveNotice({
-                            message: locale === "en" ? "Collection moved" : "集合已移動",
-                            workspaceId,
-                            spaceId,
-                            collectionId: collection.id,
-                          });
-                        }}
-                        onExport={() => handleExportCollection(collection.id, collection.name)}
-                        onInvite={() => handleOpenCollectionInvite(collection.id)}
-                        onDelete={() => deleteCollection(collection.id)}
-                        onDropWindowTab={(tabId) => handleDropWindowTabToCollection(tabId, collection.id)}
-                        onDropSavedTab={(tabId) => handleDropSavedTabToCollection(tabId, collection.id)}
-                        onDragEnterDropZone={() => setDragOverCollectionId(collection.id)}
-                        onDragLeaveDropZone={() => {
-                          setDragOverCollectionId((prev) => (prev === collection.id ? null : prev));
-                        }}
-                        isDropTarget={dragOverCollectionId === collection.id}
-                        starred={collection.starred ?? false}
-                        workspaces={workspaces}
-                        spaces={spaces}
-                        activeWorkspaceId={activeWorkspaceId}
-                        spaceId={collection.spaceId}
-                        isActive={selectedCollectionId === collection.id}
+                        updatedAt={collection.updatedAt}
+                        entityMenu={entityMenu}
+                        setEntityMenu={setEntityMenu}
+                        menuItems={[
+                          { label: "編輯集合", icon: Pencil, onClick: () => handleEditCollectionTitle(collection.id, collection.name) },
+                          { label: "刪除集合", icon: Trash2, onClick: () => deleteCollection(collection.id) },
+                          { label: "邀請好友", icon: UserPlus, onClick: () => handleOpenCollectionInvite(collection.id) },
+                        ]}
                         onSelect={() => setSelectedCollectionId(collection.id)}
-                        onToggleSelect={() =>
-                          setSelectedCollectionIds((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(collection.id)) {
-                              next.delete(collection.id);
-                            } else {
-                              next.add(collection.id);
-                            }
-                            return next;
-                          })
-                        }
-                        selected={selectedCollectionIds.has(collection.id)}
-                        collapsed={collapsedCollections[collection.id] ?? false}
-                        onToggleCollapse={() => handleToggleCollectionCollapse(collection.id)}
-                      >
-                      <SortableContext
-                        items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className={`mt-3 ${tabGridClass}`}>
-                          {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
-                            <div key={tab.id} className="group/tab relative p-2 transition-transform duration-150 hover:-translate-y-1">
-                              <TabRow
-                                id={tab.id}
-                                title={tab.title}
-                                url={tab.url}
-                                {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
-                                ogTitle={tab.ogTitle ?? null}
-                                ogDescription={tab.ogDescription ?? null}
-                                note={tab.note ?? null}
-                                ogImage={tab.ogImage ?? null}
-                                viewMode={viewMode}
-                                onDelete={deleteTab}
-                                onUpdate={updateTab}
-                                onMove={(tabId, workspaceId, spaceId, collectionId) => {
-                                  // Only move when target differs; avoids no-op reorders.
-                                  if (
-                                    collectionId === tab.collectionId &&
-                                    workspaceId === collection.workspaceId &&
-                                    spaceId === collection.spaceId
-                                  ) {
-                                    return;
-                                  }
-                                  moveTabToCollection(tabId, collectionId);
-                                  setMoveNotice({
-                                    message: locale === "en" ? "Tab moved" : "分頁已移動",
-                                    workspaceId,
-                                    spaceId,
-                                    collectionId,
-                                  });
-                                }}
-                                selected={selectedTabIds.has(tab.id)}
-                                onToggleSelect={() =>
-                                  setSelectedTabIds((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(tab.id)) {
-                                      next.delete(tab.id);
-                                    } else {
-                                      next.add(tab.id);
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    {sortedCollections.map((collection) => {
+                      const list = orderBySpace.get(collection.spaceId) ?? [];
+                      const index = list.indexOf(collection.id);
+                      const canMoveUp = index > 0;
+                      const canMoveDown = index >= 0 && index < list.length - 1;
+                      return (
+                        <CollectionCard
+                          key={collection.id}
+                          name={collection.name}
+                          tabCount={tabCountByCollection.get(collection.id) ?? 0}
+                          summary={summaries[collection.id]}
+                          onOpenAll={() => handleOpenAll(collection.id)}
+                          onMoveUp={() => moveCollectionWithinSpace(collection.id, "up")}
+                          onMoveDown={() => moveCollectionWithinSpace(collection.id, "down")}
+                          canMoveUp={canMoveUp}
+                          canMoveDown={canMoveDown}
+                          onEditTitle={(name) => handleEditCollectionTitle(collection.id, name)}
+                          onToggleStar={() => toggleCollectionStar(collection.id)}
+                          onSortAZ={() => sortTabsInCollection(collection.id)}
+                          onMove={(workspaceId, spaceId) => {
+                            moveCollectionToSpace(collection.id, workspaceId, spaceId);
+                            setMoveNotice({
+                              message: locale === "en" ? "Collection moved" : "集合已移動",
+                              workspaceId,
+                              spaceId,
+                              collectionId: collection.id,
+                            });
+                          }}
+                          onExport={() => handleExportCollection(collection.id, collection.name)}
+                          onInvite={() => handleOpenCollectionInvite(collection.id)}
+                          onDelete={() => deleteCollection(collection.id)}
+                          onDropWindowTab={(tabId) => handleDropWindowTabToCollection(tabId, collection.id)}
+                          onDropSavedTab={(tabId) => handleDropSavedTabToCollection(tabId, collection.id)}
+                          onDragEnterDropZone={() => setDragOverCollectionId(collection.id)}
+                          onDragLeaveDropZone={() => {
+                            setDragOverCollectionId((prev) => (prev === collection.id ? null : prev));
+                          }}
+                          isDropTarget={dragOverCollectionId === collection.id}
+                          starred={collection.starred ?? false}
+                          workspaces={workspaces}
+                          spaces={spaces}
+                          activeWorkspaceId={activeWorkspaceId}
+                          spaceId={collection.spaceId}
+                          isActive={selectedCollectionId === collection.id}
+                          onSelect={() => setSelectedCollectionId(collection.id)}
+                          onToggleSelect={() =>
+                            setSelectedCollectionIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(collection.id)) {
+                                next.delete(collection.id);
+                              } else {
+                                next.add(collection.id);
+                              }
+                              return next;
+                            })
+                          }
+                          selected={selectedCollectionIds.has(collection.id)}
+                          collapsed={collapsedCollections[collection.id] ?? false}
+                          onToggleCollapse={() => handleToggleCollectionCollapse(collection.id)}
+                        >
+                          <SortableContext
+                            items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className={`mt-4 ${tabGridClass}`}>
+                              {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
+                                <div key={tab.id} className="group/tab relative">
+                                  <TabRow
+                                    id={tab.id}
+                                    title={tab.title}
+                                    url={tab.url}
+                                    {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
+                                    ogTitle={tab.ogTitle ?? null}
+                                    ogDescription={tab.ogDescription ?? null}
+                                    note={tab.note ?? null}
+                                    ogImage={tab.ogImage ?? null}
+                                    viewMode={viewMode}
+                                    onDelete={deleteTab}
+                                    onUpdate={updateTab}
+                                    onMove={(tabId, workspaceId, spaceId, collectionId) => {
+                                      if (
+                                        collectionId === tab.collectionId &&
+                                        workspaceId === collection.workspaceId &&
+                                        spaceId === collection.spaceId
+                                      ) {
+                                        return;
+                                      }
+                                      moveTabToCollection(tabId, collectionId);
+                                      setMoveNotice({
+                                        message: locale === "en" ? "Tab moved" : "分頁已移動",
+                                        workspaceId,
+                                        spaceId,
+                                        collectionId,
+                                      });
+                                    }}
+                                    selected={selectedTabIds.has(tab.id)}
+                                    onToggleSelect={() =>
+                                      setSelectedTabIds((prev) => {
+                                        const next = new Set(prev);
+                                        if (next.has(tab.id)) {
+                                          next.delete(tab.id);
+                                        } else {
+                                          next.add(tab.id);
+                                        }
+                                        return next;
+                                      })
                                     }
-                                    return next;
-                                  })
-                                }
-                                workspaces={workspaces}
-                                spaces={spaces}
-                                collections={collections}
-                                currentWorkspaceId={collection.workspaceId}
-                                currentSpaceId={collection.spaceId}
-                                currentCollectionId={collection.id}
-                              />
+                                    workspaces={workspaces}
+                                    spaces={spaces}
+                                    collections={collections}
+                                    currentWorkspaceId={collection.workspaceId}
+                                    currentSpaceId={collection.spaceId}
+                                    currentCollectionId={collection.id}
+                                  />
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      </SortableContext>
-                      </CollectionCard>
-                    );
-                  })}
-                </div>
+                          </SortableContext>
+                        </CollectionCard>
+                      );
+                    })}
+                  </div>
+                )}
               </SortableContext>
             </div>
-            <div className="mt-4 text-xs text-slate-500"></div>
-          </section>
+          </main>
 
-          <aside
-            className={`flex h-full flex-col border-l border-slate-800 px-4 py-4 ${
-              rightCollapsed ? "w-16" : "w-72"
+          <section
+            className={`flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm ${
+              rightCollapsed ? "w-[72px]" : "w-auto"
             }`}
           >
-            <div className={`flex items-center ${rightCollapsed ? "justify-center" : "justify-between"}`}>
+            <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-5">
               {!rightCollapsed ? (
-                <div className="text-sm font-semibold">{t("right.openTabs")}</div>
-              ) : (
-                <div className="text-[10px] uppercase tracking-wide text-slate-500">TAB</div>
-              )}
+                <div>
+                  <div className="text-sm font-semibold text-zinc-500">目前瀏覽器</div>
+                  <h2 className="mt-1 text-2xl font-bold">開啟分頁</h2>
+                </div>
+              ) : null}
               <button
-                className="rounded border border-slate-700 px-2 py-1 text-[10px]"
                 onClick={() => setRightCollapsed((prev) => !prev)}
+                className="rounded-2xl bg-zinc-100 p-2 text-zinc-500"
                 aria-label={rightCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
-                {rightCollapsed ? "«" : "»"}
+                {rightCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
               </button>
             </div>
-            {rightCollapsed ? (
-              <div className="mt-4 flex-1 space-y-3 overflow-y-auto scrollbar-hide">
-                {collapsedTabIcons.length === 0 ? (
-                  <div className="text-center text-[10px] text-slate-500">0</div>
-                ) : (
-                  collapsedTabIcons.map((tab) => {
-                    const isSelected = selectedWindowTabIds.has(tab.id);
-                    return (
-                      <button
-                        key={tab.id}
-                        className={`flex h-9 w-9 items-center justify-center rounded-lg border text-[10px] ${
-                          isSelected ? "border-rose-400 text-rose-200" : "border-slate-700 text-slate-200"
-                        }`}
-                        title={tab.title}
-                        onClick={() => handleOpenWindowTab(tab.id, tab.windowId)}
-                      >
-                        {tab.favIconUrl ? (
-                          <img src={tab.favIconUrl} alt="icon" className="h-5 w-5 object-contain" />
-                        ) : (
-                          tab.title.slice(0, 2).toUpperCase()
-                        )}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            ) : (
+
+            {!rightCollapsed ? (
               <>
-                <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
-                  <button
-                    className="rounded border border-slate-700 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
-                    onClick={() => {
-                      if (selectedWindowTabIds.size === 0) {
-                        return;
-                      }
-                      handleSaveSelectedWindowTabs();
-                    }}
-                    disabled={selectedWindowTabIds.size === 0}
-                  >
-                    {locale === "en" ? "Add to collection" : "加入集合"}
-                  </button>
-                  <button
-                    className="rounded border border-slate-700 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
-                    onClick={handleAddSelectedWindowTabsToDock}
-                    disabled={selectedWindowTabIds.size === 0}
-                  >
-                    {locale === "en" ? "Add to Dock" : "加入 Dock"}
-                  </button>
-                  <button
-                    className="rounded border border-slate-700 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
-                    onClick={() => {
-                      if (selectedWindowTabIds.size === 0) {
-                        return;
-                      }
-                      setWindowMoveOpen(true);
-                    }}
-                    disabled={selectedWindowTabIds.size === 0}
-                  >
-                    {locale === "en" ? "Move to space" : "移到空間"}
-                  </button>
+                <div className="border-b border-zinc-200 px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white">
+                      已選 {selectedWindowTabIds.size}
+                    </div>
+                    <button
+                      className="rounded-xl bg-zinc-100 px-3 py-2 text-xs text-zinc-600 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={handleSaveSelectedWindowTabs}
+                      disabled={selectedWindowTabIds.size === 0}
+                    >
+                      {locale === "en" ? "Add to collection" : "加入集合"}
+                    </button>
+                    <button
+                      className="rounded-xl bg-zinc-100 px-3 py-2 text-xs text-zinc-600 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={handleAddSelectedWindowTabsToDock}
+                      disabled={selectedWindowTabIds.size === 0}
+                    >
+                      {locale === "en" ? "Add to Dock" : "加入 Dock"}
+                    </button>
+                    <button
+                      className="rounded-xl bg-zinc-100 px-3 py-2 text-xs text-zinc-600 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={() => setWindowMoveOpen(true)}
+                      disabled={selectedWindowTabIds.size === 0}
+                    >
+                      {locale === "en" ? "Move to space" : "移到空間"}
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 scrollbar-hide">
-                  {windowGroups.map((window) => {
-                    const isCollapsed = collapsedWindows[window.id];
-                    return (
-                      <div key={window.id} className="rounded border border-slate-800 bg-slate-900/40 p-3">
-                        <div className="flex items-center justify-between text-xs text-slate-300">
-                          <button onClick={() => toggleWindowCollapse(window.id)} className="flex items-center gap-2 font-semibold">
-                            {window.title}
-                            {isCollapsed ? (
-                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M6 15l6 -6l6 6"></path>
-                              </svg>
-                            ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M6 9l6 6l6 -6"></path>
-                              </svg>
-                            )}
-                          </button>
-                          <div className="flex items-center gap-2">
-                            <button
-                              className="rounded border border-slate-700 px-2 py-1 text-[10px]"
-                              onClick={() => handleSaveWindowGroup(window.title, window.tabs)}
-                            >
-                              {t("right.saveWindow")}
-                            </button>
-                          </div>
-                        </div>
-                        {!isCollapsed ? (
-                          <div className="mt-3 space-y-2">
-                            {window.tabs.length === 0 ? (
-                              <div className="text-xs text-slate-500">{t("right.emptyWindow")}</div>
-                            ) : (
-                              window.tabs.map((tab) => {
-                                const isSelected = selectedWindowTabIds.has(tab.id);
-                                return (
-                                <div
-                                  key={tab.id}
-                                  className="group flex items-center gap-2 rounded bg-slate-900/70 px-2 py-2 text-xs text-slate-200 transition-colors hover:bg-slate-800"
-                                  onClick={() => {
-                                    if (draggingWindowTabId === tab.id) {
-                                      return;
-                                    }
-                                    handleOpenWindowTab(tab.id, window.id);
-                                  }}
-                                  draggable
-                                  onDragStart={(event) => {
-                                    event.dataTransfer.setData("text/plain", String(tab.id));
-                                    event.dataTransfer.setData("application/x-toby-window-tab", String(tab.id));
-                                    event.dataTransfer.setData("application/x-toby-tab", String(tab.id));
-                                    event.dataTransfer.effectAllowed = "move";
-                                    setDraggingWindowTabId(tab.id);
-                                  }}
-                                  onDragEnd={() => setDraggingWindowTabId(null)}
-                                >
-                                    <div className={`flex h-5 w-5 items-center justify-center overflow-hidden rounded bg-slate-800 ${isSelected ? "hidden" : "group-hover:hidden"}`}>
-                                      {tab.favIconUrl ? (
-                                        <img src={tab.favIconUrl} alt="icon" className="h-full w-full object-contain" />
-                                      ) : null}
-                                    </div>
-                                    <input
-                                      type="checkbox"
-                                      className={`${checkboxClass} ${isSelected ? "block" : "hidden group-hover:block"}`}
-                                      checked={isSelected}
-                                      onChange={(event) => {
-                                        event.stopPropagation();
-                                        setSelectedWindowTabIds((prev) => {
-                                          const next = new Set(prev);
-                                          if (next.has(tab.id)) {
-                                            next.delete(tab.id);
-                                          } else {
-                                            next.add(tab.id);
-                                          }
-                                          return next;
-                                        });
-                                      }}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <div className="truncate">{tab.title}</div>
-                                      <div className="truncate text-[10px] text-slate-500">{tab.url}</div>
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        ) : null}
+
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                  <div className="space-y-2">
+                    {openTabList.length === 0 ? (
+                      <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500">
+                        {locale === "en" ? "No open tabs." : "尚無開啟中的分頁"}
                       </div>
-                    );
-                  })}
+                    ) : (
+                      openTabList.map((tab) => {
+                        const selected = selectedWindowTabIds.has(tab.id);
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => handleOpenWindowTab(tab.id, tab.windowId)}
+                            onMouseDown={() => toggleWindowTabSelected(tab.id)}
+                            draggable
+                            onDragStart={(event) => {
+                              event.dataTransfer.setData("application/x-toby-window-tab", String(tab.id));
+                              event.dataTransfer.effectAllowed = "move";
+                            }}
+                            className={`flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition ${
+                              tab.active
+                                ? "border-zinc-900 bg-zinc-900 text-white"
+                                : selected
+                                  ? "border-zinc-400 bg-zinc-100"
+                                  : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
+                            }`}
+                          >
+                            <div className="pt-1">
+                              <div
+                                className={`flex h-4 w-4 items-center justify-center rounded border ${
+                                  selected
+                                    ? "border-zinc-900 bg-zinc-900 text-white"
+                                    : tab.active
+                                      ? "border-white/40 bg-white/10 text-white"
+                                      : "border-zinc-300 bg-white text-transparent"
+                                }`}
+                              >
+                                <Check className="h-3 w-3" />
+                              </div>
+                            </div>
+                            <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tab.active ? "bg-white/10" : "bg-white"}`}>
+                              {tab.favIconUrl ? (
+                                <img src={tab.favIconUrl} alt={tab.title} className="h-4 w-4 object-contain" />
+                              ) : (
+                                <Link2 className={`h-4 w-4 ${tab.active ? "text-white" : "text-zinc-500"}`} />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                {tab.active ? <CircleDot className="h-3.5 w-3.5 shrink-0 text-emerald-400" /> : null}
+                                <div className="truncate text-sm font-medium">{tab.title}</div>
+                              </div>
+                              <div className={`mt-1 truncate text-xs ${tab.active ? "text-zinc-300" : "text-zinc-500"}`}>
+                                {tab.url}
+                              </div>
+                            </div>
+                            <ChevronRight className={`mt-1 h-4 w-4 shrink-0 ${tab.active ? "text-zinc-300" : "text-zinc-400"}`} />
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </>
+            ) : (
+              <div className="flex min-h-0 flex-1 flex-col items-center gap-3 overflow-y-auto px-2 py-4">
+                {collapsedTabIcons.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleOpenWindowTab(tab.id, tab.windowId)}
+                    onMouseDown={() => toggleWindowTabSelected(tab.id)}
+                    className={`relative flex h-12 w-12 items-center justify-center rounded-2xl ${
+                      selectedWindowTabIds.has(tab.id) ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-500"
+                    }`}
+                  >
+                    {tab.favIconUrl ? (
+                      <img src={tab.favIconUrl} alt={tab.title} className="h-4 w-4 object-contain" />
+                    ) : (
+                      <Link2 className="h-4 w-4" />
+                    )}
+                    {tab.active ? <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-white" /> : null}
+                  </button>
+                ))}
+              </div>
             )}
-          </aside>
+          </section>
         </main>
-        <div className="fixed bottom-4 left-1/2 z-[900] w-[min(1100px,calc(100%-2rem))] -translate-x-1/2">
-          <div className="flex items-center justify-center rounded-full border border-slate-800 bg-slate-900/80 px-4 py-2 text-xs text-slate-200 shadow-xl backdrop-blur">
-            <div className="flex items-center gap-3 overflow-visible">
-              {dockSections.map((section, index) => (
-                <div key={section.id} className="flex items-center gap-3">
-                  {section.items.map((item) => (
-                    <button
-                      key={item.id}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 text-[11px] hover:border-rose-400"
-                      title={item.label}
-                      onClick={item.onClick}
-                      onContextMenu={(event) => {
-                        if (!("onRemove" in item) || !item.onRemove) {
-                          return;
-                        }
-                        event.preventDefault();
-                        item.onRemove();
-                      }}
-                    >
-                      {"faviconUrl" in item && item.faviconUrl ? (
-                        <img src={item.faviconUrl} alt={item.label} className="h-4 w-4 object-contain" />
-                      ) : (
-                        item.icon
-                      )}
-                    </button>
-                  ))}
-                  {index < dockSections.length - 1 ? <div className="h-6 w-px bg-slate-700/70" /> : null}
-                </div>
-              ))}
+
+        {selectedWindowTabIds.size > 0 && !rightCollapsed ? (
+          <div className="fixed bottom-28 right-8 z-[998] rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-xl">
+            <div className="mb-2 flex items-center justify-between gap-4 text-sm font-semibold text-zinc-700">
+              <span>拖放示意：已選 {selectedWindowTabIds.size} 個頁籤</span>
+              <button
+                className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100"
+                onClick={() => setSelectedWindowTabIds(new Set())}
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
+            <div className="flex gap-2 text-xs text-zinc-500">
+              <span className="rounded-full bg-zinc-100 px-3 py-1.5">拖到集合</span>
+              <span className="rounded-full bg-zinc-100 px-3 py-1.5">拖到 Dock</span>
+              <span className="rounded-full bg-zinc-100 px-3 py-1.5">拖到空間</span>
+            </div>
+          </div>
+        ) : null}
+        <div className="fixed inset-x-0 bottom-4 z-[999] px-4">
+          <div className="mx-auto flex max-w-5xl items-end gap-4 overflow-visible rounded-[30px] border border-zinc-200 bg-white/85 px-5 py-4 shadow-2xl backdrop-blur-xl">
+            {dockSections.map((section, index) => (
+              <div key={section.id} className="flex items-end gap-4 overflow-visible">
+                {section.items.map((item) => {
+                  const compact = section.id === "recent" || (section.id === "temp" && item.id !== "pin");
+                  return (
+                    <DockIconButton
+                      key={item.id}
+                      label={item.label}
+                      icon={item.icon}
+                      text={item.text}
+                      faviconUrl={item.faviconUrl}
+                      compact={compact}
+                      onClick={item.onClick}
+                      onRemove={item.onRemove}
+                    />
+                  );
+                })}
+                {index < dockSections.length - 1 ? <div className="h-12 w-px shrink-0 bg-zinc-200" /> : null}
+              </div>
+            ))}
           </div>
         </div>
         {selectedCollectionIds.size > 0 || selectedWindowTabIds.size > 0 || selectedTabIds.size > 0 ? (
-          <div className="fixed bottom-20 left-1/2 z-[9999] -translate-x-1/2 rounded-full border border-slate-800/80 bg-slate-900/90 px-4 py-2 text-xs text-slate-200 shadow-xl backdrop-blur">
+          <div className="fixed bottom-20 left-1/2 z-[9999] -translate-x-1/2 rounded-full border border-zinc-200 bg-white/95 px-4 py-2 text-xs text-zinc-700 shadow-xl backdrop-blur">
             <div className="flex items-center gap-4">
               {selectedCollectionIds.size > 0 ? (
                 <div className="flex items-center gap-3">
-                  <span className="text-slate-400">
+                  <span className="text-zinc-500">
                     {locale === "en"
                       ? `${selectedCollectionIds.size} ${
                           selectedCollectionIds.size === 1 ? "collection" : "collections"
@@ -2567,7 +2637,7 @@ export function App() {
                       : `${selectedCollectionIds.size} 個集合 已選取`}
                   </span>
                   <button
-                    className="flex items-center gap-2 text-slate-200 hover:text-white"
+                    className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900"
                     onClick={() => setBulkMoveOpen(true)}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2576,10 +2646,7 @@ export function App() {
                     </svg>
                     {t("collection.move")}
                   </button>
-                  <button
-                    className="flex items-center gap-2 text-rose-300 hover:text-rose-200"
-                    onClick={handleBulkDelete}
-                  >
+                  <button className="flex items-center gap-2 text-rose-500 hover:text-rose-600" onClick={handleBulkDelete}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M4 7h16"></path>
                       <path d="M10 11v6"></path>
@@ -2592,29 +2659,29 @@ export function App() {
                 </div>
               ) : null}
               {selectedCollectionIds.size > 0 && (selectedWindowTabIds.size > 0 || selectedTabIds.size > 0) ? (
-                <div className="h-5 w-px bg-slate-700/80" />
+                <div className="h-5 w-px bg-zinc-200" />
               ) : null}
               {selectedTabIds.size > 0 ? (
                 <div className="flex items-center gap-3">
-                  <span className="text-slate-400">
+                  <span className="text-zinc-500">
                     {locale === "en"
                       ? `${selectedTabIds.size} ${selectedTabIds.size === 1 ? "tab" : "tabs"} selected`
                       : `${selectedTabIds.size} 個分頁 已選取`}
                   </span>
                   <button
-                    className="flex items-center gap-2 text-slate-200 hover:text-white"
+                    className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900"
                     onClick={() => setTabMoveOpen(true)}
                   >
                     {locale === "en" ? "Move" : "移動"}
                   </button>
                   <button
-                    className="flex items-center gap-2 text-slate-200 hover:text-white"
+                    className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900"
                     onClick={handleOpenSelectedTabs}
                   >
                     {t("tab.openSelected")}
                   </button>
                   <button
-                    className="flex items-center gap-2 text-rose-300 hover:text-rose-200"
+                    className="flex items-center gap-2 text-rose-500 hover:text-rose-600"
                     onClick={handleDeleteSelectedTabs}
                   >
                     {t("tab.delete")}
@@ -2622,21 +2689,21 @@ export function App() {
                 </div>
               ) : null}
               {(selectedCollectionIds.size > 0 || selectedTabIds.size > 0) && selectedWindowTabIds.size > 0 ? (
-                <div className="h-5 w-px bg-slate-700/80" />
+                <div className="h-5 w-px bg-zinc-200" />
               ) : null}
               {selectedWindowTabIds.size > 0 ? (
                 <div className="flex items-center gap-3">
-                  <span className="text-slate-400">
+                  <span className="text-zinc-500">
                     {t("right.selected")} {selectedWindowTabIds.size}
                   </span>
                   <button
-                    className="flex items-center gap-2 text-slate-200 hover:text-white"
+                    className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900"
                     onClick={handleOpenSelectedWindowTabs}
                   >
                     {t("right.openSelected")}
                   </button>
                   <button
-                    className="flex items-center gap-2 text-slate-200 hover:text-white"
+                    className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900"
                     onClick={handleSaveSelectedWindowTabs}
                   >
                     {t("right.saveSelected")}
