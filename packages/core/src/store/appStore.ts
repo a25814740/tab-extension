@@ -4,7 +4,6 @@ import type { AppState } from "./appState";
 import { defaultAppState } from "./appState";
 import type { LocalStoreSnapshot } from "../schemas/appSchemas";
 import type { DockItem, TabItem } from "../domain/models";
-import { sampleWorkspaces } from "../utils/sampleData";
 import { enqueueOp, markSynced } from "../sync/pendingOps";
 import { toSnapshot } from "./snapshot";
 import type { SyncClient } from "../sync/syncEngine";
@@ -80,35 +79,13 @@ export type AppActions = {
 export type AppStore = AppState & AppActions;
 
 function buildInitialState(): AppState {
-  const samples = sampleWorkspaces();
-  const workspaces = samples.map((sample) => sample.workspace);
-  const collections = samples.flatMap((sample) =>
-    sample.collections.map((collection) => ({
-      ...collection,
-    }))
-  );
-  const tabs = samples.flatMap((sample) => sample.collections.flatMap((collection) => collection.tabs));
-  const spaces = samples.flatMap((sample) =>
-    sample.spaces.map((space) => ({
-      ...space,
-    }))
-  );
-  const folders = samples.flatMap((sample) => sample.spaces.flatMap((space) => space.folders));
-  const primaryWorkspace = workspaces[0] ?? null;
-  const primarySpace = spaces.find((space) => space.workspaceId === primaryWorkspace?.id) ?? null;
-
   return {
     ...defaultAppState,
-    workspaces,
-    workspace: primaryWorkspace,
-    spaces,
-    folders,
-    collections,
-    tabs,
     cache: {
       ...defaultAppState.cache,
-      selectedWorkspaceId: primaryWorkspace?.id ?? null,
-      selectedSpaceId: primarySpace?.id ?? null,
+      ui: { ...defaultAppState.cache.ui },
+      dock: { ...defaultAppState.cache.dock },
+      pendingOps: [],
     },
   };
 }
