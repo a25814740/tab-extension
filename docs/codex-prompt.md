@@ -80,3 +80,7 @@
 4. 如何啟動專案
 5. branch 名稱
 6. commit 訊息
+
+Also use `docs/ui-reference-newtab-v0.3.tsx` as the current approved UI reference.
+Do not redesign away from this reference unless required to fix syntax, structure, or implementation issues.
+Prefer preserving its layout, interaction model, and visual hierarchy.

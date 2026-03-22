@@ -2714,12 +2714,12 @@ export function App() {
           </div>
         ) : null}
         {bulkMoveOpen ? (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setBulkMoveOpen(false)}>
-            <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setBulkMoveOpen(false)}>
+            <div className="modal-enter w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
               <div className="text-sm font-semibold">{t("collection.moveTitle")}</div>
               <div className="mt-3 space-y-3 text-xs">
                 <label className="block">
-                  <div className="mb-1 text-slate-400">{t("collection.moveWorkspace")}</div>
+                  <div className="mb-1 text-zinc-500">{t("collection.moveWorkspace")}</div>
                   <SelectMenu
                     value={bulkMoveWorkspaceId}
                     onChange={(value) => setBulkMoveWorkspaceId(value)}
@@ -2741,7 +2741,7 @@ export function App() {
                 </label>
               </div>
               <div className="mt-4 flex justify-end gap-2">
-                <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setBulkMoveOpen(false)}>
+                <button className="rounded-lg border border-zinc-200 px-3 py-2 text-xs" onClick={() => setBulkMoveOpen(false)}>
                   {t("tab.cancel")}
                 </button>
                 <button className="rounded-lg bg-rose-500 px-3 py-2 text-xs font-semibold text-white" onClick={handleBulkMove}>
@@ -2752,20 +2752,20 @@ export function App() {
           </div>
         ) : null}
         {windowMoveOpen ? (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setWindowMoveOpen(false)}>
-            <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setWindowMoveOpen(false)}>
+            <div className="modal-enter w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
               <div className="text-sm font-semibold">{locale === "en" ? "Move tabs to space" : "移動分頁到空間"}</div>
               <div className="mt-3 space-y-3 text-xs">
                 <label className="block">
-                  <div className="mb-1 text-slate-400">{locale === "en" ? "Collection name" : "集合名稱"}</div>
+                  <div className="mb-1 text-zinc-500">{locale === "en" ? "Collection name" : "集合名稱"}</div>
                   <input
-                    className="w-full rounded-md border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+                    className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
                     value={windowMoveName}
                     onChange={(event) => setWindowMoveName(event.target.value)}
                   />
                 </label>
                 <label className="block">
-                  <div className="mb-1 text-slate-400">{locale === "en" ? "Organization" : "組織"}</div>
+                  <div className="mb-1 text-zinc-500">{locale === "en" ? "Organization" : "組織"}</div>
                   <SelectMenu
                     value={windowMoveWorkspaceId}
                     onChange={(value) => setWindowMoveWorkspaceId(value)}
@@ -2776,7 +2776,7 @@ export function App() {
                   />
                 </label>
                 <label className="block">
-                  <div className="mb-1 text-slate-400">{locale === "en" ? "Space" : "空間"}</div>
+                  <div className="mb-1 text-zinc-500">{locale === "en" ? "Space" : "空間"}</div>
                   <SelectMenu
                     value={windowMoveSpaceId}
                     onChange={(value) => setWindowMoveSpaceId(value)}
@@ -2788,7 +2788,7 @@ export function App() {
                 </label>
               </div>
               <div className="mt-4 flex justify-end gap-2">
-                <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setWindowMoveOpen(false)}>
+                <button className="rounded-lg border border-zinc-200 px-3 py-2 text-xs" onClick={() => setWindowMoveOpen(false)}>
                   {t("tab.cancel")}
                 </button>
                 <button className="rounded-lg bg-rose-500 px-3 py-2 text-xs font-semibold text-white" onClick={handleMoveSelectedWindowTabsToSpace}>
@@ -2799,13 +2799,13 @@ export function App() {
           </div>
         ) : null}
         {dedupeOpen ? (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setDedupeOpen(false)}>
-            <div className="modal-enter h-[90vh] w-[90vw] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-xl" onClick={(event) => event.stopPropagation()}>
-              <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setDedupeOpen(false)}>
+            <div className="modal-enter h-[90vh] w-[90vw] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl" onClick={(event) => event.stopPropagation()}>
+              <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
                 <div className="text-sm font-semibold">{locale === "en" ? "Remove duplicates" : "移除重複分頁"}</div>
                 <div className="flex items-center gap-2">
                   <button
-                    className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:text-white"
+                    className="rounded border border-zinc-200 px-2 py-1 text-[11px] text-zinc-700 hover:text-zinc-900"
                     onClick={() => {
                       const next = new Set<string>();
                       duplicateGroups.forEach((group) => {
@@ -2819,7 +2819,7 @@ export function App() {
                     {locale === "en" ? "Keep newest" : "每組留最新"}
                   </button>
                   <button
-                    className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:text-white"
+                    className="rounded border border-zinc-200 px-2 py-1 text-[11px] text-zinc-700 hover:text-zinc-900"
                     onClick={() => {
                       const next = new Set<string>();
                       duplicateGroups.forEach((group) => {
@@ -2834,7 +2834,7 @@ export function App() {
                     {locale === "en" ? "Keep oldest" : "每組留最舊"}
                   </button>
                   <button
-                    className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:text-white"
+                    className="rounded border border-zinc-200 px-2 py-1 text-[11px] text-zinc-700 hover:text-zinc-900"
                     onClick={() => {
                       const next = new Set<string>();
                       duplicateGroups.forEach((group) => {
@@ -2846,30 +2846,30 @@ export function App() {
                     {locale === "en" ? "Select all" : "全選"}
                   </button>
                   <button
-                    className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:text-white"
+                    className="rounded border border-zinc-200 px-2 py-1 text-[11px] text-zinc-700 hover:text-zinc-900"
                     onClick={() => setDedupeKeepIds(new Set())}
                   >
                     {locale === "en" ? "Clear" : "清空"}
                   </button>
-                  <button className="text-slate-400 hover:text-slate-100" onClick={() => setDedupeOpen(false)}>✕</button>
+                  <button className="text-zinc-500 hover:text-zinc-700" onClick={() => setDedupeOpen(false)}>✕</button>
                 </div>
               </div>
-              <div className="h-[calc(90vh-120px)] overflow-y-auto px-6 py-4 text-xs text-slate-200 scrollbar-hide">
+              <div className="h-[calc(90vh-120px)] overflow-y-auto px-6 py-4 text-xs text-zinc-700 scrollbar-hide">
                 <div className="mb-4 flex items-center gap-2">
                   <input
-                    className="w-full rounded border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-100"
+                    className="w-full rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700"
                     placeholder={locale === "en" ? "Search duplicates" : "搜尋重複分頁"}
                     value={dedupeQuery}
                     onChange={(event) => setDedupeQuery(event.target.value)}
                   />
                 </div>
                 {filteredDuplicateGroups.length === 0 ? (
-                  <div className="text-slate-400">{locale === "en" ? "No duplicates found in this space." : "此空間沒有重複分頁。"}</div>
+                  <div className="text-zinc-500">{locale === "en" ? "No duplicates found in this space." : "此空間沒有重複分頁。"}</div>
                 ) : (
                   <div className="space-y-6">
                     {filteredDuplicateGroups.map((group) => (
-                      <div key={group.url} className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-                        <div className="text-xs text-slate-400">{group.url}</div>
+                      <div key={group.url} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                        <div className="text-xs text-zinc-500">{group.url}</div>
                         <div className="mt-3 space-y-2">
                           {group.items.map((item) => (
                             <label key={item.tabId} className="flex items-center gap-3">
@@ -2891,7 +2891,7 @@ export function App() {
                               />
                               <div className="min-w-0 flex-1">
                                 <div className="truncate">{item.title}</div>
-                                <div className="truncate text-[10px] text-slate-500">{item.collectionName}</div>
+                                <div className="truncate text-[10px] text-zinc-400">{item.collectionName}</div>
                               </div>
                             </label>
                           ))}
@@ -2901,8 +2901,8 @@ export function App() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-6 py-4">
-                <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setDedupeOpen(false)}>
+              <div className="flex items-center justify-end gap-2 border-t border-zinc-200 px-6 py-4">
+                <button className="rounded-lg border border-zinc-200 px-3 py-2 text-xs" onClick={() => setDedupeOpen(false)}>
                   {t("tab.cancel")}
                 </button>
                 <button className="rounded-lg bg-rose-500 px-3 py-2 text-xs font-semibold text-white" onClick={handleApplyDedupe}>
@@ -2913,7 +2913,7 @@ export function App() {
           </div>
         ) : null}
         {moveNotice ? (
-          <div className="fixed left-1/2 top-6 z-[9999] -translate-x-1/2 rounded-full border border-slate-800 bg-slate-900/90 px-5 py-2 text-sm text-slate-200 shadow-xl backdrop-blur">
+          <div className="fixed left-1/2 top-6 z-[9999] -translate-x-1/2 rounded-full border border-zinc-200 bg-white/95 px-5 py-2 text-sm text-zinc-700 shadow-xl backdrop-blur">
             <div className="flex items-center gap-3">
               <span>{moveNotice.message}</span>
               <button
@@ -2927,17 +2927,17 @@ export function App() {
               >
                 {locale === "en" ? "Jump" : "跳轉"}
               </button>
-              <button className="text-slate-500 hover:text-slate-100" onClick={() => setMoveNotice(null)}>✕</button>
+              <button className="text-zinc-400 hover:text-zinc-700" onClick={() => setMoveNotice(null)}>✕</button>
             </div>
           </div>
         ) : null}
         {tabMoveOpen ? (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setTabMoveOpen(false)}>
-            <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setTabMoveOpen(false)}>
+            <div className="modal-enter w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
               <div className="text-sm font-semibold">{locale === "en" ? "Move tabs" : "移動分頁"}</div>
               <div className="mt-3 space-y-3 text-xs">
                 <label className="block">
-                  <div className="mb-1 text-slate-400">{locale === "en" ? "Organization" : "組織"}</div>
+                  <div className="mb-1 text-zinc-500">{locale === "en" ? "Organization" : "組織"}</div>
                   <SelectMenu
                     value={tabMoveWorkspaceId}
                     onChange={(value) => setTabMoveWorkspaceId(value)}
@@ -2969,7 +2969,7 @@ export function App() {
                 </label>
               </div>
               <div className="mt-4 flex justify-end gap-2">
-                <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setTabMoveOpen(false)}>
+                <button className="rounded-lg border border-zinc-200 px-3 py-2 text-xs" onClick={() => setTabMoveOpen(false)}>
                   {t("tab.cancel")}
                 </button>
                 <button className="rounded-lg bg-rose-500 px-3 py-2 text-xs font-semibold text-white" onClick={handleMoveSelectedTabs}>
@@ -2981,27 +2981,27 @@ export function App() {
         ) : null}
 
         {collectionInviteOpen ? (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setCollectionInviteOpen(false)}>
-            <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setCollectionInviteOpen(false)}>
+            <div className="modal-enter w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
               <div className="text-sm font-semibold">{locale === "en" ? "Invite to collection" : "邀請加入集合"}</div>
               <div className="mt-3 space-y-3 text-xs">
-                <div className="rounded border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs">
+                <div className="rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs">
                   {collections.find((collection) => collection.id === collectionInviteId)?.name ?? t("app.loading")}
                 </div>
-                <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={handleCreateCollectionInvite}>
+                <button className="rounded-lg border border-zinc-200 px-3 py-2 text-xs" onClick={handleCreateCollectionInvite}>
                   {locale === "en" ? "Create invite link" : "建立邀請連結"}
                 </button>
                 {collectionInviteLink ? (
                   <div className="space-y-2">
-                    <div className="text-[11px] text-slate-400">{locale === "en" ? "Invite link" : "邀請連結"}</div>
+                    <div className="text-[11px] text-zinc-500">{locale === "en" ? "Invite link" : "邀請連結"}</div>
                     <div className="flex items-center gap-2">
                       <input
-                        className="w-full rounded-md border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-100"
+                        className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700"
                         value={collectionInviteLink}
                         readOnly
                       />
                       <button
-                        className="rounded border border-slate-700 px-2 py-2 text-xs"
+                        className="rounded border border-zinc-200 px-2 py-2 text-xs"
                         onClick={async () => {
                           try {
                             await navigator.clipboard.writeText(collectionInviteLink);
@@ -3016,10 +3016,10 @@ export function App() {
                     </div>
                   </div>
                 ) : null}
-                {collectionInviteStatus ? <div className="text-xs text-slate-400">{collectionInviteStatus}</div> : null}
+                {collectionInviteStatus ? <div className="text-xs text-zinc-500">{collectionInviteStatus}</div> : null}
               </div>
               <div className="mt-4 flex justify-end">
-                <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setCollectionInviteOpen(false)}>
+                <button className="rounded-lg border border-zinc-200 px-3 py-2 text-xs" onClick={() => setCollectionInviteOpen(false)}>
                   {t("tab.cancel")}
                 </button>
               </div>
@@ -3028,21 +3028,21 @@ export function App() {
         ) : null}
 
         {orgSettingsOpen ? (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setOrgSettingsOpen(false)}>
-            <div className="modal-enter w-full max-w-4xl rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setOrgSettingsOpen(false)}>
+            <div className="modal-enter w-full max-w-4xl rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold">{t("org.settings.title")}</div>
-                <button className="text-slate-400 hover:text-slate-100" onClick={() => setOrgSettingsOpen(false)}>✕</button>
+                <button className="text-zinc-500 hover:text-zinc-700" onClick={() => setOrgSettingsOpen(false)}>✕</button>
               </div>
-              <div className="mt-4 flex items-center gap-2 border-b border-slate-800 pb-3 text-xs">
+              <div className="mt-4 flex items-center gap-2 border-b border-zinc-200 pb-3 text-xs">
                 <button
-                  className={`rounded-full px-3 py-1 ${orgSettingsTab === "preferences" ? "bg-rose-500 text-white" : "text-slate-300 hover:text-white"}`}
+                  className={`rounded-full px-3 py-1 ${orgSettingsTab === "preferences" ? "bg-rose-500 text-white" : "text-zinc-600 hover:text-zinc-900"}`}
                   onClick={() => setOrgSettingsTab("preferences")}
                 >
                   {t("org.settings.preferences")}
                 </button>
                 <button
-                  className={`rounded-full px-3 py-1 ${orgSettingsTab === "members" ? "bg-rose-500 text-white" : "text-slate-300 hover:text-white"}`}
+                  className={`rounded-full px-3 py-1 ${orgSettingsTab === "members" ? "bg-rose-500 text-white" : "text-zinc-600 hover:text-zinc-900"}`}
                   onClick={() => setOrgSettingsTab("members")}
                 >
                   {t("org.settings.members")}
@@ -3052,7 +3052,7 @@ export function App() {
               {orgSettingsTab === "preferences" ? (
                 <div className="mt-5 grid gap-6">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-slate-800 text-sm">
+                    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-sm">
                       {orgLogoDraft ? (
                         <img src={orgLogoDraft} alt="logo" className="h-full w-full object-cover" />
                       ) : (
@@ -3060,7 +3060,7 @@ export function App() {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="rounded border border-slate-700 px-3 py-2 text-xs hover:bg-slate-900/60">
+                      <label className="rounded border border-zinc-200 px-3 py-2 text-xs hover:bg-zinc-50">
                         {t("org.settings.logo")}
                         <input
                           type="file"
@@ -3075,7 +3075,7 @@ export function App() {
                         />
                       </label>
                       <button
-                        className="rounded border border-slate-700 px-3 py-2 text-xs hover:bg-slate-900/60"
+                        className="rounded border border-zinc-200 px-3 py-2 text-xs hover:bg-zinc-50"
                         onClick={() => setOrgLogoDraft(null)}
                       >
                         {t("auth.clear")}
@@ -3084,9 +3084,9 @@ export function App() {
                   </div>
 
                   <label className="block">
-                    <div className="mb-1 text-slate-400">{t("org.settings.name")}</div>
+                    <div className="mb-1 text-zinc-500">{t("org.settings.name")}</div>
                     <input
-                      className="w-full rounded-md border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+                      className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
                       value={orgNameDraft}
                       onChange={(event) => setOrgNameDraft(event.target.value)}
                     />
@@ -3095,7 +3095,7 @@ export function App() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <button
-                        className="rounded border border-slate-700 px-3 py-2 text-xs hover:bg-slate-900/60"
+                        className="rounded border border-zinc-200 px-3 py-2 text-xs hover:bg-zinc-50"
                         onClick={() => importFileRef.current?.click()}
                       >
                         {t("org.settings.import")}
@@ -3120,13 +3120,13 @@ export function App() {
                       {t("org.settings.save")}
                     </button>
                   </div>
-                  {orgStatus ? <div className="text-xs text-slate-400">{orgStatus}</div> : null}
+                  {orgStatus ? <div className="text-xs text-zinc-500">{orgStatus}</div> : null}
 
                   <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-4">
                     <div className="text-xs font-semibold text-rose-300">{t("org.settings.delete")}</div>
-                    <div className="mt-2 text-xs text-slate-400">{t("org.settings.deleteHint")}</div>
+                    <div className="mt-2 text-xs text-zinc-500">{t("org.settings.deleteHint")}</div>
                     <input
-                      className="mt-3 w-full rounded-md border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+                      className="mt-3 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
                       placeholder={t("org.settings.deletePlaceholder")}
                       value={deleteConfirmName}
                       onChange={(event) => setDeleteConfirmName(event.target.value)}
@@ -3144,12 +3144,12 @@ export function App() {
                 </div>
               ) : (
                 <div className="mt-5 grid gap-4">
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+                  <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                     <div className="text-xs font-semibold">{t("org.link.title")}</div>
                     <div className="mt-3 flex items-center gap-2 text-xs">
                       <button
                         className={`rounded-full px-3 py-1 ${
-                          linkAccess === "restricted" ? "bg-rose-500 text-white" : "text-slate-300 hover:text-white"
+                          linkAccess === "restricted" ? "bg-rose-500 text-white" : "text-zinc-600 hover:text-zinc-900"
                         }`}
                         onClick={() => handleToggleLinkAccess("restricted")}
                       >
@@ -3157,7 +3157,7 @@ export function App() {
                       </button>
                       <button
                         className={`rounded-full px-3 py-1 ${
-                          linkAccess === "link" ? "bg-rose-500 text-white" : "text-slate-300 hover:text-white"
+                          linkAccess === "link" ? "bg-rose-500 text-white" : "text-zinc-600 hover:text-zinc-900"
                         }`}
                         onClick={() => handleToggleLinkAccess("link")}
                       >
@@ -3178,14 +3178,14 @@ export function App() {
                     </div>
                     {linkToken ? (
                       <div className="mt-3 flex items-center gap-2">
-                        <div className="text-[11px] text-slate-400">{t("org.link.url")}</div>
+                        <div className="text-[11px] text-zinc-500">{t("org.link.url")}</div>
                         <input
-                          className="w-full rounded-md border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-100"
+                          className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700"
                           value={`${effectiveSupabaseUrl}/functions/v1/share?token=${linkToken}`}
                           readOnly
                         />
                         <button
-                          className="rounded border border-slate-700 px-2 py-2 text-xs"
+                          className="rounded border border-zinc-200 px-2 py-2 text-xs"
                           onClick={async () => {
                             try {
                               await navigator.clipboard.writeText(
@@ -3201,40 +3201,40 @@ export function App() {
                         </button>
                       </div>
                     ) : null}
-                    {linkStatus ? <div className="mt-2 text-xs text-slate-400">{linkStatus}</div> : null}
+                    {linkStatus ? <div className="mt-2 text-xs text-zinc-500">{linkStatus}</div> : null}
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div className="text-xs font-semibold">{t("org.members.list")}</div>
                     <input
-                      className="w-64 rounded-md border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+                      className="w-64 rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
                       placeholder={t("org.members.search")}
                       value={memberSearch}
                       onChange={(event) => setMemberSearch(event.target.value)}
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+                  <div className="grid grid-cols-1 gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                     <div className="text-xs font-semibold">{t("org.members.add")}</div>
                     {!canManageMembers ? (
                       <div className="text-xs text-rose-300">{t("org.members.noPermission")}</div>
                     ) : null}
-                    <div className="text-[11px] text-slate-400">
+                    <div className="text-[11px] text-zinc-500">
                       {t("org.members.reward")}
-                      <span className="ml-2 text-slate-200">{workspace?.inviteCount ?? 0}</span>
+                      <span className="ml-2 text-zinc-700">{workspace?.inviteCount ?? 0}</span>
                       <span className="ml-1">{t("org.members.invites")}</span>
-                      <span className="ml-3 text-slate-200">{workspace?.points ?? 0}</span>
+                      <span className="ml-3 text-zinc-700">{workspace?.points ?? 0}</span>
                       <span className="ml-1">{t("org.members.points")}</span>
                     </div>
                     <div className="grid grid-cols-[1fr_1fr_200px_auto] gap-2">
                       <input
-                        className="rounded-md border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+                        className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
                         placeholder={t("org.members.name")}
                         value={memberName}
                         onChange={(event) => setMemberName(event.target.value)}
                       />
                       <input
-                        className="rounded-md border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+                        className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
                         placeholder={t("org.members.email")}
                         value={memberEmail}
                         onChange={(event) => setMemberEmail(event.target.value)}
@@ -3252,11 +3252,11 @@ export function App() {
                         {t("org.members.add")}
                       </button>
                     </div>
-                    {memberStatus ? <div className="text-xs text-slate-400">{memberStatus}</div> : null}
+                    {memberStatus ? <div className="text-xs text-zinc-500">{memberStatus}</div> : null}
                   </div>
 
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/40">
-                    <div className="grid grid-cols-[1fr_1fr_200px_80px] gap-3 border-b border-slate-800 px-4 py-2 text-[11px] text-slate-500">
+                  <div className="rounded-xl border border-zinc-200 bg-zinc-50">
+                    <div className="grid grid-cols-[1fr_1fr_200px_80px] gap-3 border-b border-zinc-200 px-4 py-2 text-[11px] text-zinc-400">
                       <span>{t("org.members.name")}</span>
                       <span>{t("org.members.email")}</span>
                       <span>{t("org.members.role")}</span>
@@ -3264,14 +3264,14 @@ export function App() {
                     </div>
                     <div className="max-h-64 overflow-y-auto scrollbar-hide">
                       {membersLoading ? (
-                        <div className="px-4 py-4 text-xs text-slate-400">{t("app.loading")}</div>
+                        <div className="px-4 py-4 text-xs text-zinc-500">{t("app.loading")}</div>
                       ) : filteredMembers.length === 0 ? (
-                        <div className="px-4 py-4 text-xs text-slate-400">{t("org.members.empty")}</div>
+                        <div className="px-4 py-4 text-xs text-zinc-500">{t("org.members.empty")}</div>
                       ) : (
                         filteredMembers.map((member) => (
-                          <div key={member.id} className="grid grid-cols-[1fr_1fr_200px_80px] items-center gap-3 border-b border-slate-800/60 px-4 py-3 text-xs text-slate-200">
+                          <div key={member.id} className="grid grid-cols-[1fr_1fr_200px_80px] items-center gap-3 border-b border-zinc-200/70 px-4 py-3 text-xs text-zinc-700">
                             <span className="truncate">{member.name}</span>
-                            <span className="truncate text-slate-400">{member.email}</span>
+                            <span className="truncate text-zinc-500">{member.email}</span>
                             <SelectMenu
                               value={member.role}
                               onChange={(value) =>
@@ -3285,7 +3285,7 @@ export function App() {
                               buttonClassName={!canManageMembers ? "opacity-50 pointer-events-none" : ""}
                             />
                             <button
-                              className="rounded border border-slate-700 px-2 py-1 text-[11px] text-rose-300 hover:bg-slate-900/60 disabled:opacity-40"
+                              className="rounded border border-zinc-200 px-2 py-1 text-[11px] text-rose-300 hover:bg-zinc-50 disabled:opacity-40"
                               onClick={() => handleRemoveMember(member.id)}
                               disabled={!canManageMembers}
                             >

@@ -169,3 +169,11 @@ Dock 分成以下區塊：
 - 不要自行重做整體視覺風格
 - 以穩定化與產品化為優先
 - 若有設計衝突，優先遵守本文件
+
+## UI reference implementation
+Use `docs/ui-reference-newtab-v0.3.tsx` as the visual and interaction reference for the current New Tab UI direction.
+
+Rules:
+- Do not copy it blindly without cleanup.
+- Treat it as the approved layout and interaction reference.
+- When implementation details are ambiguous, prefer matching this reference file unless it conflicts with this spec.
