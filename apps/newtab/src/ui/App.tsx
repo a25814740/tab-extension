@@ -6,6 +6,7 @@ import { CollectionRow } from "./CollectionRow";
 import { TabRow } from "./TabRow";
 import { createRuleBasedProvider } from "@toby/ai";
 import { AuthMiniPanel } from "./AuthPanel";
+import { PricingModal } from "./PricingModal";
 import {
   createSupabaseClient,
   updateMemberRole,
@@ -178,6 +179,7 @@ export function App() {
   const [dedupeQuery, setDedupeQuery] = useState("");
   const [dragOverCollectionId, setDragOverCollectionId] = useState<string | null>(null);
   const [dockDropActive, setDockDropActive] = useState(false);
+  const [pricingOpen, setPricingOpen] = useState(false);
   const [moveNotice, setMoveNotice] = useState<{
     message: string;
     workspaceId: string;
@@ -1856,6 +1858,17 @@ export function App() {
       setUpgradeNotice(locale === "en" ? "Trial expired. Please upgrade." : "試用已到期，請升級方案。");
     }
   };
+
+  const handleStartCheckout = (planId: "trial" | "personal_yearly" | "pro_monthly" | "enterprise") => {
+    if (planId === "trial") {
+      return;
+    }
+    showUiNotice(
+      locale === "en"
+        ? "PAYUNi checkout is not configured yet."
+        : "尚未設定統一金流（PAYUNi）API，提供後即可串接。"
+    );
+  };
   const showUiNotice = useCallback((message: string) => {
     setUiNotice(message);
   }, []);
@@ -2083,7 +2096,15 @@ export function App() {
           ) : null}
           {upgradeNotice ? (
             <div className="fixed left-1/2 top-12 z-[9999] -translate-x-1/2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700 shadow-lg backdrop-blur">
-              {upgradeNotice}
+              <div className="flex items-center gap-3">
+                <span>{upgradeNotice}</span>
+                <button
+                  className="rounded-full bg-rose-500 px-3 py-1 text-[10px] font-semibold text-white"
+                  onClick={() => setPricingOpen(true)}
+                >
+                  {locale === "en" ? "Upgrade" : "升級方案"}
+                </button>
+              </div>
             </div>
           ) : null}
           {uiNotice ? (
@@ -2267,6 +2288,14 @@ export function App() {
                   </button>
                 ) : null}
               </div>
+              {!leftCollapsed ? (
+                <button
+                  className="w-full rounded-xl border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-600"
+                  onClick={() => setPricingOpen(true)}
+                >
+                  {locale === "en" ? "Upgrade plan" : "升級方案"}
+                </button>
+              ) : null}
               <div className={`flex items-center ${leftCollapsed ? "justify-center" : "justify-between"}`}>
                 <div className="w-12">
                   <AuthMiniPanel />
@@ -2816,6 +2845,14 @@ export function App() {
             </div>
           </div>
         ) : null}
+        <PricingModal
+          open={pricingOpen}
+          onClose={() => setPricingOpen(false)}
+          onSelectPlan={(planId) => {
+            handleStartCheckout(planId);
+            setPricingOpen(false);
+          }}
+        />
         {bulkMoveOpen ? (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setBulkMoveOpen(false)}>
             <div className="modal-enter w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
