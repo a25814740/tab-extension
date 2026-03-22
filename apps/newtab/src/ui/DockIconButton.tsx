@@ -3,11 +3,11 @@ import type { ReactNode } from "react";
 export type DockIconButtonProps = {
   label: string;
   icon?: ReactNode;
-  text?: string;
-  faviconUrl?: string | null;
+  text?: string | undefined;
+  faviconUrl?: string | null | undefined;
   compact?: boolean;
   onClick?: () => void;
-  onRemove?: () => void;
+  onRemove?: (() => void) | undefined;
 };
 
 export function DockIconButton({

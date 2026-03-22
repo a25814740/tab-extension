@@ -84,11 +84,18 @@ type DockSection = {
 
 export function App() {
   useLocalCacheSync();
-  const toWindowTab = (tab: { id: number; title: string; url: string; favIconUrl?: string }) => {
-    const item: { id: number; title: string; url: string; favIconUrl?: string } = {
+  const toWindowTab = (tab: {
+    id: number;
+    title: string;
+    url: string;
+    favIconUrl?: string;
+    active?: boolean;
+  }) => {
+    const item: { id: number; title: string; url: string; favIconUrl?: string; active: boolean } = {
       id: tab.id,
       title: tab.title,
       url: tab.url,
+      active: tab.active ?? false,
     };
     if (typeof tab.favIconUrl === "string") {
       item.favIconUrl = tab.favIconUrl;
@@ -184,7 +191,11 @@ export function App() {
   const [entityMenu, setEntityMenu] = useState<{ type: string; id: string } | null>(null);
   const saveCollectionFromTabs = useAppStore((state) => state.saveCollectionFromTabs);
   const [windowGroups, setWindowGroups] = useState<
-    Array<{ id: number; title: string; tabs: Array<{ id: number; title: string; url: string; favIconUrl?: string }> }>
+    Array<{
+      id: number;
+      title: string;
+      tabs: Array<{ id: number; title: string; url: string; favIconUrl?: string; active: boolean }>;
+    }>
   >([]);
   const [orgSettingsOpen, setOrgSettingsOpen] = useState(false);
   const [orgSettingsTab, setOrgSettingsTab] = useState<"preferences" | "members">("preferences");

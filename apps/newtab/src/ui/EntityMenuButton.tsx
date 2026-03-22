@@ -3,7 +3,7 @@ import { MoreHorizontal } from "lucide-react";
 
 export type EntityMenuItem = {
   label: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string | undefined }>;
   onClick?: () => void;
 };
 
