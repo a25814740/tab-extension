@@ -18,6 +18,7 @@ export type AuthUser = {
 const CONFIG_KEY = "toby_auth_config_v1";
 const USER_KEY = "toby_auth_user_v1";
 const TOKEN_KEY = "toby_auth_token_v1";
+const REFRESH_TOKEN_KEY = "toby_auth_refresh_token_v1";
 const MEMBERSHIP_KEY = "toby_membership_v1";
 
 export const DEFAULT_SUPABASE_URL = "https://zhfibzpgabqgqgixgisk.supabase.co";
@@ -153,6 +154,7 @@ export function useAuthLogic() {
 
     await setLocal(USER_KEY, authUser);
     await setLocal(TOKEN_KEY, tokens.accessToken);
+    await setLocal(REFRESH_TOKEN_KEY, tokens.refreshToken);
     const membershipRes = await ensureTrialMembership(client);
     if (!membershipRes.error && membershipRes.data) {
       await setLocal(MEMBERSHIP_KEY, membershipRes.data);
@@ -171,6 +173,7 @@ export function useAuthLogic() {
     await signOut(client);
     await setLocal(USER_KEY, null);
     await setLocal(TOKEN_KEY, null);
+    await setLocal(REFRESH_TOKEN_KEY, null);
     await setLocal(MEMBERSHIP_KEY, null);
     setStatus(t("auth.status.signedOut"));
   }, [client, t]);
@@ -212,6 +215,7 @@ export function useAuthLogic() {
         };
         await setLocal(USER_KEY, authUser);
         await setLocal(TOKEN_KEY, session.data.session?.access_token ?? null);
+        await setLocal(REFRESH_TOKEN_KEY, session.data.session?.refresh_token ?? null);
         const membershipRes = await ensureTrialMembership(client);
         if (!membershipRes.error && membershipRes.data) {
           await setLocal(MEMBERSHIP_KEY, membershipRes.data);
@@ -219,8 +223,40 @@ export function useAuthLogic() {
         setStatus(`${t("auth.status.signedInAs")} ${email}`);
         return;
       }
+      const storedToken = await getLocal<string | null>(TOKEN_KEY, null);
+      const storedRefresh = await getLocal<string | null>(REFRESH_TOKEN_KEY, null);
+      if (storedToken && storedRefresh) {
+        const restored = await client.auth.setSession({
+          access_token: storedToken,
+          refresh_token: storedRefresh,
+        });
+        const restoredEmail = restored.data.session?.user?.email ?? null;
+        if (restoredEmail) {
+          const meta = restored.data.session?.user?.user_metadata ?? {};
+          const name =
+            (meta.full_name as string | undefined) ??
+            (meta.name as string | undefined) ??
+            restoredEmail.split("@")[0];
+          const authUser: AuthUser = {
+            id: restored.data.session?.user?.id ?? "",
+            email: restoredEmail,
+            name,
+            avatarUrl: (meta.avatar_url as string | undefined) ?? null,
+          };
+          await setLocal(USER_KEY, authUser);
+          await setLocal(TOKEN_KEY, restored.data.session?.access_token ?? null);
+          await setLocal(REFRESH_TOKEN_KEY, restored.data.session?.refresh_token ?? null);
+          const membershipRes = await ensureTrialMembership(client);
+          if (!membershipRes.error && membershipRes.data) {
+            await setLocal(MEMBERSHIP_KEY, membershipRes.data);
+          }
+          setStatus(`${t("auth.status.signedInAs")} ${restoredEmail}`);
+          return;
+        }
+      }
       await setLocal(USER_KEY, null);
       await setLocal(TOKEN_KEY, null);
+      await setLocal(REFRESH_TOKEN_KEY, null);
       await setLocal(MEMBERSHIP_KEY, null);
       setStatus(t("auth.status.notSignedIn"));
     })();
