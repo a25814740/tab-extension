@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.payuni_return]
 verify_jwt = false
+
+[functions.payuni_checkout]
+verify_jwt = false

@@ -53,3 +53,6 @@ This file tracks incomplete work. Keep entries short and actionable.
 
 ## Ops / Access
 - [ ] Provide Supabase service role access to extend `a25814740@gmail.com` trial by 10 years
+- [ ] 串接 PAYUNi 結帳（目前僅 UI 占位與提示）
+- [ ] 決定並實作 Pro 月付方案卡片／比較表（或移除 `pro_monthly` 相關程式碼）
+- [ ] 首次登入時若沒有任何 Workspace，導引到建立流程（移除 sample data 後的空白體驗）

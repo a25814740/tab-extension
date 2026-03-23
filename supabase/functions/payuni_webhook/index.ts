@@ -24,6 +24,24 @@ function isSuccess(payload: Record<string, unknown>) {
   return status === "success" || status === "paid";
 }
 
+function resolvePlanId(rawPayload: Record<string, unknown> | null) {
+  const planId = String(rawPayload?.planId ?? "");
+  if (planId === "personal_yearly" || planId === "pro_monthly" || planId === "enterprise") {
+    return planId;
+  }
+  return "personal_yearly";
+}
+
+function resolvePaidEndsAt(planId: string, now: Date) {
+  if (planId === "pro_monthly") {
+    return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  }
+  if (planId === "enterprise") {
+    return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+  }
+  return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return json({ ok: true }, 200);
@@ -71,13 +89,19 @@ serve(async (req) => {
   });
 
   if (!paymentInsert.error && userId && isSuccess(payload)) {
+    const paymentLookup = await client
+      .from("payments")
+      .select("raw_payload")
+      .eq("provider_order_id", orderId)
+      .maybeSingle();
+    const planId = resolvePlanId((paymentLookup.data?.raw_payload as Record<string, unknown>) ?? null);
     const now = new Date();
     const paidStartsAt = now.toISOString();
-    const paidEndsAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    const paidEndsAt = resolvePaidEndsAt(planId, now).toISOString();
     await client.from("memberships").upsert(
       {
         user_id: userId,
-        plan_type: "personal_yearly",
+        plan_type: planId,
         status: "paid_active",
         paid_starts_at: paidStartsAt,
         paid_ends_at: paidEndsAt,

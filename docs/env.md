@@ -20,6 +20,8 @@ This project uses environment variables for credentials and business metadata. D
 - `PAYUNI_MERCHANT_ID`
 - `PAYUNI_HASH_KEY`
 - `PAYUNI_HASH_IV`
+- `PAYUNI_CHECKOUT_URL`
+- `PAYUNI_VERSION` (default: `1.5`)
 - `PAYUNI_RETURN_URL`
 - `PAYUNI_NOTIFY_URL`
 

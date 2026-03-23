@@ -30,7 +30,9 @@ import {
   ArrowUpDown,
   Building2,
   Check,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   ChevronsUpDown,
   CircleDot,
   Clock3,
@@ -179,6 +181,7 @@ export function App() {
   const [dedupeQuery, setDedupeQuery] = useState("");
   const [dragOverCollectionId, setDragOverCollectionId] = useState<string | null>(null);
   const [dockDropActive, setDockDropActive] = useState(false);
+  const [dockCollapsed, setDockCollapsed] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [moveNotice, setMoveNotice] = useState<{
     message: string;
@@ -237,6 +240,7 @@ export function App() {
     "h-4 w-4 rounded border-zinc-300 bg-white text-zinc-900 focus:ring-zinc-300/40";
   const pulledWorkspacesRef = useRef<Set<string>>(new Set());
   const AUTH_USER_KEY = "toby_auth_user_v1";
+  const DOCK_COLLAPSED_KEY = "toby_dock_collapsed_v1";
 
   const workspace = useMemo(() => {
     if (selectedWorkspaceId) {
@@ -300,6 +304,23 @@ export function App() {
       cancelled = true;
     };
   }, [AUTH_USER_KEY, authUser, supabaseClient]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const stored = await getLocal<boolean>(DOCK_COLLAPSED_KEY, false);
+      if (active) {
+        setDockCollapsed(stored);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [DOCK_COLLAPSED_KEY]);
+
+  useEffect(() => {
+    void setLocal(DOCK_COLLAPSED_KEY, dockCollapsed);
+  }, [DOCK_COLLAPSED_KEY, dockCollapsed]);
 
   const resolveAccessToken = useCallback(async () => {
     if (!supabaseClient) {
@@ -1859,16 +1880,49 @@ export function App() {
     }
   };
 
-  const handleStartCheckout = (planId: "trial" | "personal_yearly" | "pro_monthly" | "enterprise") => {
-    if (planId === "trial") {
-      return;
-    }
-    showUiNotice(
-      locale === "en"
-        ? "PAYUNi checkout is not configured yet."
-        : "尚未設定統一金流（PAYUNi）API，提供後即可串接。"
-    );
-  };
+  const buildPayuniCheckoutUrl = useCallback(
+    (planId: "personal_yearly" | "pro_monthly", accessToken: string) => {
+      if (!effectiveSupabaseUrl) {
+        return null;
+      }
+      const baseUrl = effectiveSupabaseUrl.replace(/\/$/, "");
+      const params = new URLSearchParams({
+        plan: planId,
+        token: accessToken,
+        locale,
+      });
+      return `${baseUrl}/functions/v1/payuni_checkout?${params.toString()}`;
+    },
+    [effectiveSupabaseUrl, locale]
+  );
+
+  const handleStartCheckout = useCallback(
+    async (planId: "trial" | "personal_yearly" | "pro_monthly" | "enterprise") => {
+      if (planId === "trial") {
+        return;
+      }
+      if (planId === "enterprise") {
+        showUiNotice(locale === "en" ? "Contact us for enterprise pricing." : "企業方案請聯絡我們。");
+        return;
+      }
+      if (!supabaseClient) {
+        showUiNotice(t("auth.status.missingSupabase"));
+        return;
+      }
+      const accessToken = await resolveAccessToken();
+      if (!accessToken) {
+        showUiNotice(locale === "en" ? "Please sign in again." : "請重新登入後再嘗試。");
+        return;
+      }
+      const checkoutUrl = buildPayuniCheckoutUrl(planId, accessToken);
+      if (!checkoutUrl) {
+        showUiNotice(locale === "en" ? "Missing checkout URL." : "金流連結未設定。");
+        return;
+      }
+      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+    },
+    [buildPayuniCheckoutUrl, locale, resolveAccessToken, showUiNotice, supabaseClient, t]
+  );
   const showUiNotice = useCallback((message: string) => {
     setUiNotice(message);
   }, []);
@@ -2081,7 +2135,7 @@ export function App() {
     <div className="h-[100vh] w-full overflow-x-auto bg-zinc-100 p-4 text-zinc-900">
       <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
         <main
-          className={`grid h-full min-h-full min-w-[1280px] gap-4 pb-24 ${
+          className={`grid h-full min-h-full min-w-[1280px] gap-4 pb-4 ${
             leftCollapsed
               ? "grid-cols-[84px_minmax(420px,1fr)_360px]"
               : rightCollapsed
@@ -2541,6 +2595,63 @@ export function App() {
                 )}
               </SortableContext>
             </div>
+            <div className="border-t border-zinc-200 bg-white/90">
+              <div className="flex items-center justify-between px-6 py-3">
+                <div className="text-xs font-semibold text-zinc-500">Dock</div>
+                <button
+                  className="flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] text-zinc-600 hover:bg-zinc-50"
+                  onClick={() => setDockCollapsed((prev) => !prev)}
+                >
+                  {dockCollapsed ? (locale === "en" ? "Expand" : "展開") : locale === "en" ? "Collapse" : "收合"}
+                  {dockCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </button>
+              </div>
+              <div
+                className={`overflow-hidden transition-all duration-300 ease-out ${
+                  dockCollapsed ? "max-h-0 -translate-y-2 opacity-0" : "max-h-[220px] translate-y-0 opacity-100"
+                }`}
+              >
+                <div
+                  className={`mx-6 mb-4 flex items-end gap-4 overflow-visible rounded-[24px] border border-zinc-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur ${
+                    dockDropActive ? "ring-2 ring-zinc-300" : ""
+                  }`}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "copy";
+                    setDockDropActive(true);
+                  }}
+                  onDragEnter={() => setDockDropActive(true)}
+                  onDragLeave={(event) => {
+                    if (event.currentTarget.contains(event.relatedTarget as Node)) {
+                      return;
+                    }
+                    setDockDropActive(false);
+                  }}
+                  onDrop={handleDropToDock}
+                >
+                  {dockSections.map((section, index) => (
+                    <div key={section.id} className="flex items-end gap-4 overflow-visible">
+                      {section.items.map((item) => {
+                        const compact = section.id === "recent" || (section.id === "temp" && item.id !== "pin");
+                        return (
+                          <DockIconButton
+                            key={item.id}
+                            label={item.label}
+                            icon={item.icon}
+                            text={item.text}
+                            faviconUrl={item.faviconUrl}
+                            compact={compact}
+                            onClick={item.onClick}
+                            onRemove={item.onRemove}
+                          />
+                        );
+                      })}
+                      {index < dockSections.length - 1 ? <div className="h-12 w-px shrink-0 bg-zinc-200" /> : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </main>
 
           <section
@@ -2715,47 +2826,6 @@ export function App() {
             </div>
           </div>
         ) : null}
-        <div className="fixed inset-x-0 bottom-4 z-[999] px-4">
-          <div
-            className={`mx-auto flex max-w-5xl items-end gap-4 overflow-visible rounded-[30px] border border-zinc-200 bg-white/85 px-5 py-4 shadow-2xl backdrop-blur-xl ${
-              dockDropActive ? "ring-2 ring-zinc-300" : ""
-            }`}
-            onDragOver={(event) => {
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "copy";
-              setDockDropActive(true);
-            }}
-            onDragEnter={() => setDockDropActive(true)}
-            onDragLeave={(event) => {
-              if (event.currentTarget.contains(event.relatedTarget as Node)) {
-                return;
-              }
-              setDockDropActive(false);
-            }}
-            onDrop={handleDropToDock}
-          >
-            {dockSections.map((section, index) => (
-              <div key={section.id} className="flex items-end gap-4 overflow-visible">
-                {section.items.map((item) => {
-                  const compact = section.id === "recent" || (section.id === "temp" && item.id !== "pin");
-                  return (
-                    <DockIconButton
-                      key={item.id}
-                      label={item.label}
-                      icon={item.icon}
-                      text={item.text}
-                      faviconUrl={item.faviconUrl}
-                      compact={compact}
-                      onClick={item.onClick}
-                      onRemove={item.onRemove}
-                    />
-                  );
-                })}
-                {index < dockSections.length - 1 ? <div className="h-12 w-px shrink-0 bg-zinc-200" /> : null}
-              </div>
-            ))}
-          </div>
-        </div>
         {selectedCollectionIds.size > 0 || selectedWindowTabIds.size > 0 || selectedTabIds.size > 0 ? (
           <div className="fixed bottom-20 left-1/2 z-[9999] -translate-x-1/2 rounded-full border border-zinc-200 bg-white/95 px-4 py-2 text-xs text-zinc-700 shadow-xl backdrop-blur">
             <div className="flex items-center gap-4">
@@ -2845,14 +2915,14 @@ export function App() {
             </div>
           </div>
         ) : null}
-        <PricingModal
-          open={pricingOpen}
-          onClose={() => setPricingOpen(false)}
-          onSelectPlan={(planId) => {
-            handleStartCheckout(planId);
+          <PricingModal
+            open={pricingOpen}
+            onClose={() => setPricingOpen(false)}
+            onSelectPlan={(planId) => {
+            void handleStartCheckout(planId);
             setPricingOpen(false);
           }}
-        />
+          />
         {bulkMoveOpen ? (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setBulkMoveOpen(false)}>
             <div className="modal-enter w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
