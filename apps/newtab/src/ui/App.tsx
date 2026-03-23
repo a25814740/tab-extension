@@ -1880,6 +1880,10 @@ export function App() {
     }
   };
 
+  const showUiNotice = useCallback((message: string) => {
+    setUiNotice(message);
+  }, []);
+
   const buildPayuniCheckoutUrl = useCallback(
     (planId: "personal_yearly" | "pro_monthly", accessToken: string) => {
       if (!effectiveSupabaseUrl) {
@@ -1923,9 +1927,6 @@ export function App() {
     },
     [buildPayuniCheckoutUrl, locale, resolveAccessToken, showUiNotice, supabaseClient, t]
   );
-  const showUiNotice = useCallback((message: string) => {
-    setUiNotice(message);
-  }, []);
 
   const dockSections = useMemo<DockSection[]>(() => {
     const openCollection = (collectionId: string) => {
