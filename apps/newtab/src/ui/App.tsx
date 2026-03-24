@@ -28,7 +28,9 @@ import { manualDriveSync, startupDriveSync } from "../sync/driveSync";
 import { DockIconButton } from "./DockIconButton";
 import { EntityMenuButton } from "./EntityMenuButton";
 import {
+  ArrowDownAZ,
   Building2,
+  CalendarClock,
   Check,
   ChevronDown,
   ChevronRight,
@@ -66,7 +68,7 @@ import {
   useSensors,
   DragEndEvent,
 } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, rectSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 type MemberRole = "owner" | "admin" | "editor" | "commenter" | "viewer";
 type AddCollectionAction = "blank" | "current-window" | "selected-tabs";
@@ -1103,10 +1105,10 @@ export function App() {
 
   const sortModeOptions = useMemo(
     () => [
-      { value: "custom" as const, label: t("app.sort.custom") },
-      { value: "recent" as const, label: t("app.sort.recent") },
-      { value: "name" as const, label: t("app.sort.name") },
-      { value: "createdAt" as const, label: t("app.sort.createdAt") },
+      { value: "custom" as const, label: t("app.sort.custom"), icon: <ChevronsUpDown className="h-4 w-4" /> },
+      { value: "recent" as const, label: t("app.sort.recent"), icon: <Clock3 className="h-4 w-4" /> },
+      { value: "name" as const, label: t("app.sort.name"), icon: <ArrowDownAZ className="h-4 w-4" /> },
+      { value: "createdAt" as const, label: t("app.sort.createdAt"), icon: <CalendarClock className="h-4 w-4" /> },
     ],
     [t]
   );
@@ -2683,8 +2685,9 @@ export function App() {
                     onChange={setSortMode}
                     options={sortModeOptions}
                     size="md"
+                    label={t("toolbar.sort")}
                     buttonClassName="min-w-[140px]"
-                    showSelectedIcon={false}
+                    showSelectedIcon
                   />
 
                   <SelectMenu
@@ -2713,7 +2716,7 @@ export function App() {
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
               <SortableContext
                 items={sortedCollections.map((collection) => collection.id)}
-                strategy={viewMode === "list" ? verticalListSortingStrategy : rectSortingStrategy}
+                strategy={verticalListSortingStrategy}
               >
                 {viewMode === "list" ? (
                   <div className="space-y-3">
@@ -2800,14 +2803,14 @@ export function App() {
                     })}
                   </div>
                 ) : (
-                  <div className="columns-1 [column-gap:1rem] md:columns-2 2xl:columns-3">
+                  <div className="space-y-4">
                     {sortedCollections.map((collection) => {
                       const list = orderBySpace.get(collection.spaceId) ?? [];
                       const index = list.indexOf(collection.id);
                       const canMoveUp = index > 0;
                       const canMoveDown = index >= 0 && index < list.length - 1;
                       return (
-                        <div key={collection.id} className="mb-4 break-inside-avoid">
+                        <div key={collection.id}>
                           <CollectionCard
                             name={collection.name}
                             tabCount={tabCountByCollection.get(collection.id) ?? 0}
@@ -2927,7 +2930,7 @@ export function App() {
                 )}
               </SortableContext>
             </div>
-            <div className="border-t border-zinc-200 bg-white/90">
+            <div className="relative z-20 border-t border-zinc-200 bg-white/90">
               <div className="flex items-center justify-between px-6 py-3">
                 <div className="text-xs font-semibold text-zinc-500">Dock</div>
                 <button
@@ -2939,8 +2942,8 @@ export function App() {
                 </button>
               </div>
               <div
-                className={`overflow-hidden transition-all duration-300 ease-out ${
-                  dockCollapsed ? "max-h-0 -translate-y-2 opacity-0" : "max-h-[220px] translate-y-0 opacity-100"
+                className={`overflow-visible transition-all duration-300 ease-out ${
+                  dockCollapsed ? "pointer-events-none max-h-0 -translate-y-2 opacity-0" : "max-h-[220px] translate-y-0 opacity-100"
                 }`}
               >
                 <div
