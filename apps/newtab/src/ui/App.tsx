@@ -1900,6 +1900,33 @@ export function App() {
     [effectiveSupabaseUrl, locale]
   );
 
+  const buildPayuniAutoSubmitHtml = useCallback(
+    (payload: { merchantId: string; tradeInfo: string; tradeSha: string; version: string; checkoutUrl: string }) => `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Redirecting...</title>
+  </head>
+  <body>
+    <form id="payuni-form" method="post" action="${payload.checkoutUrl}">
+      <input type="hidden" name="MerchantID" value="${payload.merchantId}" />
+      <input type="hidden" name="TradeInfo" value="${payload.tradeInfo}" />
+      <input type="hidden" name="TradeSha" value="${payload.tradeSha}" />
+      <input type="hidden" name="Version" value="${payload.version}" />
+      <noscript>
+        <p>JavaScript 已被停用，請手動按下按鈕繼續付款。</p>
+        <button type="submit">繼續前往付款</button>
+      </noscript>
+    </form>
+    <script>
+      document.getElementById("payuni-form").submit();
+    </script>
+  </body>
+</html>`,
+    []
+  );
+
   const handleStartCheckout = useCallback(
     async (planId: "trial" | "personal_yearly" | "pro_monthly" | "enterprise") => {
       if (planId === "trial") {
@@ -1923,9 +1950,50 @@ export function App() {
         showUiNotice(locale === "en" ? "Missing checkout URL." : "金流連結未設定。");
         return;
       }
-      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+      const popup = window.open("", "_blank", "noopener,noreferrer");
+      if (!popup) {
+        showUiNotice(locale === "en" ? "Please allow pop-ups to continue." : "請允許彈出視窗以完成付款。");
+        return;
+      }
+      popup.document.write(
+        `<p style="font-family: system-ui; padding: 24px;">${locale === "en" ? "Preparing checkout..." : "正在準備付款頁面..."}</p>`
+      );
+      try {
+        const response = await fetch(checkoutUrl, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ planId }),
+        });
+        const data = (await response.json()) as {
+          ok: boolean;
+          checkout?: {
+            merchantId: string;
+            tradeInfo: string;
+            tradeSha: string;
+            version: string;
+            checkoutUrl: string;
+          };
+          error?: string;
+        };
+        if (!response.ok || !data?.ok || !data.checkout) {
+          showUiNotice(locale === "en" ? "Checkout failed. Please try again." : "付款建立失敗，請稍後再試。");
+          popup.close();
+          return;
+        }
+        const html = buildPayuniAutoSubmitHtml(data.checkout);
+        popup.document.open();
+        popup.document.write(html);
+        popup.document.close();
+      } catch (error) {
+        showUiNotice(locale === "en" ? "Checkout failed. Please try again." : "付款建立失敗，請稍後再試。");
+        popup.close();
+      }
     },
-    [buildPayuniCheckoutUrl, locale, resolveAccessToken, showUiNotice, supabaseClient, t]
+    [buildPayuniAutoSubmitHtml, buildPayuniCheckoutUrl, locale, resolveAccessToken, showUiNotice, supabaseClient, t]
   );
 
   const dockSections = useMemo<DockSection[]>(() => {

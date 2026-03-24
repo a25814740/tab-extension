@@ -148,6 +148,13 @@ serve(async (req) => {
     NotifyURL: PAYUNI_NOTIFY_URL,
   });
   const tradeSha = await buildTradeSha(tradeInfo);
+  const checkoutPayload = {
+    merchantId: PAYUNI_MERCHANT_ID,
+    tradeInfo,
+    tradeSha,
+    version: PAYUNI_VERSION,
+    checkoutUrl: PAYUNI_CHECKOUT_URL,
+  };
 
   const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   await adminClient.from("payments").insert({
@@ -189,5 +196,9 @@ serve(async (req) => {
   </body>
 </html>`;
 
-  return req.method === "POST" ? json({ ok: true, checkoutUrl: url.toString() }) : html(htmlBody, 200);
+  if (req.method === "POST" || req.headers.get("accept")?.includes("application/json")) {
+    return json({ ok: true, checkout: checkoutPayload }, 200);
+  }
+
+  return html(htmlBody, 200);
 });
