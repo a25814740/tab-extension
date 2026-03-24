@@ -234,7 +234,7 @@ const MESSAGES = {
     "toolbar.view": "檢視",
     "toolbar.view.card": "卡片",
     "toolbar.view.compact": "精簡",
-    "toolbar.view.list": "清單",
+    "toolbar.view.list": "列表",
     "toolbar.view.image": "圖片",
     "toolbar.expand": "展開",
     "toolbar.collapse": "收合",

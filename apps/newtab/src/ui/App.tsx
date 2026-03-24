@@ -1065,6 +1065,16 @@ export function App() {
     return `排序：${t("app.sort.custom")}`;
   }, [sortMode, t]);
 
+  const viewModeOptions = useMemo(
+    () => [
+      { value: "image" as const, label: t("toolbar.view.image"), icon: <LayoutGrid className="h-4 w-4" /> },
+      { value: "grid" as const, label: t("toolbar.view.card"), icon: <Grid2X2 className="h-4 w-4" /> },
+      { value: "compact" as const, label: t("toolbar.view.compact"), icon: <Columns3 className="h-4 w-4" /> },
+      { value: "list" as const, label: t("toolbar.view.list"), icon: <List className="h-4 w-4" /> },
+    ],
+    [t]
+  );
+
   const handleCycleSortMode = () => {
     const next = sortMode === "recent" ? "name" : sortMode === "name" ? "createdAt" : "recent";
     setSortMode(next);
@@ -2635,20 +2645,14 @@ export function App() {
                     <span>{sortLabel}</span>
                   </button>
 
-                  <div className="flex items-center rounded-2xl border border-zinc-200 bg-white p-1">
-                    <button
-                      onClick={() => setViewMode("grid")}
-                      className={`rounded-xl p-2 ${viewMode === "grid" ? "bg-zinc-900 text-white" : "text-zinc-500"}`}
-                    >
-                      <Grid2X2 className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => setViewMode("list")}
-                      className={`rounded-xl p-2 ${viewMode === "list" ? "bg-zinc-900 text-white" : "text-zinc-500"}`}
-                    >
-                      <List className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <SelectMenu
+                    value={viewMode}
+                    onChange={setViewMode}
+                    options={viewModeOptions}
+                    size="md"
+                    showSelectedIcon
+                    buttonClassName="min-w-[140px]"
+                  />
 
                   <div className="flex min-w-[260px] items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-500">
                     <Search className="h-4 w-4" />
