@@ -63,18 +63,22 @@ function encodeQuery(data: Record<string, string>) {
     .join("&");
 }
 
-async function buildTradeInfo(data: Record<string, string>) {
+async function buildEncryptInfo(data: Record<string, string>) {
   const tradeInfo = encodeQuery(data);
   const keyBytes = new TextEncoder().encode(PAYUNI_HASH_KEY);
   const ivBytes = new TextEncoder().encode(PAYUNI_HASH_IV);
   const tradeBytes = new TextEncoder().encode(tradeInfo);
-  const cryptoKey = await crypto.subtle.importKey("raw", keyBytes, { name: "AES-CBC" }, false, ["encrypt"]);
-  const encrypted = await crypto.subtle.encrypt({ name: "AES-CBC", iv: ivBytes }, cryptoKey, tradeBytes);
-  return toHex(encrypted);
+  const cryptoKey = await crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, ["encrypt"]);
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: ivBytes, tagLength: 128 }, cryptoKey, tradeBytes));
+  const tagLength = 16;
+  const cipherBytes = encrypted.slice(0, Math.max(0, encrypted.length - tagLength));
+  const tagBytes = encrypted.slice(Math.max(0, encrypted.length - tagLength));
+  const merged = `${btoa(String.fromCharCode(...cipherBytes))}:::${btoa(String.fromCharCode(...tagBytes))}`;
+  return toHex(new TextEncoder().encode(merged));
 }
 
-async function buildTradeSha(tradeInfo: string) {
-  const raw = `HashKey=${PAYUNI_HASH_KEY}&TradeInfo=${tradeInfo}&HashIV=${PAYUNI_HASH_IV}`;
+async function buildHashInfo(encryptInfo: string) {
+  const raw = `${PAYUNI_HASH_KEY}${encryptInfo}${PAYUNI_HASH_IV}`;
   return sha256(raw);
 }
 
@@ -135,23 +139,21 @@ serve(async (req) => {
 
   const orderId = buildOrderId();
   const now = Math.floor(Date.now() / 1000).toString();
-  const tradeInfo = await buildTradeInfo({
-    MerchantID: PAYUNI_MERCHANT_ID,
-    RespondType: "JSON",
-    TimeStamp: now,
-    Version: PAYUNI_VERSION,
-    MerchantOrderNo: orderId,
-    Amt: String(plan.amount),
-    ItemDesc: `Toby ${plan.label}`,
-    Email: user.email,
+  const encryptInfo = await buildEncryptInfo({
+    MerID: PAYUNI_MERCHANT_ID,
+    Timestamp: now,
+    MerTradeNo: orderId,
+    TradeAmt: String(plan.amount),
+    ProdDesc: `Toby ${plan.label}`,
+    UsrMail: user.email,
     ReturnURL: PAYUNI_RETURN_URL,
     NotifyURL: PAYUNI_NOTIFY_URL,
   });
-  const tradeSha = await buildTradeSha(tradeInfo);
+  const hashInfo = await buildHashInfo(encryptInfo);
   const checkoutPayload = {
-    merchantId: PAYUNI_MERCHANT_ID,
-    tradeInfo,
-    tradeSha,
+    merId: PAYUNI_MERCHANT_ID,
+    encryptInfo,
+    hashInfo,
     version: PAYUNI_VERSION,
     checkoutUrl: PAYUNI_CHECKOUT_URL,
   };
@@ -181,9 +183,9 @@ serve(async (req) => {
   </head>
   <body>
     <form id="payuni-form" method="post" action="${PAYUNI_CHECKOUT_URL}">
-      <input type="hidden" name="MerchantID" value="${PAYUNI_MERCHANT_ID}" />
-      <input type="hidden" name="TradeInfo" value="${tradeInfo}" />
-      <input type="hidden" name="TradeSha" value="${tradeSha}" />
+      <input type="hidden" name="MerID" value="${PAYUNI_MERCHANT_ID}" />
+      <input type="hidden" name="EncryptInfo" value="${encryptInfo}" />
+      <input type="hidden" name="HashInfo" value="${hashInfo}" />
       <input type="hidden" name="Version" value="${PAYUNI_VERSION}" />
       <noscript>
         <p>JavaScript 已被停用，請手動按下按鈕繼續付款。</p>

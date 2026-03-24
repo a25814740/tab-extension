@@ -1882,7 +1882,7 @@ export function App() {
   const submitPayuniFormInPopup = useCallback(
     (
       popup: Window,
-      payload: { merchantId: string; tradeInfo: string; tradeSha: string; version: string; checkoutUrl: string }
+      payload: { merId: string; encryptInfo: string; hashInfo: string; version: string; checkoutUrl: string }
     ) => {
       const doc = popup.document;
       doc.open();
@@ -1894,9 +1894,9 @@ export function App() {
       form.action = payload.checkoutUrl;
 
       const fields: Record<string, string> = {
-        MerchantID: payload.merchantId,
-        TradeInfo: payload.tradeInfo,
-        TradeSha: payload.tradeSha,
+        MerID: payload.merId,
+        EncryptInfo: payload.encryptInfo,
+        HashInfo: payload.hashInfo,
         Version: payload.version,
       };
 
@@ -1917,7 +1917,7 @@ export function App() {
   const renderPayuniConfirmPage = useCallback(
     (
       popup: Window,
-      payload: { merchantId: string; tradeInfo: string; tradeSha: string; version: string; checkoutUrl: string }
+      payload: { merId: string; encryptInfo: string; hashInfo: string; version: string; checkoutUrl: string }
     ) => {
       const doc = popup.document;
       doc.open();
@@ -2073,9 +2073,9 @@ export function App() {
         const data = (await response.json()) as {
           ok: boolean;
           checkout?: {
-            merchantId: string;
-            tradeInfo: string;
-            tradeSha: string;
+            merId: string;
+            encryptInfo: string;
+            hashInfo: string;
             version: string;
             checkoutUrl: string;
           };
