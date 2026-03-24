@@ -1903,37 +1903,102 @@ export function App() {
     []
   );
 
+  const buildPayuniStatusHtml = useCallback(
+    (title: string, message: string, actionLabel?: string, actionUrl?: string) => `<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${title}</title>
+    <style>
+      body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #0f172a; color: #e2e8f0; }
+      .wrap { max-width: 520px; margin: 0 auto; padding: 36px 20px; }
+      .card { border: 1px solid #1e293b; border-radius: 16px; padding: 18px; background: #111827; }
+      h1 { margin: 0 0 8px; font-size: 18px; }
+      p { margin: 0; color: #94a3b8; line-height: 1.6; font-size: 13px; }
+      a { display: inline-block; margin-top: 14px; text-decoration: none; border: 1px solid #334155; border-radius: 10px; padding: 9px 12px; color: #e2e8f0; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>${title}</h1>
+        <p>${message}</p>
+        ${actionLabel && actionUrl ? `<a href="${actionUrl}">${actionLabel}</a>` : ""}
+      </div>
+    </div>
+  </body>
+</html>`,
+    []
+  );
+
   const handleStartCheckout = useCallback(
     async (planId: "trial" | "personal_yearly" | "pro_monthly" | "enterprise") => {
+      const popup = window.open("about:blank", "_blank");
+      if (!popup) {
+        showUiNotice(locale === "en" ? "Please allow pop-ups to continue." : "請允許彈出視窗以完成付款。");
+        return;
+      }
+      popup.document.open();
+      popup.document.write(
+        buildPayuniStatusHtml(
+          locale === "en" ? "Preparing checkout" : "正在準備付款",
+          locale === "en" ? "Please wait..." : "請稍候，系統正在建立付款訂單。"
+        )
+      );
+      popup.document.close();
+
       if (planId === "trial") {
+        popup.close();
         return;
       }
       if (planId === "enterprise") {
         showUiNotice(locale === "en" ? "Contact us for enterprise pricing." : "企業方案請聯絡我們。");
+        popup.document.open();
+        popup.document.write(
+          buildPayuniStatusHtml(
+            locale === "en" ? "Enterprise plan" : "企業方案",
+            locale === "en" ? "Please contact us for enterprise pricing." : "企業方案請聯絡我們。"
+          )
+        );
+        popup.document.close();
         return;
       }
       if (!supabaseClient) {
         showUiNotice(t("auth.status.missingSupabase"));
+        popup.document.open();
+        popup.document.write(
+          buildPayuniStatusHtml(locale === "en" ? "Checkout failed" : "付款建立失敗", t("auth.status.missingSupabase"))
+        );
+        popup.document.close();
         return;
       }
       const accessToken = await resolveAccessToken();
       if (!accessToken) {
         showUiNotice(locale === "en" ? "Please sign in again." : "請重新登入後再嘗試。");
+        popup.document.open();
+        popup.document.write(
+          buildPayuniStatusHtml(
+            locale === "en" ? "Need sign in" : "需要重新登入",
+            locale === "en" ? "Please sign in again, then retry checkout." : "請重新登入後再嘗試付款。"
+          )
+        );
+        popup.document.close();
         return;
       }
       const checkoutUrl = buildPayuniCheckoutUrl(planId, accessToken);
       if (!checkoutUrl) {
         showUiNotice(locale === "en" ? "Missing checkout URL." : "金流連結未設定。");
+        popup.document.open();
+        popup.document.write(
+          buildPayuniStatusHtml(
+            locale === "en" ? "Checkout failed" : "付款建立失敗",
+            locale === "en" ? "Missing checkout URL." : "金流連結未設定。"
+          )
+        );
+        popup.document.close();
         return;
       }
-      const popup = window.open("", "_blank", "noopener,noreferrer");
-      if (!popup) {
-        showUiNotice(locale === "en" ? "Please allow pop-ups to continue." : "請允許彈出視窗以完成付款。");
-        return;
-      }
-      popup.document.write(
-        `<p style="font-family: system-ui; padding: 24px;">${locale === "en" ? "Preparing checkout..." : "正在準備付款頁面..."}</p>`
-      );
       try {
         const response = await fetch(checkoutUrl, {
           method: "POST",
@@ -1957,7 +2022,16 @@ export function App() {
         };
         if (!response.ok || !data?.ok || !data.checkout) {
           showUiNotice(locale === "en" ? "Checkout failed. Please try again." : "付款建立失敗，請稍後再試。");
-          popup.close();
+          popup.document.open();
+          popup.document.write(
+            buildPayuniStatusHtml(
+              locale === "en" ? "Checkout failed" : "付款建立失敗",
+              locale === "en" ? "Server did not return checkout data." : "伺服器未回傳付款資料。",
+              locale === "en" ? "Open fallback page" : "開啟備援頁面",
+              checkoutUrl
+            )
+          );
+          popup.document.close();
           return;
         }
         const html = buildPayuniAutoSubmitHtml(data.checkout);
@@ -1966,10 +2040,28 @@ export function App() {
         popup.document.close();
       } catch (error) {
         showUiNotice(locale === "en" ? "Checkout failed. Please try again." : "付款建立失敗，請稍後再試。");
-        popup.close();
+        popup.document.open();
+        popup.document.write(
+          buildPayuniStatusHtml(
+            locale === "en" ? "Checkout failed" : "付款建立失敗",
+            locale === "en" ? "Network error while creating checkout." : "建立付款時發生網路錯誤。",
+            locale === "en" ? "Open fallback page" : "開啟備援頁面",
+            checkoutUrl
+          )
+        );
+        popup.document.close();
       }
     },
-    [buildPayuniAutoSubmitHtml, buildPayuniCheckoutUrl, locale, resolveAccessToken, showUiNotice, supabaseClient, t]
+    [
+      buildPayuniAutoSubmitHtml,
+      buildPayuniCheckoutUrl,
+      buildPayuniStatusHtml,
+      locale,
+      resolveAccessToken,
+      showUiNotice,
+      supabaseClient,
+      t,
+    ]
   );
 
   const dockSections = useMemo<DockSection[]>(() => {
