@@ -2725,23 +2725,87 @@ export function App() {
               >
                 {viewMode === "list" ? (
                   <div className="space-y-3">
-                    {sortedCollections.map((collection) => (
-                      <CollectionRow
-                        key={collection.id}
-                        id={collection.id}
-                        name={collection.name}
-                        tabCount={tabCountByCollection.get(collection.id) ?? 0}
-                        updatedAt={collection.updatedAt}
-                        entityMenu={entityMenu}
-                        setEntityMenu={setEntityMenu}
-                        menuItems={[
-                          { label: "編輯集合", icon: Pencil, onClick: () => handleEditCollectionTitle(collection.id, collection.name) },
-                          { label: "刪除集合", icon: Trash2, onClick: () => deleteCollection(collection.id) },
-                          { label: "邀請好友", icon: UserPlus, onClick: () => handleOpenCollectionInvite(collection.id) },
-                        ]}
-                        onSelect={() => setSelectedCollectionId(collection.id)}
-                      />
-                    ))}
+                    {sortedCollections.map((collection) => {
+                      const list = tabsByCollection.get(collection.id) ?? [];
+                      return (
+                        <div key={collection.id} className="space-y-2">
+                          <CollectionRow
+                            id={collection.id}
+                            name={collection.name}
+                            tabCount={tabCountByCollection.get(collection.id) ?? 0}
+                            updatedAt={collection.updatedAt}
+                            entityMenu={entityMenu}
+                            setEntityMenu={setEntityMenu}
+                            menuItems={[
+                              { label: "編輯集合", icon: Pencil, onClick: () => handleEditCollectionTitle(collection.id, collection.name) },
+                              { label: "刪除集合", icon: Trash2, onClick: () => deleteCollection(collection.id) },
+                              { label: "邀請好友", icon: UserPlus, onClick: () => handleOpenCollectionInvite(collection.id) },
+                            ]}
+                            onSelect={() => setSelectedCollectionId(collection.id)}
+                          />
+                          {list.length > 0 ? (
+                            <SortableContext
+                              items={list.map((tab) => tab.id)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="space-y-2 pl-4 pr-1">
+                                {list.map((tab) => (
+                                  <div key={tab.id} className="group/tab relative">
+                                    <TabRow
+                                      id={tab.id}
+                                      title={tab.title}
+                                      url={tab.url}
+                                      {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
+                                      ogTitle={tab.ogTitle ?? null}
+                                      ogDescription={tab.ogDescription ?? null}
+                                      note={tab.note ?? null}
+                                      ogImage={tab.ogImage ?? null}
+                                      viewMode="list"
+                                      onDelete={deleteTab}
+                                      onUpdate={updateTab}
+                                      onMove={(tabId, workspaceId, spaceId, collectionId) => {
+                                        if (
+                                          collectionId === tab.collectionId &&
+                                          workspaceId === collection.workspaceId &&
+                                          spaceId === collection.spaceId
+                                        ) {
+                                          return;
+                                        }
+                                        moveTabToCollection(tabId, collectionId);
+                                        setMoveNotice({
+                                          message: locale === "en" ? "Tab moved" : "分頁已移動",
+                                          workspaceId,
+                                          spaceId,
+                                          collectionId,
+                                        });
+                                      }}
+                                      selected={selectedTabIds.has(tab.id)}
+                                      onToggleSelect={() =>
+                                        setSelectedTabIds((prev) => {
+                                          const next = new Set(prev);
+                                          if (next.has(tab.id)) {
+                                            next.delete(tab.id);
+                                          } else {
+                                            next.add(tab.id);
+                                          }
+                                          return next;
+                                        })
+                                      }
+                                      workspaces={workspaces}
+                                      spaces={spaces}
+                                      collections={collections}
+                                      currentWorkspaceId={collection.workspaceId}
+                                      currentSpaceId={collection.spaceId}
+                                      currentCollectionId={collection.id}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </SortableContext>
+                          ) : null}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="grid gap-4 xl:grid-cols-2">
