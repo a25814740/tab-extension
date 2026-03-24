@@ -28,7 +28,6 @@ import { manualDriveSync, startupDriveSync } from "../sync/driveSync";
 import { DockIconButton } from "./DockIconButton";
 import { EntityMenuButton } from "./EntityMenuButton";
 import {
-  ArrowUpDown,
   Building2,
   Check,
   ChevronDown,
@@ -1102,18 +1101,15 @@ export function App() {
     }
   }, [filteredCollections, sortMode]);
 
-  const sortLabel = useMemo(() => {
-    if (sortMode === "recent") {
-      return `排序：${t("app.sort.recent")}`;
-    }
-    if (sortMode === "name") {
-      return `排序：${t("app.sort.name")}`;
-    }
-    if (sortMode === "createdAt") {
-      return `排序：${t("app.sort.createdAt")}`;
-    }
-    return `排序：${t("app.sort.custom")}`;
-  }, [sortMode, t]);
+  const sortModeOptions = useMemo(
+    () => [
+      { value: "custom" as const, label: t("app.sort.custom") },
+      { value: "recent" as const, label: t("app.sort.recent") },
+      { value: "name" as const, label: t("app.sort.name") },
+      { value: "createdAt" as const, label: t("app.sort.createdAt") },
+    ],
+    [t]
+  );
 
   const viewModeOptions = useMemo(
     () => [
@@ -1124,11 +1120,6 @@ export function App() {
     ],
     [t]
   );
-
-  const handleCycleSortMode = () => {
-    const next = sortMode === "recent" ? "name" : sortMode === "name" ? "createdAt" : "recent";
-    setSortMode(next);
-  };
 
   useEffect(() => {
     const provider = createRuleBasedProvider();
@@ -2687,13 +2678,14 @@ export function App() {
                     ) : null}
                   </div>
 
-                  <button
-                    onClick={handleCycleSortMode}
-                    className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-700"
-                  >
-                    <ArrowUpDown className="h-4 w-4" />
-                    <span>{sortLabel}</span>
-                  </button>
+                  <SelectMenu
+                    value={sortMode}
+                    onChange={setSortMode}
+                    options={sortModeOptions}
+                    size="md"
+                    buttonClassName="min-w-[140px]"
+                    showSelectedIcon={false}
+                  />
 
                   <SelectMenu
                     value={viewMode}
