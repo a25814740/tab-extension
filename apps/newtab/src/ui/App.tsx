@@ -86,6 +86,9 @@ type DockSection = {
   items: DockEntry[];
 };
 
+const PAYUNI_DRY_RUN_KEY = "toby_payuni_dry_run_v1";
+const PAYUNI_REQUIRE_CONFIRM_KEY = "toby_payuni_require_confirm_v1";
+
 export function App() {
   useLocalCacheSync();
   const toWindowTab = (tab: {
@@ -1911,6 +1914,56 @@ export function App() {
     []
   );
 
+  const renderPayuniConfirmPage = useCallback(
+    (
+      popup: Window,
+      payload: { merchantId: string; tradeInfo: string; tradeSha: string; version: string; checkoutUrl: string }
+    ) => {
+      const doc = popup.document;
+      doc.open();
+      doc.write(
+        "<!doctype html><html lang='zh-Hant'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>確認付款</title><style>body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0}.wrap{max-width:560px;margin:0 auto;padding:36px 20px}.card{border:1px solid #1e293b;border-radius:16px;padding:18px;background:#111827}h1{margin:0 0 8px;font-size:18px}p{margin:0;color:#94a3b8;line-height:1.6;font-size:13px}.row{margin-top:14px;display:flex;gap:10px}.btn{flex:1;border:1px solid #334155;border-radius:10px;padding:10px 12px;background:transparent;color:#e2e8f0;cursor:pointer}.btn-primary{background:#f43f5e;border-color:#f43f5e;color:#fff}</style></head><body></body></html>"
+      );
+      doc.close();
+
+      const wrap = doc.createElement("div");
+      wrap.className = "wrap";
+      const card = doc.createElement("div");
+      card.className = "card";
+
+      const title = doc.createElement("h1");
+      title.textContent = locale === "en" ? "Confirm checkout" : "確認送出付款";
+
+      const desc = doc.createElement("p");
+      desc.textContent =
+        locale === "en"
+          ? "You are about to submit payment data to PAYUNi. Click confirm to continue."
+          : "即將送出付款資料到 PAYUNi。按下確認後才會進入金流頁。";
+
+      const row = doc.createElement("div");
+      row.className = "row";
+
+      const cancel = doc.createElement("button");
+      cancel.className = "btn";
+      cancel.textContent = locale === "en" ? "Cancel" : "取消";
+      cancel.addEventListener("click", () => popup.close());
+
+      const confirm = doc.createElement("button");
+      confirm.className = "btn btn-primary";
+      confirm.textContent = locale === "en" ? "Confirm and continue" : "確認並前往付款";
+      confirm.addEventListener("click", () => submitPayuniFormInPopup(popup, payload));
+
+      row.appendChild(cancel);
+      row.appendChild(confirm);
+      card.appendChild(title);
+      card.appendChild(desc);
+      card.appendChild(row);
+      wrap.appendChild(card);
+      doc.body.appendChild(wrap);
+    },
+    [locale, submitPayuniFormInPopup]
+  );
+
   const buildPayuniStatusHtml = useCallback(
     (title: string, message: string, actionLabel?: string, actionUrl?: string) => `<!doctype html>
 <html lang="zh-Hant">
@@ -2042,6 +2095,30 @@ export function App() {
           popup.document.close();
           return;
         }
+        const dryRun = await getLocal<boolean>(PAYUNI_DRY_RUN_KEY, false);
+        if (dryRun) {
+          showUiNotice(locale === "en" ? "Checkout dry-run mode: not submitted." : "乾跑模式：已建立但未送出付款。");
+          popup.document.open();
+          popup.document.write(
+            buildPayuniStatusHtml(
+              locale === "en" ? "Dry run enabled" : "乾跑模式已啟用",
+              locale === "en"
+                ? "Checkout payload is ready, but submission is blocked in dry-run mode."
+                : "付款資料已建立，但目前為乾跑模式，系統不會送出到金流。",
+              locale === "en" ? "Open PAYUNi page manually" : "手動開啟金流頁",
+              data.checkout.checkoutUrl
+            )
+          );
+          popup.document.close();
+          return;
+        }
+
+        const requireConfirm = await getLocal<boolean>(PAYUNI_REQUIRE_CONFIRM_KEY, true);
+        if (requireConfirm) {
+          renderPayuniConfirmPage(popup, data.checkout);
+          return;
+        }
+
         submitPayuniFormInPopup(popup, data.checkout);
       } catch (error) {
         showUiNotice(locale === "en" ? "Checkout failed. Please try again." : "付款建立失敗，請稍後再試。");
@@ -2062,6 +2139,7 @@ export function App() {
       buildPayuniStatusHtml,
       locale,
       resolveAccessToken,
+      renderPayuniConfirmPage,
       showUiNotice,
       submitPayuniFormInPopup,
       supabaseClient,
