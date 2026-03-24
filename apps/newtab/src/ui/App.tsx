@@ -1331,17 +1331,6 @@ export function App() {
     );
     showUiNotice(locale === "en" ? "Added to Dock" : "已加入 Dock");
   };
-  const handleMoveCollectionWithinSpace = useCallback(
-    (collectionId: string, direction: "up" | "down") => {
-      if (sortMode !== "custom") {
-        setSortMode("custom");
-        showUiNotice(locale === "en" ? "Switched to Custom sort." : "已切換為自訂排序");
-      }
-      moveCollectionWithinSpace(collectionId, direction);
-    },
-    [locale, moveCollectionWithinSpace, setSortMode, showUiNotice, sortMode]
-  );
-
   const handleDropToDock = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDockDropActive(false);
@@ -1935,6 +1924,16 @@ export function App() {
   const showUiNotice = useCallback((message: string) => {
     setUiNotice(message);
   }, []);
+  const handleMoveCollectionWithinSpace = useCallback(
+    (collectionId: string, direction: "up" | "down") => {
+      if (sortMode !== "custom") {
+        setSortMode("custom");
+        showUiNotice(locale === "en" ? "Switched to Custom sort." : "已切換為自訂排序");
+      }
+      moveCollectionWithinSpace(collectionId, direction);
+    },
+    [locale, moveCollectionWithinSpace, setSortMode, showUiNotice, sortMode]
+  );
 
   const buildPayuniCheckoutUrl = useCallback(
     (planId: "personal_yearly" | "pro_monthly", accessToken: string) => {
