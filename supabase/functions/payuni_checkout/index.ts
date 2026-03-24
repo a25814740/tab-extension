@@ -38,6 +38,11 @@ function html(body: string, status = 200) {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+      // Allow auto-submit + form POST even if the platform applies sandbox defaults.
+      "Content-Security-Policy":
+        "sandbox allow-forms allow-scripts allow-popups allow-top-navigation-by-user-activation",
     },
   });
 }
@@ -173,6 +178,10 @@ serve(async (req) => {
       <input type="hidden" name="TradeInfo" value="${tradeInfo}" />
       <input type="hidden" name="TradeSha" value="${tradeSha}" />
       <input type="hidden" name="Version" value="${PAYUNI_VERSION}" />
+      <noscript>
+        <p>JavaScript 已被停用，請手動按下按鈕繼續付款。</p>
+        <button type="submit">繼續前往付款</button>
+      </noscript>
     </form>
     <script>
       document.getElementById("payuni-form").submit();
