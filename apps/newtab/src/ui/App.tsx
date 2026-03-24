@@ -1876,30 +1876,38 @@ export function App() {
     [effectiveSupabaseUrl, locale]
   );
 
-  const buildPayuniAutoSubmitHtml = useCallback(
-    (payload: { merchantId: string; tradeInfo: string; tradeSha: string; version: string; checkoutUrl: string }) => `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Redirecting...</title>
-  </head>
-  <body>
-    <form id="payuni-form" method="post" action="${payload.checkoutUrl}">
-      <input type="hidden" name="MerchantID" value="${payload.merchantId}" />
-      <input type="hidden" name="TradeInfo" value="${payload.tradeInfo}" />
-      <input type="hidden" name="TradeSha" value="${payload.tradeSha}" />
-      <input type="hidden" name="Version" value="${payload.version}" />
-      <noscript>
-        <p>JavaScript 已被停用，請手動按下按鈕繼續付款。</p>
-        <button type="submit">繼續前往付款</button>
-      </noscript>
-    </form>
-    <script>
-      document.getElementById("payuni-form").submit();
-    </script>
-  </body>
-</html>`,
+  const submitPayuniFormInPopup = useCallback(
+    (
+      popup: Window,
+      payload: { merchantId: string; tradeInfo: string; tradeSha: string; version: string; checkoutUrl: string }
+    ) => {
+      const doc = popup.document;
+      doc.open();
+      doc.write("<!doctype html><html lang='zh-Hant'><head><meta charset='utf-8'><title>Redirecting...</title></head><body></body></html>");
+      doc.close();
+
+      const form = doc.createElement("form");
+      form.method = "POST";
+      form.action = payload.checkoutUrl;
+
+      const fields: Record<string, string> = {
+        MerchantID: payload.merchantId,
+        TradeInfo: payload.tradeInfo,
+        TradeSha: payload.tradeSha,
+        Version: payload.version,
+      };
+
+      Object.entries(fields).forEach(([name, value]) => {
+        const input = doc.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+
+      doc.body.appendChild(form);
+      form.submit();
+    },
     []
   );
 
@@ -2034,10 +2042,7 @@ export function App() {
           popup.document.close();
           return;
         }
-        const html = buildPayuniAutoSubmitHtml(data.checkout);
-        popup.document.open();
-        popup.document.write(html);
-        popup.document.close();
+        submitPayuniFormInPopup(popup, data.checkout);
       } catch (error) {
         showUiNotice(locale === "en" ? "Checkout failed. Please try again." : "付款建立失敗，請稍後再試。");
         popup.document.open();
@@ -2053,12 +2058,12 @@ export function App() {
       }
     },
     [
-      buildPayuniAutoSubmitHtml,
       buildPayuniCheckoutUrl,
       buildPayuniStatusHtml,
       locale,
       resolveAccessToken,
       showUiNotice,
+      submitPayuniFormInPopup,
       supabaseClient,
       t,
     ]
