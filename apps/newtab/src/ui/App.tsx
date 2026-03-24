@@ -22,7 +22,7 @@ import { useLocale } from "../i18n";
 import { localSnapshotSchema, toSnapshot, type LocalStoreSnapshot, type MembershipStatus } from "@toby/core";
 import { DEFAULT_SUPABASE_ANON_KEY, DEFAULT_SUPABASE_URL, useAuthLogic, useAuthUser } from "../auth/useAuth";
 import { toSafeFaviconUrl } from "../utils/favicon";
-import { fetchOgMetadata } from "../utils/og";
+import { canFetchOgMetadata, fetchOgMetadata } from "../utils/og";
 import { SelectMenu } from "./SelectMenu";
 import { manualDriveSync, startupDriveSync } from "../sync/driveSync";
 import { DockIconButton } from "./DockIconButton";
@@ -418,7 +418,7 @@ export function App() {
       .filter(
         (tab) =>
           !tab.ogImage &&
-          /^https?:\/\//i.test(tab.url) &&
+          canFetchOgMetadata(tab.url) &&
           !fetchedPreviewTabIdsRef.current.has(tab.id) &&
           !fetchingPreviewTabIdsRef.current.has(tab.id)
       )

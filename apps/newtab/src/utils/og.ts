@@ -4,6 +4,8 @@ export type OgMetadata = {
   image?: string;
 };
 
+const BLOCKED_OG_HOSTS = new Set(["chromewebstore.google.com", "chrome.google.com"]);
+
 const META_SELECTORS = {
   ogTitle: 'meta[property="og:title"]',
   ogDescription: 'meta[property="og:description"]',
@@ -23,8 +25,27 @@ function normalizeUrl(baseUrl: string, value?: string | null) {
   }
 }
 
-export async function fetchOgMetadata(url: string, timeoutMs = 6000): Promise<OgMetadata | null> {
+export function canFetchOgMetadata(url: string) {
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    return false;
+  }
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    if (BLOCKED_OG_HOSTS.has(hostname)) {
+      return false;
+    }
+    if (hostname === "example.com" || hostname.endsWith(".example.com")) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchOgMetadata(url: string, timeoutMs = 6000): Promise<OgMetadata | null> {
+  if (!canFetchOgMetadata(url)) {
     return null;
   }
 
