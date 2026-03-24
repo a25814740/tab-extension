@@ -67,7 +67,7 @@ import {
   useSensors,
   DragEndEvent,
 } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy, rectSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 type MemberRole = "owner" | "admin" | "editor" | "commenter" | "viewer";
 type AddCollectionAction = "blank" | "current-window" | "selected-tabs";
@@ -2721,7 +2721,7 @@ export function App() {
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
               <SortableContext
                 items={sortedCollections.map((collection) => collection.id)}
-                strategy={verticalListSortingStrategy}
+                strategy={viewMode === "list" ? verticalListSortingStrategy : rectSortingStrategy}
               >
                 {viewMode === "list" ? (
                   <div className="space-y-3">
@@ -2808,126 +2808,127 @@ export function App() {
                     })}
                   </div>
                 ) : (
-                  <div className="grid gap-4 xl:grid-cols-2">
+                  <div className="columns-1 [column-gap:1rem] md:columns-2 2xl:columns-3">
                     {sortedCollections.map((collection) => {
                       const list = orderBySpace.get(collection.spaceId) ?? [];
                       const index = list.indexOf(collection.id);
                       const canMoveUp = index > 0;
                       const canMoveDown = index >= 0 && index < list.length - 1;
                       return (
-                        <CollectionCard
-                          key={collection.id}
-                          name={collection.name}
-                          tabCount={tabCountByCollection.get(collection.id) ?? 0}
-                          summary={summaries[collection.id]}
-                          onOpenAll={() => handleOpenAll(collection.id)}
-                          onMoveUp={() => moveCollectionWithinSpace(collection.id, "up")}
-                          onMoveDown={() => moveCollectionWithinSpace(collection.id, "down")}
-                          canMoveUp={canMoveUp}
-                          canMoveDown={canMoveDown}
-                          onEditTitle={(name) => handleEditCollectionTitle(collection.id, name)}
-                          onToggleStar={() => toggleCollectionStar(collection.id)}
-                          onSortAZ={() => sortTabsInCollection(collection.id)}
-                          onMove={(workspaceId, spaceId) => {
-                            moveCollectionToSpace(collection.id, workspaceId, spaceId);
-                            setMoveNotice({
-                              message: locale === "en" ? "Collection moved" : "集合已移動",
-                              workspaceId,
-                              spaceId,
-                              collectionId: collection.id,
-                            });
-                          }}
-                          onExport={() => handleExportCollection(collection.id, collection.name)}
-                          onInvite={() => handleOpenCollectionInvite(collection.id)}
-                          onDelete={() => deleteCollection(collection.id)}
-                          onDropWindowTab={(tabId) => handleDropWindowTabToCollection(tabId, collection.id)}
-                          onDropSavedTab={(tabId) => handleDropSavedTabToCollection(tabId, collection.id)}
-                          onDragEnterDropZone={() => setDragOverCollectionId(collection.id)}
-                          onDragLeaveDropZone={() => {
-                            setDragOverCollectionId((prev) => (prev === collection.id ? null : prev));
-                          }}
-                          isDropTarget={dragOverCollectionId === collection.id}
-                          starred={collection.starred ?? false}
-                          workspaces={workspaces}
-                          spaces={spaces}
-                          activeWorkspaceId={activeWorkspaceId}
-                          spaceId={collection.spaceId}
-                          isActive={selectedCollectionId === collection.id}
-                          onSelect={() => setSelectedCollectionId(collection.id)}
-                          onToggleSelect={() =>
-                            setSelectedCollectionIds((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(collection.id)) {
-                                next.delete(collection.id);
-                              } else {
-                                next.add(collection.id);
-                              }
-                              return next;
-                            })
-                          }
-                          selected={selectedCollectionIds.has(collection.id)}
-                          collapsed={collapsedCollections[collection.id] ?? false}
-                          onToggleCollapse={() => handleToggleCollectionCollapse(collection.id)}
-                        >
-                          <SortableContext
-                            items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
-                            strategy={verticalListSortingStrategy}
+                        <div key={collection.id} className="mb-4 break-inside-avoid">
+                          <CollectionCard
+                            name={collection.name}
+                            tabCount={tabCountByCollection.get(collection.id) ?? 0}
+                            summary={summaries[collection.id]}
+                            onOpenAll={() => handleOpenAll(collection.id)}
+                            onMoveUp={() => moveCollectionWithinSpace(collection.id, "up")}
+                            onMoveDown={() => moveCollectionWithinSpace(collection.id, "down")}
+                            canMoveUp={canMoveUp}
+                            canMoveDown={canMoveDown}
+                            onEditTitle={(name) => handleEditCollectionTitle(collection.id, name)}
+                            onToggleStar={() => toggleCollectionStar(collection.id)}
+                            onSortAZ={() => sortTabsInCollection(collection.id)}
+                            onMove={(workspaceId, spaceId) => {
+                              moveCollectionToSpace(collection.id, workspaceId, spaceId);
+                              setMoveNotice({
+                                message: locale === "en" ? "Collection moved" : "集合已移動",
+                                workspaceId,
+                                spaceId,
+                                collectionId: collection.id,
+                              });
+                            }}
+                            onExport={() => handleExportCollection(collection.id, collection.name)}
+                            onInvite={() => handleOpenCollectionInvite(collection.id)}
+                            onDelete={() => deleteCollection(collection.id)}
+                            onDropWindowTab={(tabId) => handleDropWindowTabToCollection(tabId, collection.id)}
+                            onDropSavedTab={(tabId) => handleDropSavedTabToCollection(tabId, collection.id)}
+                            onDragEnterDropZone={() => setDragOverCollectionId(collection.id)}
+                            onDragLeaveDropZone={() => {
+                              setDragOverCollectionId((prev) => (prev === collection.id ? null : prev));
+                            }}
+                            isDropTarget={dragOverCollectionId === collection.id}
+                            starred={collection.starred ?? false}
+                            workspaces={workspaces}
+                            spaces={spaces}
+                            activeWorkspaceId={activeWorkspaceId}
+                            spaceId={collection.spaceId}
+                            isActive={selectedCollectionId === collection.id}
+                            onSelect={() => setSelectedCollectionId(collection.id)}
+                            onToggleSelect={() =>
+                              setSelectedCollectionIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(collection.id)) {
+                                  next.delete(collection.id);
+                                } else {
+                                  next.add(collection.id);
+                                }
+                                return next;
+                              })
+                            }
+                            selected={selectedCollectionIds.has(collection.id)}
+                            collapsed={collapsedCollections[collection.id] ?? false}
+                            onToggleCollapse={() => handleToggleCollectionCollapse(collection.id)}
                           >
-                            <div className={`mt-4 ${tabGridClass}`}>
-                              {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
-                                <div key={tab.id} className="group/tab relative">
-                                  <TabRow
-                                    id={tab.id}
-                                    title={tab.title}
-                                    url={tab.url}
-                                    {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
-                                    ogTitle={tab.ogTitle ?? null}
-                                    ogDescription={tab.ogDescription ?? null}
-                                    note={tab.note ?? null}
-                                    ogImage={tab.ogImage ?? null}
-                                    viewMode={viewMode}
-                                    onDelete={deleteTab}
-                                    onUpdate={updateTab}
-                                    onMove={(tabId, workspaceId, spaceId, collectionId) => {
-                                      if (
-                                        collectionId === tab.collectionId &&
-                                        workspaceId === collection.workspaceId &&
-                                        spaceId === collection.spaceId
-                                      ) {
-                                        return;
-                                      }
-                                      moveTabToCollection(tabId, collectionId);
-                                      setMoveNotice({
-                                        message: locale === "en" ? "Tab moved" : "分頁已移動",
-                                        workspaceId,
-                                        spaceId,
-                                        collectionId,
-                                      });
-                                    }}
-                                    selected={selectedTabIds.has(tab.id)}
-                                    onToggleSelect={() =>
-                                      setSelectedTabIds((prev) => {
-                                        const next = new Set(prev);
-                                        if (next.has(tab.id)) {
-                                          next.delete(tab.id);
-                                        } else {
-                                          next.add(tab.id);
+                            <SortableContext
+                              items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className={`mt-4 ${tabGridClass}`}>
+                                {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
+                                  <div key={tab.id} className="group/tab relative">
+                                    <TabRow
+                                      id={tab.id}
+                                      title={tab.title}
+                                      url={tab.url}
+                                      {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
+                                      ogTitle={tab.ogTitle ?? null}
+                                      ogDescription={tab.ogDescription ?? null}
+                                      note={tab.note ?? null}
+                                      ogImage={tab.ogImage ?? null}
+                                      viewMode={viewMode}
+                                      onDelete={deleteTab}
+                                      onUpdate={updateTab}
+                                      onMove={(tabId, workspaceId, spaceId, collectionId) => {
+                                        if (
+                                          collectionId === tab.collectionId &&
+                                          workspaceId === collection.workspaceId &&
+                                          spaceId === collection.spaceId
+                                        ) {
+                                          return;
                                         }
-                                        return next;
-                                      })
-                                    }
-                                    workspaces={workspaces}
-                                    spaces={spaces}
-                                    collections={collections}
-                                    currentWorkspaceId={collection.workspaceId}
-                                    currentSpaceId={collection.spaceId}
-                                    currentCollectionId={collection.id}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </SortableContext>
-                        </CollectionCard>
+                                        moveTabToCollection(tabId, collectionId);
+                                        setMoveNotice({
+                                          message: locale === "en" ? "Tab moved" : "分頁已移動",
+                                          workspaceId,
+                                          spaceId,
+                                          collectionId,
+                                        });
+                                      }}
+                                      selected={selectedTabIds.has(tab.id)}
+                                      onToggleSelect={() =>
+                                        setSelectedTabIds((prev) => {
+                                          const next = new Set(prev);
+                                          if (next.has(tab.id)) {
+                                            next.delete(tab.id);
+                                          } else {
+                                            next.add(tab.id);
+                                          }
+                                          return next;
+                                        })
+                                      }
+                                      workspaces={workspaces}
+                                      spaces={spaces}
+                                      collections={collections}
+                                      currentWorkspaceId={collection.workspaceId}
+                                      currentSpaceId={collection.spaceId}
+                                      currentCollectionId={collection.id}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </SortableContext>
+                          </CollectionCard>
+                        </div>
                       );
                     })}
                   </div>
