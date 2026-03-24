@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { openTabs } from "@toby/chrome-adapters";
 import { createPortal } from "react-dom";
 import { SelectMenu } from "./SelectMenu";
+import { toSafeFaviconUrl } from "../utils/favicon";
 
 type Props = {
   id: string;
@@ -80,6 +81,7 @@ export function TabRow({
     "flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-[11px] text-zinc-600 shadow-sm transition-colors duration-150 hover:bg-zinc-200";
   const checkboxClass =
     "h-4 w-4 rounded border-zinc-300 bg-white text-zinc-900 focus:ring-zinc-300/40";
+  const safeFaviconUrl = toSafeFaviconUrl(url, faviconUrl ?? null);
 
   const handleOpen = () => {
     void openTabs([url]);
@@ -318,9 +320,9 @@ export function TabRow({
           // 清單模式使用固定欄寬，避免不同長度造成排版不一致
           <div className="grid min-w-0 flex-1 grid-cols-[24px_220px_1fr] items-center gap-3">
             <div className="flex h-5 w-5 flex-none items-center justify-center overflow-hidden rounded bg-zinc-100">
-              {faviconUrl ? (
+              {safeFaviconUrl ? (
                 <img
-                  src={faviconUrl}
+                  src={safeFaviconUrl}
                   alt="favicon"
                   className={`h-full w-full object-contain ${selected ? "hidden" : "group-hover/tab:hidden"}`}
                 />
@@ -346,9 +348,9 @@ export function TabRow({
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-2 py-1">
             <div className="flex h-5 w-5 flex-none items-center justify-center overflow-hidden rounded bg-zinc-100">
-              {faviconUrl ? (
+              {safeFaviconUrl ? (
                 <img
-                  src={faviconUrl}
+                  src={safeFaviconUrl}
                   alt="favicon"
                   className={`h-full w-full object-contain ${selected ? "hidden" : "group-hover/tab:hidden"}`}
                 />

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createSupabaseClient, ensureTrialMembership, getGoogleOAuthUrl, signOut } from "@toby/api-client";
 import { getRedirectUrl, getSync, launchWebAuthFlow, setSync, getLocal, setLocal } from "@toby/chrome-adapters";
 import { useLocale } from "../i18n";
+import { computeTrialEndsAt, TRIAL_DAYS, type MembershipStatus } from "@toby/core";
 
 export type AuthConfig = {
   supabaseUrl: string;
@@ -20,6 +21,17 @@ const USER_KEY = "toby_auth_user_v1";
 const TOKEN_KEY = "toby_auth_token_v1";
 const REFRESH_TOKEN_KEY = "toby_auth_refresh_token_v1";
 const MEMBERSHIP_KEY = "toby_membership_v1";
+
+type MembershipSnapshot = {
+  userId: string;
+  planType: string;
+  status: MembershipStatus;
+  trialStartedAt: string | null;
+  trialEndsAt: string | null;
+  paidStartsAt: string | null;
+  paidEndsAt: string | null;
+  updatedAt: string | null;
+};
 
 export const DEFAULT_SUPABASE_URL = "https://zhfibzpgabqgqgixgisk.supabase.co";
 export const DEFAULT_SUPABASE_ANON_KEY =
@@ -155,10 +167,7 @@ export function useAuthLogic() {
     await setLocal(USER_KEY, authUser);
     await setLocal(TOKEN_KEY, tokens.accessToken);
     await setLocal(REFRESH_TOKEN_KEY, tokens.refreshToken);
-    const membershipRes = await ensureTrialMembership(client);
-    if (!membershipRes.error && membershipRes.data) {
-      await setLocal(MEMBERSHIP_KEY, membershipRes.data);
-    }
+    await syncMembershipSnapshot(client, authUser?.id ?? null);
     if (authUser?.email) {
       setStatus(`${t("auth.status.signedInAs")} ${authUser.email}`);
     } else {
@@ -216,10 +225,7 @@ export function useAuthLogic() {
         await setLocal(USER_KEY, authUser);
         await setLocal(TOKEN_KEY, session.data.session?.access_token ?? null);
         await setLocal(REFRESH_TOKEN_KEY, session.data.session?.refresh_token ?? null);
-        const membershipRes = await ensureTrialMembership(client);
-        if (!membershipRes.error && membershipRes.data) {
-          await setLocal(MEMBERSHIP_KEY, membershipRes.data);
-        }
+        await syncMembershipSnapshot(client, authUser.id);
         setStatus(`${t("auth.status.signedInAs")} ${email}`);
         return;
       }
@@ -246,10 +252,7 @@ export function useAuthLogic() {
           await setLocal(USER_KEY, authUser);
           await setLocal(TOKEN_KEY, restored.data.session?.access_token ?? null);
           await setLocal(REFRESH_TOKEN_KEY, restored.data.session?.refresh_token ?? null);
-          const membershipRes = await ensureTrialMembership(client);
-          if (!membershipRes.error && membershipRes.data) {
-            await setLocal(MEMBERSHIP_KEY, membershipRes.data);
-          }
+          await syncMembershipSnapshot(client, authUser.id);
           setStatus(`${t("auth.status.signedInAs")} ${restoredEmail}`);
           return;
         }
@@ -275,6 +278,42 @@ export function useAuthLogic() {
     handleSignOut,
     handleClearConfig,
   };
+}
+
+function createLocalTrialMembership(userId: string): MembershipSnapshot {
+  const startedAt = new Date().toISOString();
+  return {
+    userId,
+    planType: "trial",
+    status: "trial_active",
+    trialStartedAt: startedAt,
+    trialEndsAt: computeTrialEndsAt(startedAt, TRIAL_DAYS),
+    paidStartsAt: null,
+    paidEndsAt: null,
+    updatedAt: startedAt,
+  };
+}
+
+async function syncMembershipSnapshot(
+  client: ReturnType<typeof createSupabaseClient>,
+  userId: string | null
+) {
+  if (!userId) {
+    return;
+  }
+
+  const localMembership = await getLocal<MembershipSnapshot | null>(MEMBERSHIP_KEY, null);
+  if (localMembership?.userId === userId) {
+    return;
+  }
+
+  const membershipRes = await ensureTrialMembership(client);
+  if (!membershipRes.error && membershipRes.data) {
+    await setLocal(MEMBERSHIP_KEY, membershipRes.data);
+    return;
+  }
+
+  await setLocal(MEMBERSHIP_KEY, createLocalTrialMembership(userId));
 }
 
 function extractTokens(url: string) {

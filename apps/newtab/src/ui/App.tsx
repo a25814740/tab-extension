@@ -21,7 +21,7 @@ import { appStore } from "../store/appStore";
 import { useLocale } from "../i18n";
 import { localSnapshotSchema, toSnapshot, type LocalStoreSnapshot, type MembershipStatus } from "@toby/core";
 import { DEFAULT_SUPABASE_ANON_KEY, DEFAULT_SUPABASE_URL, useAuthLogic, useAuthUser } from "../auth/useAuth";
-import { fetchOgMetadata } from "../utils/og";
+import { toSafeFaviconUrl } from "../utils/favicon";
 import { SelectMenu } from "./SelectMenu";
 import { manualDriveSync, startupDriveSync } from "../sync/driveSync";
 import { DockIconButton } from "./DockIconButton";
@@ -75,6 +75,7 @@ type DockEntry = {
   label: string;
   icon?: ReactNode;
   text?: string;
+  url?: string;
   onClick: () => void;
   faviconUrl?: string | null;
   onRemove?: () => void;
@@ -100,8 +101,9 @@ export function App() {
       url: tab.url,
       active: tab.active ?? false,
     };
-    if (typeof tab.favIconUrl === "string") {
-      item.favIconUrl = tab.favIconUrl;
+    const safeFaviconUrl = toSafeFaviconUrl(tab.url, typeof tab.favIconUrl === "string" ? tab.favIconUrl : null);
+    if (safeFaviconUrl) {
+      item.favIconUrl = safeFaviconUrl;
     }
     return item;
   };
@@ -131,7 +133,6 @@ export function App() {
   const setSelectedWorkspaceId = useAppStore((state) => state.setSelectedWorkspaceId);
   const setSelectedSpaceId = useAppStore((state) => state.setSelectedSpaceId);
   const setSelectedCollectionId = useAppStore((state) => state.setSelectedCollectionId);
-  const updateTabMetadata = useAppStore((state) => state.updateTabMetadata);
   const updateCollectionTitle = useAppStore((state) => state.updateCollectionTitle);
   const toggleCollectionStar = useAppStore((state) => state.toggleCollectionStar);
   const moveCollectionWithinSpace = useAppStore((state) => state.moveCollectionWithinSpace);
@@ -1080,32 +1081,6 @@ export function App() {
     void run();
   }, [scopedCollections, tabsByCollection]);
 
-  const ogFetchInFlight = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    const candidates = scopedTabs.filter(
-      (tab) => !tab.ogTitle || !tab.ogDescription || !tab.ogImage
-    );
-    if (candidates.length === 0) {
-      return;
-    }
-    candidates.forEach((tab) => {
-      if (ogFetchInFlight.current.has(tab.id)) {
-        return;
-      }
-      ogFetchInFlight.current.add(tab.id);
-      void (async () => {
-        const meta = await fetchOgMetadata(tab.url);
-        if (meta) {
-          updateTabMetadata(tab.id, {
-            ogTitle: meta.title ?? tab.ogTitle ?? null,
-            ogDescription: meta.description ?? tab.ogDescription ?? null,
-            ogImage: meta.image ?? tab.ogImage ?? null,
-          });
-        }
-      })();
-    });
-  }, [scopedTabs, updateTabMetadata]);
-
   useEffect(() => {
     let isMounted = true;
     const loadWindows = async () => {
@@ -1214,8 +1189,9 @@ export function App() {
       url: tab.url,
       pinned: false,
     };
-    if (typeof tab.favIconUrl === "string") {
-      input.favIconUrl = tab.favIconUrl;
+    const safeFaviconUrl = toSafeFaviconUrl(tab.url, typeof tab.favIconUrl === "string" ? tab.favIconUrl : null);
+    if (safeFaviconUrl) {
+      input.favIconUrl = safeFaviconUrl;
     }
     return input;
   };
@@ -2050,6 +2026,7 @@ export function App() {
       id: item.id,
       label: item.title,
       text: item.title.slice(0, 2).toUpperCase(),
+      url: item.url ?? undefined,
       faviconUrl: item.faviconUrl ?? null,
       onClick: () => {
         if (item.type === "collection" && item.collectionId) {
@@ -2708,6 +2685,7 @@ export function App() {
                             label={item.label}
                             icon={item.icon}
                             text={item.text}
+                            url={item.url}
                             faviconUrl={item.faviconUrl}
                             compact={compact}
                             onClick={item.onClick}
@@ -2784,6 +2762,7 @@ export function App() {
                     ) : (
                       openTabList.map((tab) => {
                         const selected = selectedWindowTabIds.has(tab.id);
+                        const safeWindowTabFavicon = toSafeFaviconUrl(tab.url, tab.favIconUrl ?? null);
                         return (
                           <div
                             key={tab.id}
@@ -2830,8 +2809,8 @@ export function App() {
                               </button>
                             </div>
                             <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tab.active ? "bg-white/10" : "bg-white"}`}>
-                              {tab.favIconUrl ? (
-                                <img src={tab.favIconUrl} alt={tab.title} className="h-4 w-4 object-contain" />
+                              {safeWindowTabFavicon ? (
+                                <img src={safeWindowTabFavicon} alt={tab.title} className="h-4 w-4 object-contain" />
                               ) : (
                                 <Link2 className={`h-4 w-4 ${tab.active ? "text-white" : "text-zinc-500"}`} />
                               )}
@@ -2855,23 +2834,26 @@ export function App() {
               </>
             ) : (
               <div className="flex min-h-0 flex-1 flex-col items-center gap-3 overflow-y-auto px-2 py-4">
-                {collapsedTabIcons.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleOpenWindowTab(tab.id, tab.windowId)}
-                    onMouseDown={() => toggleWindowTabSelected(tab.id)}
-                    className={`relative flex h-12 w-12 items-center justify-center rounded-2xl ${
-                      selectedWindowTabIds.has(tab.id) ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-500"
-                    }`}
-                  >
-                    {tab.favIconUrl ? (
-                      <img src={tab.favIconUrl} alt={tab.title} className="h-4 w-4 object-contain" />
-                    ) : (
-                      <Link2 className="h-4 w-4" />
-                    )}
-                    {tab.active ? <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-white" /> : null}
-                  </button>
-                ))}
+                {collapsedTabIcons.map((tab) => {
+                  const safeWindowTabFavicon = toSafeFaviconUrl(tab.url, tab.favIconUrl ?? null);
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => handleOpenWindowTab(tab.id, tab.windowId)}
+                      onMouseDown={() => toggleWindowTabSelected(tab.id)}
+                      className={`relative flex h-12 w-12 items-center justify-center rounded-2xl ${
+                        selectedWindowTabIds.has(tab.id) ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-500"
+                      }`}
+                    >
+                      {safeWindowTabFavicon ? (
+                        <img src={safeWindowTabFavicon} alt={tab.title} className="h-4 w-4 object-contain" />
+                      ) : (
+                        <Link2 className="h-4 w-4" />
+                      )}
+                      {tab.active ? <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-white" /> : null}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </section>
