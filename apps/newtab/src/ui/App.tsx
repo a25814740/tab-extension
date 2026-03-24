@@ -2813,7 +2813,7 @@ export function App() {
                               items={list.map((tab) => tab.id)}
                               strategy={verticalListSortingStrategy}
                             >
-                              <div className="space-y-2 pl-4 pr-1">
+                              <div className="space-y-3 pl-4 pr-1">
                                 {list.map((tab) => (
                                   <div key={tab.id} className="group/tab relative">
                                     <TabRow
