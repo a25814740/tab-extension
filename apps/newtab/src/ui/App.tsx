@@ -67,6 +67,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  useDroppable,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
@@ -1102,16 +1103,25 @@ export function App() {
         return list.sort((a, b) => a.position - b.position);
     }
   }, [filteredCollections, sortMode]);
+  const isCustomSort = sortMode === "custom";
 
-  const sortModeOptions = useMemo(
-    () => [
-      { value: "custom" as const, label: t("app.sort.custom"), icon: <ChevronsUpDown className="h-4 w-4" /> },
-      { value: "recent" as const, label: t("app.sort.recent"), icon: <Clock3 className="h-4 w-4" /> },
-      { value: "name" as const, label: t("app.sort.name"), icon: <ArrowDownAZ className="h-4 w-4" /> },
-      { value: "createdAt" as const, label: t("app.sort.createdAt"), icon: <CalendarClock className="h-4 w-4" /> },
-    ],
-    [t]
-  );
+  const sortModeOptions = useMemo(() => {
+    const prefix = t("toolbar.sort");
+    return [
+      {
+        value: "custom" as const,
+        label: `${prefix} · ${t("app.sort.custom")}`,
+        icon: <ChevronsUpDown className="h-4 w-4" />,
+      },
+      { value: "recent" as const, label: `${prefix} · ${t("app.sort.recent")}`, icon: <Clock3 className="h-4 w-4" /> },
+      { value: "name" as const, label: `${prefix} · ${t("app.sort.name")}`, icon: <ArrowDownAZ className="h-4 w-4" /> },
+      {
+        value: "createdAt" as const,
+        label: `${prefix} · ${t("app.sort.createdAt")}`,
+        icon: <CalendarClock className="h-4 w-4" />,
+      },
+    ];
+  }, [t]);
 
   const viewModeOptions = useMemo(
     () => [
@@ -1321,6 +1331,16 @@ export function App() {
     );
     showUiNotice(locale === "en" ? "Added to Dock" : "已加入 Dock");
   };
+  const handleMoveCollectionWithinSpace = useCallback(
+    (collectionId: string, direction: "up" | "down") => {
+      if (sortMode !== "custom") {
+        setSortMode("custom");
+        showUiNotice(locale === "en" ? "Switched to Custom sort." : "已切換為自訂排序");
+      }
+      moveCollectionWithinSpace(collectionId, direction);
+    },
+    [locale, moveCollectionWithinSpace, setSortMode, showUiNotice, sortMode]
+  );
 
   const handleDropToDock = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -2339,6 +2359,7 @@ export function App() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+  const dockDrop = useDroppable({ id: "dock-drop" });
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (!event.over || event.active.id === event.over.id) {
@@ -2346,12 +2367,30 @@ export function App() {
     }
 
     const activeId = String(event.active.id);
-    const overId = String(event.over.id);
+    const overData = event.over.data.current as { targetId?: string; placeAfter?: boolean } | undefined;
+    const overId = String(overData?.targetId ?? event.over.id);
 
     const isSpace = spaces.some((space) => space.id === activeId);
     const isFolder = folders.some((folder) => folder.id === activeId);
     const isCollection = collections.some((collection) => collection.id === activeId);
     const isTab = tabs.some((tab) => tab.id === activeId);
+    const isDockDrop = event.over.id === "dock-drop";
+
+    if (isDockDrop && isTab) {
+      const selectedTabs = selectedTabIds.has(activeId)
+        ? tabs.filter((tab) => selectedTabIds.has(tab.id))
+        : tabs.filter((tab) => tab.id === activeId);
+      if (selectedTabs.length > 0) {
+        addDockItemsFromTabs(
+          selectedTabs.map((tab) => ({
+            title: tab.title,
+            url: tab.url,
+            faviconUrl: tab.faviconUrl,
+          }))
+        );
+      }
+      return;
+    }
 
     if (isSpace) {
       reorderSpaces(activeId, overId);
@@ -2374,8 +2413,8 @@ export function App() {
     }
 
     if (isTab) {
-      const placeAfter = Boolean(event.over?.data.current?.placeAfter);
-      if (event.over?.data.current?.placeAfter !== undefined) {
+      const placeAfter = Boolean(overData?.placeAfter);
+      if (overData?.placeAfter !== undefined) {
         reorderTabsWithIndex(activeId, overId, placeAfter);
       } else {
         reorderTabs(activeId, overId);
@@ -2604,17 +2643,6 @@ export function App() {
                 <button className="rounded-xl bg-zinc-100 px-2 py-1 text-[10px] text-zinc-600" onClick={handleSync}>
                   {leftCollapsed ? "⟳" : t("app.syncNow")}
                 </button>
-                {!leftCollapsed ? (
-                  <button
-                    className="rounded-xl bg-zinc-100 px-2 py-1 text-[10px] text-zinc-600"
-                    onClick={() => {
-                      setOrgSettingsTab("preferences");
-                      setOrgSettingsOpen(true);
-                    }}
-                  >
-                    {t("sidebar.settings")}
-                  </button>
-                ) : null}
               </div>
               {!leftCollapsed ? (
                 <button
@@ -2685,7 +2713,6 @@ export function App() {
                     onChange={setSortMode}
                     options={sortModeOptions}
                     size="md"
-                    label={t("toolbar.sort")}
                     buttonClassName="min-w-[140px]"
                     showSelectedIcon
                   />
@@ -2807,17 +2834,18 @@ export function App() {
                     {sortedCollections.map((collection) => {
                       const list = orderBySpace.get(collection.spaceId) ?? [];
                       const index = list.indexOf(collection.id);
-                      const canMoveUp = index > 0;
-                      const canMoveDown = index >= 0 && index < list.length - 1;
+                      const canMoveUp = isCustomSort && index > 0;
+                      const canMoveDown = isCustomSort && index >= 0 && index < list.length - 1;
                       return (
                         <div key={collection.id}>
                           <CollectionCard
+                            id={collection.id}
                             name={collection.name}
                             tabCount={tabCountByCollection.get(collection.id) ?? 0}
                             summary={summaries[collection.id]}
                             onOpenAll={() => handleOpenAll(collection.id)}
-                            onMoveUp={() => moveCollectionWithinSpace(collection.id, "up")}
-                            onMoveDown={() => moveCollectionWithinSpace(collection.id, "down")}
+                            onMoveUp={() => handleMoveCollectionWithinSpace(collection.id, "up")}
+                            onMoveDown={() => handleMoveCollectionWithinSpace(collection.id, "down")}
                             canMoveUp={canMoveUp}
                             canMoveDown={canMoveDown}
                             onEditTitle={(name) => handleEditCollectionTitle(collection.id, name)}
@@ -2947,8 +2975,9 @@ export function App() {
                 }`}
               >
                 <div
+                  ref={dockDrop.setNodeRef}
                   className={`mx-6 mb-4 flex items-end gap-4 overflow-visible rounded-[24px] border border-zinc-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur ${
-                    dockDropActive ? "ring-2 ring-zinc-300" : ""
+                    dockDropActive || dockDrop.isOver ? "ring-2 ring-zinc-300" : ""
                   }`}
                   onDragOver={(event) => {
                     event.preventDefault();

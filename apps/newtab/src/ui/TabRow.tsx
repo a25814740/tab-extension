@@ -1,5 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useDroppable } from "@dnd-kit/core";
 import { Card } from "@toby/shared-ui";
 import { useLocale } from "../i18n";
 import { useEffect, useState } from "react";
@@ -87,9 +88,13 @@ export function TabRow({
     id,
     data: { type: "tab", placeAfter: true },
   });
-  const sortableBefore = useSortable({
-    id,
-    data: { type: "tab", placeAfter: false },
+  const beforeDrop = useDroppable({
+    id: `${id}::before`,
+    data: { type: "tab", placeAfter: false, targetId: id },
+  });
+  const afterDrop = useDroppable({
+    id: `${id}::after`,
+    data: { type: "tab", placeAfter: true, targetId: id },
   });
 
   const isList = viewMode === "list";
@@ -240,15 +245,9 @@ export function TabRow({
             aria-label={t("drag.tab")}
             {...sortable.attributes}
             {...sortable.listeners}
+            ref={sortable.setActivatorNodeRef}
             onClick={(event) => event.stopPropagation()}
             onMouseDown={(event) => event.stopPropagation()}
-            draggable
-            onDragStart={(event) => {
-              event.stopPropagation();
-              // Custom mime type enables cross-collection drag/drop without backend calls.
-              event.dataTransfer.setData("application/x-toby-saved-tab", id);
-              event.dataTransfer.effectAllowed = "move";
-            }}
           >
             <span className={actionButtonInner}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon icon-tabler icon-tabler-drag-drop">
@@ -282,21 +281,15 @@ export function TabRow({
             </button>
           </div>
           <div className="absolute right-0 bottom-0 z-10 flex translate-x-[20%] translate-y-1/2 gap-2 opacity-0 transition-opacity duration-150 group-hover/tab:opacity-100 group-hover/tab:pointer-events-auto pointer-events-none">
-            <button
-              className={actionButtonBase}
-              aria-label={t("drag.tab")}
-              {...sortable.attributes}
-              {...sortable.listeners}
-              onClick={(event) => event.stopPropagation()}
-              onMouseDown={(event) => event.stopPropagation()}
-              draggable
-              onDragStart={(event) => {
-                event.stopPropagation();
-                // Custom mime type enables cross-collection drag/drop without backend calls.
-                event.dataTransfer.setData("application/x-toby-saved-tab", id);
-                event.dataTransfer.effectAllowed = "move";
-              }}
-            >
+          <button
+            className={actionButtonBase}
+            aria-label={t("drag.tab")}
+            {...sortable.attributes}
+            {...sortable.listeners}
+            ref={sortable.setActivatorNodeRef}
+            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
               <span className={actionButtonInner}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon icon-tabler icon-tabler-drag-drop">
                   <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -405,12 +398,13 @@ export function TabRow({
       {isCompact ? null : (
         <div className="mt-2 flex items-center gap-2">
           <div
-            className={`h-1 flex-1 rounded ${sortableBefore.isOver ? "bg-zinc-400" : "bg-zinc-200"}`}
-            ref={sortableBefore.setNodeRef}
-            {...sortableBefore.attributes}
-            {...sortableBefore.listeners}
+            className={`h-1 flex-1 rounded ${beforeDrop.isOver ? "bg-zinc-400" : "bg-zinc-200"}`}
+            ref={beforeDrop.setNodeRef}
           />
-          <div className={`h-1 flex-1 rounded ${sortable.isOver ? "bg-zinc-400" : "bg-zinc-200"}`} />
+          <div
+            className={`h-1 flex-1 rounded ${afterDrop.isOver ? "bg-zinc-400" : "bg-zinc-200"}`}
+            ref={afterDrop.setNodeRef}
+          />
         </div>
       )}
 

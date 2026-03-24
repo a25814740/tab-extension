@@ -5,6 +5,7 @@ import { useAuthLogic, useAuthUser } from "../auth/useAuth";
 import { useAppStore } from "../store/appStore";
 import { getLocal } from "@toby/chrome-adapters";
 import type { Membership } from "@toby/core";
+import { Bell, Check, ChevronRight, HelpCircle, Languages, LogIn, LogOut } from "lucide-react";
 
 export function AuthPanel() {
   const { t } = useLocale();
@@ -87,18 +88,34 @@ export function AuthMiniPanel() {
     };
     return labels[membership.planType] ?? membership.planType;
   }, [locale, membership?.planType]);
+  const statusLine = useMemo(() => {
+    const parts: string[] = [];
+    if (lastSyncAt) {
+      parts.push(`${t("app.lastSync")} ${new Date(lastSyncAt).toLocaleTimeString()}`);
+    }
+    if (lastSyncError) {
+      parts.push(`${t("app.syncError")} (${lastSyncError})`);
+    }
+    if (nextSyncRetryAt) {
+      parts.push(`${t("app.retry")} ${new Date(nextSyncRetryAt).toLocaleTimeString()}`);
+    }
+    if (pendingCount > 0) {
+      parts.push(`${t("app.pending")} ${pendingCount}`);
+    }
+    return parts.join(" • ");
+  }, [lastSyncAt, lastSyncError, nextSyncRetryAt, pendingCount, t]);
 
   return (
     <div className="w-full">
       <button
-        className="flex w-full flex-col items-center justify-center gap-1 px-1 py-1 text-[10px] text-slate-200"
+        className="flex w-full flex-col items-center justify-center gap-1 rounded-2xl bg-zinc-100 px-2 py-2 text-[10px] text-zinc-600 hover:bg-zinc-200"
         onClick={() => setOpen((prev) => !prev)}
       >
-        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-900/70">
+        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-white">
           {user?.avatarUrl ? (
             <img src={user.avatarUrl} alt="avatar" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-[10px]">
+            <div className="flex h-full w-full items-center justify-center text-[10px] text-zinc-500">
               {user?.name?.slice(0, 2).toUpperCase() ?? "?"}
             </div>
           )}
@@ -108,112 +125,102 @@ export function AuthMiniPanel() {
 
       {open ? (
         <>
-          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="fixed bottom-4 left-4 z-50 w-64 p-3">
-            <div className="space-y-3 rounded-2xl border border-slate-800/80 bg-slate-900/95 p-4 shadow-xl backdrop-blur">
-              <div className="flex flex-col items-center gap-2 text-center">
-                <div className="h-12 w-12 overflow-hidden rounded-full bg-slate-800">
+          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setOpen(false)} />
+          <div className="fixed bottom-5 left-5 z-50 w-72">
+            <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-2xl">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 overflow-hidden rounded-full border border-zinc-200 bg-zinc-100">
                   {user?.avatarUrl ? (
                     <img src={user.avatarUrl} alt="avatar" className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[12px]">
+                    <div className="flex h-full w-full items-center justify-center text-[12px] text-zinc-500">
                       {user?.name?.slice(0, 2).toUpperCase() ?? "?"}
                     </div>
                   )}
                 </div>
-                <div className="text-sm font-semibold text-slate-100">
-                  {user?.name ?? t("app.signIn")}
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-zinc-900">
+                    {user?.name ?? t("app.signIn")}
+                  </div>
+                  <div className="truncate text-[11px] text-zinc-500">{user?.email ?? "-"}</div>
                 </div>
-                <div className="text-[11px] text-slate-500">{user?.email ?? "-"}</div>
-                <div className="text-[11px] text-slate-500">
-                  {locale === "en" ? "Plan" : "方案"}：{planLabel}
-                </div>
-              <div className="mt-2 w-full">
+              </div>
+              <div className="mt-3 flex items-center justify-between text-[11px] text-zinc-500">
+                <span>{locale === "en" ? "Plan" : "方案"}</span>
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-600">{planLabel}</span>
+              </div>
+              <div className="mt-3">
                 {!user ? (
-                  <button className="w-full rounded-lg border border-slate-700 px-2 py-2 text-xs hover:bg-slate-900/60" onClick={handleGoogle}>
+                  <button
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50"
+                    onClick={handleGoogle}
+                  >
+                    <LogIn className="h-4 w-4" />
                     {t("auth.googleSignIn")}
                   </button>
                 ) : (
-                    <button
-                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 px-2 py-2 text-xs hover:bg-slate-900/60"
-                      onClick={handleSignOut}
-                    >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M10 16l4 -4l-4 -4"></path>
-                      <path d="M4 12h10"></path>
-                      <path d="M12 4h6v16h-6"></path>
-                    </svg>
+                  <button
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="h-4 w-4" />
                     {t("auth.signOut")}
                   </button>
                 )}
               </div>
-              <div className="mt-3 w-full border-t border-slate-800/60 pt-3 text-[10px] text-slate-500">
-                {lastSyncAt ? `${t("app.lastSync")} ${new Date(lastSyncAt).toLocaleTimeString()}` : ""}
-                {lastSyncError ? ` • ${t("app.syncError")} (${lastSyncError})` : ""}
-                {nextSyncRetryAt ? ` • ${t("app.retry")} ${new Date(nextSyncRetryAt).toLocaleTimeString()}` : ""}
-                {pendingCount > 0 ? ` • ${t("app.pending")} ${pendingCount}` : ""}
+              <div className="mt-3 border-t border-zinc-200 pt-3 text-[10px] text-zinc-500">
+                {statusLine || "-"}
               </div>
             </div>
-            <div className="space-y-2">
-                <button
-                  className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-300 hover:bg-slate-900/60"
-                  onClick={() => setFaqOpen(true)}
-                >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 18h.01"></path>
-                  <path d="M12 15a3 3 0 1 0 -3 -3"></path>
-                  <path d="M19.4 15a7 7 0 1 0 -14.8 0"></path>
-                </svg>
+            <div className="mt-2 space-y-1 rounded-2xl border border-zinc-200 bg-white p-2 shadow-lg">
+              <button
+                className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs text-zinc-600 hover:bg-zinc-100"
+                onClick={() => setFaqOpen(true)}
+              >
+                <HelpCircle className="h-4 w-4 text-zinc-500" />
                 {t("rail.faq")}
+                <ChevronRight className="ml-auto h-4 w-4 text-zinc-400" />
               </button>
               <button
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-300 hover:bg-slate-900/60"
+                className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs text-zinc-600 hover:bg-zinc-100"
                 onClick={() => setUpdatesOpen(true)}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"></path>
-                  <path d="M9 17v1a3 3 0 0 0 6 0v-1"></path>
-                </svg>
+                <Bell className="h-4 w-4 text-zinc-500" />
                 {t("rail.updates")}
+                <ChevronRight className="ml-auto h-4 w-4 text-zinc-400" />
               </button>
               <button
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-300 hover:bg-slate-900/60"
+                className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs text-zinc-600 hover:bg-zinc-100"
                 onClick={() => setLangOpen(true)}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 5h7"></path>
-                  <path d="M9 3v2c0 4.418 -2.239 8 -5 8"></path>
-                  <path d="M5 9c0 4.418 2.239 8 5 8"></path>
-                  <path d="M15 3v2"></path>
-                  <path d="M19 3v2"></path>
-                  <path d="M15 9c0 1.657 1.343 3 3 3"></path>
-                  <path d="M18 12c0 1.657 -1.343 3 -3 3"></path>
-                </svg>
+                <Languages className="h-4 w-4 text-zinc-500" />
                 {t("app.language")}
+                <ChevronRight className="ml-auto h-4 w-4 text-zinc-400" />
               </button>
-            </div>
             </div>
           </div>
         </>
       ) : null}
 
       {faqOpen ? (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setFaqOpen(false)}>
-          <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
-            <div className="text-sm font-semibold">{t("rail.faq")}</div>
-            <div className="mt-3 text-xs text-slate-400">FAQ 內容可放這裡。</div>
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setFaqOpen(false)}
+        >
+          <div
+            className="modal-enter w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+              <HelpCircle className="h-4 w-4 text-zinc-500" />
+              {t("rail.faq")}
+            </div>
+            <div className="mt-3 text-xs text-zinc-500">FAQ 內容可放這裡。</div>
             <div className="mt-4 flex justify-end">
-              <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setFaqOpen(false)}>
+              <button
+                className="rounded-lg border border-zinc-200 px-3 py-2 text-xs text-zinc-600"
+                onClick={() => setFaqOpen(false)}
+              >
                 {t("tab.cancel")}
               </button>
             </div>
@@ -222,12 +229,24 @@ export function AuthMiniPanel() {
       ) : null}
 
       {updatesOpen ? (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setUpdatesOpen(false)}>
-          <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
-            <div className="text-sm font-semibold">{t("rail.updates")}</div>
-            <div className="mt-3 text-xs text-slate-400">更新通知可放這裡。</div>
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setUpdatesOpen(false)}
+        >
+          <div
+            className="modal-enter w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+              <Bell className="h-4 w-4 text-zinc-500" />
+              {t("rail.updates")}
+            </div>
+            <div className="mt-3 text-xs text-zinc-500">更新通知可放這裡。</div>
             <div className="mt-4 flex justify-end">
-              <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setUpdatesOpen(false)}>
+              <button
+                className="rounded-lg border border-zinc-200 px-3 py-2 text-xs text-zinc-600"
+                onClick={() => setUpdatesOpen(false)}
+              >
                 {t("tab.cancel")}
               </button>
             </div>
@@ -236,27 +255,43 @@ export function AuthMiniPanel() {
       ) : null}
 
       {langOpen ? (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" onClick={() => setLangOpen(false)}>
-          <div className="modal-enter w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
-            <div className="text-sm font-semibold">{t("app.language")}</div>
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setLangOpen(false)}
+        >
+          <div
+            className="modal-enter w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+              <Languages className="h-4 w-4 text-zinc-500" />
+              {t("app.language")}
+            </div>
             <div className="mt-4 grid grid-cols-1 gap-2 text-xs">
               <button
-                className={`flex items-center justify-between rounded-lg border px-3 py-2 ${locale === "zh-TW" ? "border-rose-400 text-white" : "border-slate-700 text-slate-300"} hover:bg-slate-900/60`}
+                className={`flex items-center justify-between rounded-lg border px-3 py-2 ${
+                  locale === "zh-TW" ? "border-zinc-900 text-zinc-900" : "border-zinc-200 text-zinc-600"
+                } hover:bg-zinc-50`}
                 onClick={() => setLocale("zh-TW")}
               >
-                <span>🇹🇼 繁體中文</span>
-                {locale === "zh-TW" ? "✓" : ""}
+                <span>繁體中文</span>
+                {locale === "zh-TW" ? <Check className="h-4 w-4 text-zinc-900" /> : null}
               </button>
               <button
-                className={`flex items-center justify-between rounded-lg border px-3 py-2 ${locale === "en" ? "border-rose-400 text-white" : "border-slate-700 text-slate-300"} hover:bg-slate-900/60`}
+                className={`flex items-center justify-between rounded-lg border px-3 py-2 ${
+                  locale === "en" ? "border-zinc-900 text-zinc-900" : "border-zinc-200 text-zinc-600"
+                } hover:bg-zinc-50`}
                 onClick={() => setLocale("en")}
               >
-                <span>🇺🇸 English</span>
-                {locale === "en" ? "✓" : ""}
+                <span>English</span>
+                {locale === "en" ? <Check className="h-4 w-4 text-zinc-900" /> : null}
               </button>
             </div>
             <div className="mt-4 flex justify-end">
-              <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs" onClick={() => setLangOpen(false)}>
+              <button
+                className="rounded-lg border border-zinc-200 px-3 py-2 text-xs text-zinc-600"
+                onClick={() => setLangOpen(false)}
+              >
                 {t("tab.cancel")}
               </button>
             </div>

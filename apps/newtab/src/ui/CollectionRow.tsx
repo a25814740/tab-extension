@@ -1,4 +1,5 @@
 import { FolderTree } from "lucide-react";
+import { useDroppable } from "@dnd-kit/core";
 import type { EntityMenuItem } from "./EntityMenuButton";
 import { EntityMenuButton } from "./EntityMenuButton";
 
@@ -23,9 +24,16 @@ export function CollectionRow({
   menuItems,
   onSelect,
 }: Props) {
+  const drop = useDroppable({
+    id: `collection-drop-${id}`,
+    data: { targetId: id, type: "collection" },
+  });
   return (
     <button
-      className="flex w-full items-center gap-4 rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-4 text-left transition hover:bg-zinc-100"
+      ref={drop.setNodeRef}
+      className={`flex w-full items-center gap-4 rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-4 text-left transition hover:bg-zinc-100 ${
+        drop.isOver ? "ring-1 ring-zinc-300" : ""
+      }`}
       onClick={onSelect}
     >
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-zinc-500 shadow-sm">

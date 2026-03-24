@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { Card } from "@toby/shared-ui";
 import { useLocale } from "../i18n";
 import { SelectMenu } from "./SelectMenu";
+import { useDroppable } from "@dnd-kit/core";
 
 type Props = {
+  id: string;
   name: string;
   tabCount: number;
   onOpenAll: () => void;
@@ -40,6 +42,7 @@ type Props = {
 };
 
 export function CollectionCard({
+  id,
   name,
   tabCount,
   onOpenAll,
@@ -74,6 +77,10 @@ export function CollectionCard({
   onToggleCollapse,
 }: Props) {
   const { t } = useLocale();
+  const drop = useDroppable({
+    id: `collection-drop-${id}`,
+    data: { targetId: id, type: "collection" },
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveWorkspaceId, setMoveWorkspaceId] = useState(activeWorkspaceId ?? "");
@@ -107,10 +114,11 @@ export function CollectionCard({
 
   return (
     <Card
+      ref={drop.setNodeRef}
       className={
         isActive
           ? "group relative w-full rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 shadow-sm"
-          : isDropTarget
+          : isDropTarget || drop.isOver
           ? "group relative w-full rounded-[24px] border border-zinc-200 bg-zinc-100 p-4 ring-1 ring-zinc-300 shadow-sm"
           : "group relative w-full rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 shadow-sm hover:bg-zinc-100"
       }
