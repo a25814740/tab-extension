@@ -8,6 +8,21 @@ import { createPortal } from "react-dom";
 import { SelectMenu } from "./SelectMenu";
 import { toSafeFaviconUrl } from "../utils/favicon";
 
+function toSafePreviewImageUrl(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol === "data:" || parsed.protocol === "blob:" || parsed.protocol === "chrome-extension:") {
+      return value;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 type Props = {
   id: string;
   title: string;
@@ -82,6 +97,7 @@ export function TabRow({
   const checkboxClass =
     "h-4 w-4 rounded border-zinc-300 bg-white text-zinc-900 focus:ring-zinc-300/40";
   const safeFaviconUrl = toSafeFaviconUrl(url, faviconUrl ?? null);
+  const safePreviewImageUrl = toSafePreviewImageUrl(ogImage ?? null);
 
   const handleOpen = () => {
     void openTabs([url]);
@@ -306,8 +322,8 @@ export function TabRow({
       )}
       {showImageBlock ? (
         <div className="mb-2 aspect-video w-full overflow-hidden rounded bg-zinc-100">
-          {ogImage ? (
-            <img src={ogImage} alt="preview" className="h-full w-full object-cover" />
+          {safePreviewImageUrl ? (
+            <img src={safePreviewImageUrl} alt="preview" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-[10px] text-zinc-500">
               {t("tab.noImage")}
