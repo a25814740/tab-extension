@@ -170,6 +170,7 @@ export function App() {
   const selectedCollectionId = useAppStore((state) => state.cache.selectedCollectionId ?? null);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(new Set());
   const [selectedWindowTabIds, setSelectedWindowTabIds] = useState<Set<number>>(new Set());
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<Set<string>>(new Set());
@@ -244,6 +245,7 @@ export function App() {
   const [collectionInviteStatus, setCollectionInviteStatus] = useState("");
   const importFileRef = useRef<HTMLInputElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchWrapRef = useRef<HTMLDivElement | null>(null);
   const fetchedPreviewTabIdsRef = useRef<Set<string>>(new Set());
   const fetchingPreviewTabIdsRef = useRef<Set<string>>(new Set());
   const checkboxClass =
@@ -1103,7 +1105,6 @@ export function App() {
         return list.sort((a, b) => a.position - b.position);
     }
   }, [filteredCollections, sortMode]);
-  const isCustomSort = sortMode === "custom";
 
   const sortModeOptions = useMemo(() => {
     const prefix = t("toolbar.sort");
@@ -1146,6 +1147,29 @@ export function App() {
     };
     void run();
   }, [scopedCollections, tabsByCollection]);
+
+  useEffect(() => {
+    if (!searchOpen) {
+      return;
+    }
+    const handler = (event: MouseEvent) => {
+      if (!searchWrapRef.current || !(event.target instanceof Node)) {
+        return;
+      }
+      if (!searchWrapRef.current.contains(event.target)) {
+        setSearchOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (!searchOpen) {
+      return;
+    }
+    searchInputRef.current?.focus();
+  }, [searchOpen]);
 
   useEffect(() => {
     let isMounted = true;
@@ -2259,7 +2283,10 @@ export function App() {
         id: "search",
         label: locale === "en" ? "Search" : "搜尋",
         icon: <Search className="h-5 w-5" />,
-        onClick: () => searchInputRef.current?.focus(),
+        onClick: () => {
+          setSearchOpen(true);
+          searchInputRef.current?.focus();
+        },
       },
       {
         id: "ai",
@@ -2665,11 +2692,11 @@ export function App() {
                 <div className="text-sm font-semibold text-zinc-500">
                   {workspace?.name ?? t("app.loading")} / {activeSpaceName}
                 </div>
-                <div className="ml-auto flex flex-wrap items-center gap-2">
+                <div ref={searchWrapRef} className="ml-auto relative flex items-center gap-2">
                   <div className="relative">
                     <button
                       onClick={() => setCreateCollectionMenuOpen((prev) => !prev)}
-                      className="flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white"
+                      className="flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2 text-xs font-medium text-white border border-zinc-900"
                     >
                       <Plus className="h-4 w-4" />
                       <span>新增集合</span>
@@ -2724,17 +2751,34 @@ export function App() {
                     showSelectedIcon
                     buttonClassName="min-w-[140px]"
                   />
-
-                  <div className="flex min-w-[260px] items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-500">
+                  <button
+                    className="flex h-9 w-9 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 border border-zinc-100"
+                    onClick={() => setSearchOpen((prev) => !prev)}
+                    aria-label={t("nav.search")}
+                  >
                     <Search className="h-4 w-4" />
-                    <input
-                      ref={searchInputRef}
-                      className="w-full bg-transparent text-sm text-zinc-700 outline-none placeholder:text-zinc-400"
-                      placeholder={t("app.searchPlaceholder")}
-                      value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                    />
-                  </div>
+                  </button>
+                  {searchOpen ? (
+                    <div className="absolute inset-y-0 left-0 right-0 z-30 flex items-center">
+                      <div className="ml-auto w-full">
+                        <div className="flex min-w-[260px] items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-2 text-xs text-zinc-500 border border-zinc-100">
+                          <Search className="h-4 w-4" />
+                          <input
+                            ref={searchInputRef}
+                            className="w-full bg-transparent text-xs text-zinc-700 outline-none placeholder:text-zinc-400"
+                            placeholder={t("app.searchPlaceholder")}
+                            value={searchQuery}
+                            onChange={(event) => setSearchQuery(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Escape") {
+                                setSearchOpen(false);
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -2833,8 +2877,8 @@ export function App() {
                     {sortedCollections.map((collection) => {
                       const list = orderBySpace.get(collection.spaceId) ?? [];
                       const index = list.indexOf(collection.id);
-                      const canMoveUp = isCustomSort && index > 0;
-                      const canMoveDown = isCustomSort && index >= 0 && index < list.length - 1;
+                      const canMoveUp = index > 0;
+                      const canMoveDown = index >= 0 && index < list.length - 1;
                       return (
                         <div key={collection.id}>
                           <CollectionCard

@@ -221,54 +221,56 @@ export function CollectionCard({
                 <path d="M15 4h5v5" />
               </svg>
             </button>
-            <button
-              className="text-zinc-500 hover:text-zinc-700"
-              onClick={onMoveUp}
-              disabled={!canMoveUp}
-              aria-label={t("collection.moveUp")}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="icon icon-tabler icons-tabler-outline icon-tabler-arrow-autofit-up"
+            {canMoveUp ? (
+              <button
+                className="text-zinc-500 hover:text-zinc-700"
+                onClick={onMoveUp}
+                aria-label={t("collection.moveUp")}
               >
-                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                <path d="M12 4h-6a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h8" />
-                <path d="M18 20v-17" />
-                <path d="M15 6l3 -3l3 3" />
-              </svg>
-            </button>
-            <button
-              className="text-zinc-500 hover:text-zinc-700"
-              onClick={onMoveDown}
-              disabled={!canMoveDown}
-              aria-label={t("collection.moveDown")}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="icon icon-tabler icons-tabler-outline icon-tabler-arrow-autofit-down"
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="icon icon-tabler icons-tabler-outline icon-tabler-arrow-autofit-up"
+                >
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M12 4h-6a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h8" />
+                  <path d="M18 20v-17" />
+                  <path d="M15 6l3 -3l3 3" />
+                </svg>
+              </button>
+            ) : null}
+            {canMoveDown ? (
+              <button
+                className="text-zinc-500 hover:text-zinc-700"
+                onClick={onMoveDown}
+                aria-label={t("collection.moveDown")}
               >
-                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                <path d="M12 20h-6a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h8" />
-                <path d="M18 4v17" />
-                <path d="M15 18l3 3l3 -3" />
-              </svg>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="icon icon-tabler icons-tabler-outline icon-tabler-arrow-autofit-down"
+                >
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M12 20h-6a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h8" />
+                  <path d="M18 4v17" />
+                  <path d="M15 18l3 3l3 -3" />
+                </svg>
+              </button>
+            ) : null}
             <div className="relative" ref={menuRef}>
               <button className="text-zinc-500 hover:text-zinc-700" onClick={() => setMenuOpen((prev) => !prev)} aria-label={t("collection.more")}>
                 <svg
