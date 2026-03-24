@@ -1067,10 +1067,10 @@ export function App() {
 
   const tabGridClass =
     viewMode === "list"
-      ? "grid grid-cols-1"
+      ? "grid grid-cols-1 gap-3"
       : viewMode === "image"
-      ? "grid [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]"
-      : "grid [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]";
+      ? "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]"
+      : "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]";
 
   const filteredCollections = useMemo(() => {
     const scopedBySpace = activeSpaceId
