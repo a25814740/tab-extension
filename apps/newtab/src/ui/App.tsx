@@ -22,6 +22,7 @@ import { useLocale } from "../i18n";
 import { localSnapshotSchema, toSnapshot, type LocalStoreSnapshot, type MembershipStatus } from "@toby/core";
 import { DEFAULT_SUPABASE_ANON_KEY, DEFAULT_SUPABASE_URL, useAuthLogic, useAuthUser } from "../auth/useAuth";
 import { toSafeFaviconUrl } from "../utils/favicon";
+import { fetchOgMetadata } from "../utils/og";
 import { SelectMenu } from "./SelectMenu";
 import { manualDriveSync, startupDriveSync } from "../sync/driveSync";
 import { DockIconButton } from "./DockIconButton";
@@ -143,6 +144,7 @@ export function App() {
   const sortTabsInCollection = useAppStore((state) => state.sortTabsInCollection);
   const deleteCollection = useAppStore((state) => state.deleteCollection);
   const updateTab = useAppStore((state) => state.updateTab);
+  const updateTabMetadata = useAppStore((state) => state.updateTabMetadata);
   const deleteTab = useAppStore((state) => state.deleteTab);
   const moveTabToCollection = useAppStore((state) => state.moveTabToCollection);
   const addTabToCollection = useAppStore((state) => state.addTabToCollection);
@@ -240,6 +242,8 @@ export function App() {
   const [collectionInviteStatus, setCollectionInviteStatus] = useState("");
   const importFileRef = useRef<HTMLInputElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const fetchedPreviewTabIdsRef = useRef<Set<string>>(new Set());
+  const fetchingPreviewTabIdsRef = useRef<Set<string>>(new Set());
   const checkboxClass =
     "h-4 w-4 rounded border-zinc-300 bg-white text-zinc-900 focus:ring-zinc-300/40";
   const pulledWorkspacesRef = useRef<Set<string>>(new Set());
@@ -405,6 +409,52 @@ export function App() {
         : [],
     [activeWorkspaceId, tabs, scopedCollections]
   );
+
+  useEffect(() => {
+    if (viewMode !== "image") {
+      return;
+    }
+    const candidates = scopedTabs
+      .filter(
+        (tab) =>
+          !tab.ogImage &&
+          /^https?:\/\//i.test(tab.url) &&
+          !fetchedPreviewTabIdsRef.current.has(tab.id) &&
+          !fetchingPreviewTabIdsRef.current.has(tab.id)
+      )
+      .slice(0, 10);
+    if (candidates.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      for (const tab of candidates) {
+        if (cancelled) {
+          return;
+        }
+        fetchingPreviewTabIdsRef.current.add(tab.id);
+        try {
+          const metadata = await fetchOgMetadata(tab.url, 4500);
+          if (cancelled) {
+            return;
+          }
+          if (metadata?.image || metadata?.title || metadata?.description) {
+            updateTabMetadata(tab.id, {
+              ogTitle: metadata.title ?? null,
+              ogDescription: metadata.description ?? null,
+              ogImage: metadata.image ?? null,
+            });
+          }
+        } finally {
+          fetchingPreviewTabIdsRef.current.delete(tab.id);
+          fetchedPreviewTabIdsRef.current.add(tab.id);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [scopedTabs, updateTabMetadata, viewMode]);
 
   useEffect(() => {
     let isMounted = true;

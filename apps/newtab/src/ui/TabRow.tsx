@@ -14,7 +14,13 @@ function toSafePreviewImageUrl(value: string | null | undefined) {
   }
   try {
     const parsed = new URL(value);
-    if (parsed.protocol === "data:" || parsed.protocol === "blob:" || parsed.protocol === "chrome-extension:") {
+    if (
+      parsed.protocol === "https:" ||
+      parsed.protocol === "http:" ||
+      parsed.protocol === "data:" ||
+      parsed.protocol === "blob:" ||
+      parsed.protocol === "chrome-extension:"
+    ) {
       return value;
     }
   } catch {
