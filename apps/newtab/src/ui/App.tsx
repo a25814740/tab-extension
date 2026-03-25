@@ -6,7 +6,7 @@ import { CollectionRow } from "./CollectionRow";
 import { TabRow } from "./TabRow";
 import { createRuleBasedProvider } from "@toby/ai";
 import { AuthMiniPanel } from "./AuthPanel";
-import { PricingModal } from "./PricingModal";
+import { PricingModal, type PricingPlanId } from "./PricingModal";
 import {
   createSupabaseClient,
   updateMemberRole,
@@ -189,6 +189,7 @@ export function App() {
   const [dedupeKeepIds, setDedupeKeepIds] = useState<Set<string>>(new Set());
   const [dedupeQuery, setDedupeQuery] = useState("");
   const [dragOverCollectionId, setDragOverCollectionId] = useState<string | null>(null);
+  const [blankCollectionDropActive, setBlankCollectionDropActive] = useState(false);
   const [dockDropActive, setDockDropActive] = useState(false);
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
@@ -1286,6 +1287,14 @@ export function App() {
     return input;
   };
 
+  const buildQuickCollectionName = (title: string) => {
+    const trimmed = title.trim();
+    if (!trimmed) {
+      return locale === "en" ? "New collection" : "新集合";
+    }
+    return trimmed.length > 32 ? `${trimmed.slice(0, 32)}…` : trimmed;
+  };
+
   const handleSaveWindowGroup = (
     title: string,
     list: Array<{ id: number; title: string; url: string; favIconUrl?: string }>
@@ -1339,6 +1348,62 @@ export function App() {
       });
     }
     setDragOverCollectionId(null);
+  };
+
+  const handleDropSavedTabToBlank = (tabId: string) => {
+    if (!guardWrite()) {
+      return;
+    }
+    const tab = tabs.find((item) => item.id === tabId);
+    if (!tab) {
+      return;
+    }
+    const sourceCollection = collections.find((collection) => collection.id === tab.collectionId);
+    const workspaceId = activeWorkspaceId ?? sourceCollection?.workspaceId ?? null;
+    const spaceId = activeSpaceId ?? sourceCollection?.spaceId ?? null;
+    if (!workspaceId || !spaceId) {
+      showUiNotice(locale === "en" ? "Please select a space first." : "請先選擇空間。");
+      return;
+    }
+    const tabInput = {
+      title: tab.title,
+      url: tab.url,
+      pinned: false,
+      ...(tab.faviconUrl ? { favIconUrl: tab.faviconUrl } : {}),
+    };
+    saveCollectionFromTabsInSpace(buildQuickCollectionName(tab.title), [tabInput], workspaceId, spaceId);
+    deleteTab(tab.id);
+    setSelectedTabIds((prev) => {
+      const next = new Set(prev);
+      next.delete(tab.id);
+      return next;
+    });
+    setDragOverCollectionId(null);
+    showUiNotice(locale === "en" ? "Created a new collection from tab." : "已從分頁快速建立新集合。");
+  };
+
+  const handleDropWindowTabToBlank = (tabId: number) => {
+    if (!guardWrite()) {
+      return;
+    }
+    const tab = windowGroups.flatMap((window) => window.tabs).find((item) => item.id === tabId);
+    if (!tab) {
+      return;
+    }
+    const workspaceId = activeWorkspaceId ?? workspace?.id ?? null;
+    const spaceId = activeSpaceId ?? scopedSpaces[0]?.id ?? null;
+    if (!workspaceId || !spaceId) {
+      showUiNotice(locale === "en" ? "Please select a space first." : "請先選擇空間。");
+      return;
+    }
+    saveCollectionFromTabsInSpace(buildQuickCollectionName(tab.title), [toTabInput(tab)], workspaceId, spaceId);
+    void closeTabs([tabId]);
+    setSelectedWindowTabIds((prev) => {
+      const next = new Set(prev);
+      next.delete(tabId);
+      return next;
+    });
+    showUiNotice(locale === "en" ? "Created a new collection from tab." : "已從分頁快速建立新集合。");
   };
 
   const addDockItemsFromTabs = (items: Array<{ title: string; url: string; faviconUrl?: string | null }>) => {
@@ -1960,7 +2025,7 @@ export function App() {
   );
 
   const buildPayuniCheckoutUrl = useCallback(
-    (planId: "personal_yearly" | "pro_monthly", accessToken: string) => {
+    (planId: "personal_yearly", accessToken: string) => {
       if (!effectiveSupabaseUrl) {
         return null;
       }
@@ -2090,7 +2155,7 @@ export function App() {
   );
 
   const handleStartCheckout = useCallback(
-    async (planId: "trial" | "personal_yearly" | "pro_monthly" | "enterprise") => {
+    async (planId: PricingPlanId) => {
       const popup = window.open("about:blank", "_blank");
       if (!popup) {
         showUiNotice(locale === "en" ? "Please allow pop-ups to continue." : "請允許彈出視窗以完成付款。");
@@ -2105,17 +2170,29 @@ export function App() {
       );
       popup.document.close();
 
-      if (planId === "trial") {
-        popup.close();
-        return;
-      }
-      if (planId === "enterprise") {
-        showUiNotice(locale === "en" ? "Contact us for enterprise pricing." : "企業方案請聯絡我們。");
+      if (planId === "team" || planId === "enterprise") {
+        const contactMessage =
+          planId === "team"
+            ? locale === "en"
+              ? "Team plan setup requires manual onboarding. Please contact us."
+              : "團隊方案需人工開通，請先聯絡我們。"
+            : locale === "en"
+              ? "Contact us for enterprise pricing."
+              : "企業方案請聯絡我們。";
+        const title =
+          planId === "team"
+            ? locale === "en"
+              ? "Team plan"
+              : "團隊方案"
+            : locale === "en"
+              ? "Enterprise plan"
+              : "企業方案";
+        showUiNotice(contactMessage);
         popup.document.open();
         popup.document.write(
           buildPayuniStatusHtml(
-            locale === "en" ? "Enterprise plan" : "企業方案",
-            locale === "en" ? "Please contact us for enterprise pricing." : "企業方案請聯絡我們。"
+            title,
+            contactMessage
           )
         );
         popup.document.close();
@@ -2143,7 +2220,7 @@ export function App() {
         popup.document.close();
         return;
       }
-      const checkoutUrl = buildPayuniCheckoutUrl(planId, accessToken);
+      const checkoutUrl = buildPayuniCheckoutUrl("personal_yearly", accessToken);
       if (!checkoutUrl) {
         showUiNotice(locale === "en" ? "Missing checkout URL." : "金流連結未設定。");
         popup.document.open();
@@ -2216,7 +2293,7 @@ export function App() {
         }
 
         submitPayuniFormInPopup(popup, data.checkout);
-      } catch (error) {
+      } catch {
         showUiNotice(locale === "en" ? "Checkout failed. Please try again." : "付款建立失敗，請稍後再試。");
         popup.document.open();
         popup.document.write(
@@ -2386,6 +2463,10 @@ export function App() {
     })
   );
   const dockDrop = useDroppable({ id: "dock-drop" });
+  const collectionBlankDrop = useDroppable({
+    id: "collection-blank-drop",
+    data: { targetId: "collection-blank-drop", type: "collection-blank" },
+  });
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (!event.over || event.active.id === event.over.id) {
@@ -2401,6 +2482,7 @@ export function App() {
     const isCollection = collections.some((collection) => collection.id === activeId);
     const isTab = tabs.some((tab) => tab.id === activeId);
     const isDockDrop = event.over.id === "dock-drop";
+    const isCollectionBlankDrop = event.over.id === "collection-blank-drop";
 
     if (isDockDrop && isTab) {
       const selectedTabs = selectedTabIds.has(activeId)
@@ -2415,6 +2497,11 @@ export function App() {
           }))
         );
       }
+      return;
+    }
+
+    if (isCollectionBlankDrop && isTab) {
+      handleDropSavedTabToBlank(activeId);
       return;
     }
 
@@ -2999,6 +3086,48 @@ export function App() {
                     })}
                   </div>
                 )}
+                <div
+                  ref={collectionBlankDrop.setNodeRef}
+                  className={`mt-4 flex min-h-[72px] items-center justify-center rounded-2xl border border-dashed px-4 py-4 text-xs transition ${
+                    collectionBlankDrop.isOver || blankCollectionDropActive
+                      ? "border-rose-300 bg-rose-50 text-rose-600"
+                      : "border-zinc-300 bg-zinc-50 text-zinc-500"
+                  }`}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                    setBlankCollectionDropActive(true);
+                  }}
+                  onDragEnter={() => setBlankCollectionDropActive(true)}
+                  onDragLeave={(event) => {
+                    const related = event.relatedTarget;
+                    if (related instanceof Node && event.currentTarget.contains(related)) {
+                      return;
+                    }
+                    setBlankCollectionDropActive(false);
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setBlankCollectionDropActive(false);
+                    const savedRaw = event.dataTransfer.getData("application/x-toby-saved-tab");
+                    if (savedRaw) {
+                      handleDropSavedTabToBlank(savedRaw);
+                      return;
+                    }
+                    const windowRaw =
+                      event.dataTransfer.getData("application/x-toby-window-tab") ||
+                      event.dataTransfer.getData("application/x-toby-tab") ||
+                      event.dataTransfer.getData("text/plain");
+                    const tabId = Number(windowRaw);
+                    if (Number.isFinite(tabId)) {
+                      handleDropWindowTabToBlank(tabId);
+                    }
+                  }}
+                >
+                  {locale === "en"
+                    ? "Drop tab here to quickly create a new collection"
+                    : "將分頁拖曳到這裡，快速建立新集合"}
+                </div>
               </SortableContext>
             </div>
             <div className="relative z-20 border-t border-zinc-200 bg-white/90">
