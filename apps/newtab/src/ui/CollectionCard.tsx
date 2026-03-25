@@ -153,7 +153,7 @@ export function CollectionCard({
     >
       <div className="border-b border-zinc-200 pb-4">
         {isDropTarget ? (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
             <div className="rounded-full bg-zinc-900/90 px-4 py-2 text-xs text-white shadow-lg">
               {t("drag.dropToAdd")}
             </div>
