@@ -43,6 +43,8 @@ type Props = {
   onDelete?: (tabId: string) => void;
   onUpdate?: (tabId: string, payload: { title: string; url: string; note: string | null }) => void;
   onMove?: (tabId: string, workspaceId: string, spaceId: string, collectionId: string) => void;
+  onAddToDock?: (tabId: string) => void;
+  onOpen?: (tabId: string) => void;
   selected?: boolean;
   onToggleSelect?: () => void;
   workspaces?: Array<{ id: string; name: string }>;
@@ -66,6 +68,8 @@ export function TabRow({
   onDelete,
   onUpdate,
   onMove,
+  onAddToDock,
+  onOpen,
   selected,
   onToggleSelect,
   workspaces = [],
@@ -111,6 +115,7 @@ export function TabRow({
   const safePreviewImageUrl = toSafePreviewImageUrl(ogImage ?? null);
 
   const handleOpen = () => {
+    onOpen?.(id);
     void openTabs([url]);
   };
 
@@ -139,6 +144,9 @@ export function TabRow({
     setMoveSpaceId(currentSpaceId ?? "");
     setMoveCollectionId(currentCollectionId ?? "");
     setIsEditing(true);
+  };
+  const handleAddToDock = () => {
+    onAddToDock?.(id);
   };
 
   const handleSave = () => {
@@ -233,6 +241,17 @@ export function TabRow({
             className={actionButtonBase}
             onClick={(event) => {
               event.stopPropagation();
+              handleAddToDock();
+            }}
+            onMouseDown={(event) => event.stopPropagation()}
+            aria-label={t("tab.addToDock")}
+          >
+            <span className={actionButtonInner}>＋</span>
+          </button>
+          <button
+            className={actionButtonBase}
+            onClick={(event) => {
+              event.stopPropagation();
               handleStartEdit();
             }}
             onMouseDown={(event) => event.stopPropagation()}
@@ -304,6 +323,17 @@ export function TabRow({
                   <path d="M3 15l0 .01" />
                 </svg>
               </span>
+            </button>
+            <button
+              className={actionButtonBase}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleAddToDock();
+              }}
+              onMouseDown={(event) => event.stopPropagation()}
+              aria-label={t("tab.addToDock")}
+            >
+              <span className={actionButtonInner}>＋</span>
             </button>
             <button
               className={actionButtonBase}

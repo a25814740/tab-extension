@@ -40,20 +40,17 @@ import {
   Clock3,
   Columns3,
   FolderPlus,
+  GripVertical,
   Grid2X2,
-  Inbox,
   LayoutGrid,
   Layers2,
-  Layers3,
   Link2,
   List,
   PanelRightClose,
   PanelRightOpen,
-  Pin,
   Plus,
   Search,
   Settings,
-  Sparkles,
   Trash2,
   X,
   UserPlus,
@@ -90,6 +87,15 @@ type DockSection = {
   label: string;
   items: DockEntry[];
 };
+type DockQuickItem = {
+  id: string;
+  type: "tab" | "collection";
+  title: string;
+  url?: string | null;
+  collectionId?: string | null;
+  faviconUrl?: string | null;
+  createdAt: string;
+};
 
 const PAYUNI_DRY_RUN_KEY = "toby_payuni_dry_run_v1";
 const PAYUNI_REQUIRE_CONFIRM_KEY = "toby_payuni_require_confirm_v1";
@@ -123,6 +129,9 @@ export function App() {
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
   const [upgradeNotice, setUpgradeNotice] = useState("");
   const [uiNotice, setUiNotice] = useState("");
+  const showUiNotice = useCallback((message: string) => {
+    setUiNotice(message);
+  }, []);
   const authUser = useAuthUser();
   const { handleGoogle, status, config } = useAuthLogic();
   const workspaceState = useAppStore((state) => state.workspace);
@@ -155,6 +164,7 @@ export function App() {
   const saveCollectionFromTabsInSpace = useAppStore((state) => state.saveCollectionFromTabsInSpace);
   const addDockItems = useAppStore((state) => state.addDockItems);
   const removeDockItem = useAppStore((state) => state.removeDockItem);
+  const clearDockItems = useAppStore((state) => state.clearDockItems);
   const viewMode = useAppStore((state) => state.cache.ui.viewMode);
   const sortMode = useAppStore((state) => state.cache.ui.sortMode);
   const dockPinnedItems = useAppStore((state) => state.cache.dock.pinned);
@@ -182,6 +192,8 @@ export function App() {
   const [windowMoveOpen, setWindowMoveOpen] = useState(false);
   const [windowMoveWorkspaceId, setWindowMoveWorkspaceId] = useState("");
   const [windowMoveSpaceId, setWindowMoveSpaceId] = useState("");
+  const [windowMoveTargetMode, setWindowMoveTargetMode] = useState<"new" | "existing">("new");
+  const [windowMoveCollectionId, setWindowMoveCollectionId] = useState("");
   const [windowMoveName, setWindowMoveName] = useState("");
   const [tabMoveOpen, setTabMoveOpen] = useState(false);
   const [tabMoveWorkspaceId, setTabMoveWorkspaceId] = useState("");
@@ -194,6 +206,10 @@ export function App() {
   const [blankCollectionDropActive, setBlankCollectionDropActive] = useState(false);
   const [dockDropActive, setDockDropActive] = useState(false);
   const [dockCollapsed, setDockCollapsed] = useState(false);
+  const [dockSettingsOpen, setDockSettingsOpen] = useState(false);
+  const [dockPinnedLimit, setDockPinnedLimit] = useState(40);
+  const [dockStashItems, setDockStashItems] = useState<DockQuickItem[]>([]);
+  const [dockRecentItems, setDockRecentItems] = useState<DockQuickItem[]>([]);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [moveNotice, setMoveNotice] = useState<{
     message: string;
@@ -256,6 +272,45 @@ export function App() {
   const pulledWorkspacesRef = useRef<Set<string>>(new Set());
   const AUTH_USER_KEY = "toby_auth_user_v1";
   const DOCK_COLLAPSED_KEY = "toby_dock_collapsed_v1";
+  const DOCK_STASH_KEY = "toby_dock_stash_v1";
+  const DOCK_RECENT_KEY = "toby_dock_recent_v1";
+  const DOCK_PINNED_LIMIT_KEY = "toby_dock_pinned_limit_v1";
+  const DOCK_LIMIT_MIN = 8;
+  const DOCK_LIMIT_MAX = 120;
+  const DOCK_STASH_MAX = 40;
+  const DOCK_RECENT_MAX = 40;
+
+  const toDockKey = useCallback((item: Pick<DockQuickItem, "type" | "url" | "collectionId" | "title">) => {
+    return `${item.type}:${item.url ?? item.collectionId ?? item.title}`;
+  }, []);
+  const sanitizeDockLimit = useCallback(
+    (value: number) => {
+      const base = Number.isFinite(value) ? value : 40;
+      return Math.max(DOCK_LIMIT_MIN, Math.min(DOCK_LIMIT_MAX, Math.floor(base)));
+    },
+    [DOCK_LIMIT_MAX, DOCK_LIMIT_MIN]
+  );
+  const normalizeDockQuickItem = useCallback((value: unknown): DockQuickItem | null => {
+    if (!value || typeof value !== "object") {
+      return null;
+    }
+    const candidate = value as Record<string, unknown>;
+    const type = candidate.type;
+    const title = candidate.title;
+    const createdAt = candidate.createdAt;
+    if ((type !== "tab" && type !== "collection") || typeof title !== "string" || typeof createdAt !== "string") {
+      return null;
+    }
+    return {
+      id: typeof candidate.id === "string" ? candidate.id : crypto.randomUUID(),
+      type,
+      title,
+      url: typeof candidate.url === "string" ? candidate.url : null,
+      collectionId: typeof candidate.collectionId === "string" ? candidate.collectionId : null,
+      faviconUrl: typeof candidate.faviconUrl === "string" ? candidate.faviconUrl : null,
+      createdAt,
+    };
+  }, []);
 
   const workspace = useMemo(() => {
     if (selectedWorkspaceId) {
@@ -336,6 +391,52 @@ export function App() {
   useEffect(() => {
     void setLocal(DOCK_COLLAPSED_KEY, dockCollapsed);
   }, [DOCK_COLLAPSED_KEY, dockCollapsed]);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const [storedLimit, storedStash, storedRecent] = await Promise.all([
+        getLocal<number>(DOCK_PINNED_LIMIT_KEY, 40),
+        getLocal<unknown[]>(DOCK_STASH_KEY, []),
+        getLocal<unknown[]>(DOCK_RECENT_KEY, []),
+      ]);
+      if (!active) {
+        return;
+      }
+      setDockPinnedLimit(sanitizeDockLimit(storedLimit));
+      const parsedStash = Array.isArray(storedStash)
+        ? storedStash.map((item) => normalizeDockQuickItem(item)).filter((item): item is DockQuickItem => Boolean(item))
+        : [];
+      const parsedRecent = Array.isArray(storedRecent)
+        ? storedRecent.map((item) => normalizeDockQuickItem(item)).filter((item): item is DockQuickItem => Boolean(item))
+        : [];
+      setDockStashItems(parsedStash.slice(0, DOCK_STASH_MAX));
+      setDockRecentItems(parsedRecent.slice(0, DOCK_RECENT_MAX));
+    })();
+    return () => {
+      active = false;
+    };
+  }, [DOCK_PINNED_LIMIT_KEY, DOCK_RECENT_KEY, DOCK_STASH_KEY, DOCK_RECENT_MAX, DOCK_STASH_MAX, normalizeDockQuickItem, sanitizeDockLimit]);
+  useEffect(() => {
+    void setLocal(DOCK_PINNED_LIMIT_KEY, dockPinnedLimit);
+  }, [DOCK_PINNED_LIMIT_KEY, dockPinnedLimit]);
+  useEffect(() => {
+    void setLocal(DOCK_STASH_KEY, dockStashItems);
+  }, [DOCK_STASH_KEY, dockStashItems]);
+  useEffect(() => {
+    void setLocal(DOCK_RECENT_KEY, dockRecentItems);
+  }, [DOCK_RECENT_KEY, dockRecentItems]);
+  useEffect(() => {
+    if (dockPinnedItems.length <= dockPinnedLimit) {
+      return;
+    }
+    const overflow = dockPinnedItems.length - dockPinnedLimit;
+    dockPinnedItems.slice(0, overflow).forEach((item) => removeDockItem(item.id));
+    setUiNotice(
+      locale === "en"
+        ? `Dock exceeded limit (${dockPinnedLimit}), oldest shortcuts were removed.`
+        : `Dock 超過上限 ${dockPinnedLimit}，已自動移除最舊捷徑。`
+    );
+  }, [dockPinnedItems, dockPinnedLimit, locale, removeDockItem]);
 
   const resolveAccessToken = useCallback(async () => {
     if (!supabaseClient) {
@@ -685,6 +786,16 @@ export function App() {
     () => spaces.filter((space) => space.workspaceId === windowMoveWorkspaceId),
     [spaces, windowMoveWorkspaceId]
   );
+  const windowMoveCollections = useMemo(
+    () =>
+      collections
+        .filter(
+          (collection) =>
+            collection.workspaceId === windowMoveWorkspaceId && collection.spaceId === windowMoveSpaceId
+        )
+        .sort((a, b) => a.position - b.position),
+    [collections, windowMoveSpaceId, windowMoveWorkspaceId]
+  );
 
   const tabMoveSpaces = useMemo(
     () => spaces.filter((space) => space.workspaceId === tabMoveWorkspaceId),
@@ -830,6 +941,18 @@ export function App() {
       setWindowMoveSpaceId(windowMoveSpaces[0].id);
     }
   }, [windowMoveSpaces, windowMoveSpaceId]);
+  useEffect(() => {
+    if (windowMoveCollections.length === 0) {
+      setWindowMoveCollectionId("");
+      if (windowMoveTargetMode === "existing") {
+        setWindowMoveTargetMode("new");
+      }
+      return;
+    }
+    if (!windowMoveCollections.some((collection) => collection.id === windowMoveCollectionId)) {
+      setWindowMoveCollectionId(windowMoveCollections[0].id);
+    }
+  }, [windowMoveCollectionId, windowMoveCollections, windowMoveTargetMode]);
 
   useEffect(() => {
     if (!windowMoveOpen) {
@@ -838,7 +961,10 @@ export function App() {
     if (!windowMoveName.trim()) {
       setWindowMoveName(t("right.selectedTabs"));
     }
-  }, [t, windowMoveName, windowMoveOpen]);
+    if (!windowMoveCollectionId && windowMoveCollections[0]) {
+      setWindowMoveCollectionId(windowMoveCollections[0].id);
+    }
+  }, [t, windowMoveCollectionId, windowMoveCollections, windowMoveName, windowMoveOpen]);
 
   useEffect(() => {
     if (!moveNotice) {
@@ -1050,11 +1176,42 @@ export function App() {
     return base;
   }, [canAssignOwner, t]);
 
+  const pushDockRecentItem = useCallback(
+    (item: Omit<DockQuickItem, "id" | "createdAt">) => {
+      const now = new Date().toISOString();
+      const candidate: DockQuickItem = {
+        id: crypto.randomUUID(),
+        createdAt: now,
+        ...item,
+      };
+      setDockRecentItems((prev) => {
+        const next = [candidate, ...prev.filter((entry) => toDockKey(entry) !== toDockKey(candidate))];
+        return next.slice(0, DOCK_RECENT_MAX);
+      });
+    },
+    [DOCK_RECENT_MAX, toDockKey]
+  );
+  const openCollectionTabs = useCallback(
+    (collectionId: string) => {
+      const urls = scopedTabs.filter((tab) => tab.collectionId === collectionId).map((tab) => tab.url);
+      if (urls.length > 0) {
+        void openTabs(urls);
+      }
+      const collection = collections.find((item) => item.id === collectionId);
+      if (collection) {
+        pushDockRecentItem({
+          type: "collection",
+          title: collection.name,
+          collectionId: collection.id,
+          url: null,
+          faviconUrl: null,
+        });
+      }
+    },
+    [collections, pushDockRecentItem, scopedTabs]
+  );
   const handleOpenAll = (collectionId: string) => {
-    const urls = scopedTabs.filter((tab) => tab.collectionId === collectionId).map((tab) => tab.url);
-    if (urls.length > 0) {
-      void openTabs(urls);
-    }
+    openCollectionTabs(collectionId);
   };
 
   const tabsByCollection = useMemo(() => {
@@ -1498,6 +1655,16 @@ export function App() {
   };
 
   const handleOpenWindowTab = (tabId: number, windowId: number) => {
+    const tab = windowGroups.flatMap((window) => window.tabs).find((item) => item.id === tabId);
+    if (tab) {
+      pushDockRecentItem({
+        type: "tab",
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.favIconUrl ?? null,
+        collectionId: null,
+      });
+    }
     void focusTab(tabId, windowId);
   };
 
@@ -1867,17 +2034,28 @@ export function App() {
   };
 
   const handleOpenSelectedWindowTabs = () => {
+    const openedTabs: Array<{ title: string; url: string; favIconUrl?: string }> = [];
     const urls: string[] = [];
     windowGroups.forEach((window) => {
       window.tabs.forEach((tab) => {
         if (selectedWindowTabIds.has(tab.id)) {
           urls.push(tab.url);
+          openedTabs.push(tab);
         }
       });
     });
     if (urls.length > 0) {
       void openTabs(urls);
     }
+    openedTabs.forEach((tab) =>
+      pushDockRecentItem({
+        type: "tab",
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.favIconUrl ?? null,
+        collectionId: null,
+      })
+    );
   };
 
   const handleOpenSelectedTabs = () => {
@@ -1888,7 +2066,119 @@ export function App() {
     if (urls.length > 0) {
       void openTabs(urls);
     }
+    scopedTabs
+      .filter((tab) => selectedTabIds.has(tab.id))
+      .forEach((tab) =>
+        pushDockRecentItem({
+          type: "tab",
+          title: tab.title,
+          url: tab.url,
+          faviconUrl: tab.faviconUrl,
+          collectionId: null,
+        })
+      );
   };
+  const upsertDockStashItems = useCallback(
+    (items: Array<Omit<DockQuickItem, "id" | "createdAt">>) => {
+      if (items.length === 0) {
+        return;
+      }
+      const now = new Date().toISOString();
+      const mapped = items.map((item) => ({
+        id: crypto.randomUUID(),
+        createdAt: now,
+        ...item,
+      }));
+      setDockStashItems((prev) => {
+        const merged = [...mapped, ...prev].filter((entry, index, array) => {
+          const key = toDockKey(entry);
+          return array.findIndex((candidate) => toDockKey(candidate) === key) === index;
+        });
+        return merged.slice(0, DOCK_STASH_MAX);
+      });
+      showUiNotice(locale === "en" ? "Added to Stash" : "已加入暫放");
+    },
+    [DOCK_STASH_MAX, locale, showUiNotice, toDockKey]
+  );
+  const handleStashSelectedTabs = useCallback(() => {
+    const savedTabItems = scopedTabs
+      .filter((tab) => selectedTabIds.has(tab.id))
+      .map((tab) => ({
+        type: "tab" as const,
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.faviconUrl,
+        collectionId: null,
+      }));
+    const openTabItems = windowGroups
+      .flatMap((window) => window.tabs)
+      .filter((tab) => selectedWindowTabIds.has(tab.id))
+      .map((tab) => ({
+        type: "tab" as const,
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.favIconUrl ?? null,
+        collectionId: null,
+      }));
+    const combined = [...savedTabItems, ...openTabItems];
+    if (combined.length === 0) {
+      showUiNotice(locale === "en" ? "Please select tabs first." : "請先選取分頁。");
+      return;
+    }
+    upsertDockStashItems(combined);
+  }, [locale, scopedTabs, selectedTabIds, selectedWindowTabIds, showUiNotice, upsertDockStashItems, windowGroups]);
+  const handleAddTabToDock = useCallback(
+    (tabId: string) => {
+      const tab = tabs.find((item) => item.id === tabId);
+      if (!tab) {
+        return;
+      }
+      addDockItems([
+        {
+          type: "tab",
+          title: tab.title,
+          url: tab.url,
+          faviconUrl: tab.faviconUrl,
+        },
+      ]);
+      showUiNotice(locale === "en" ? "Added to Dock" : "已加入 Dock");
+    },
+    [addDockItems, locale, showUiNotice, tabs]
+  );
+  const handleTrackOpenSavedTab = useCallback(
+    (tabId: string) => {
+      const tab = tabs.find((item) => item.id === tabId);
+      if (!tab) {
+        return;
+      }
+      pushDockRecentItem({
+        type: "tab",
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.faviconUrl,
+        collectionId: null,
+      });
+    },
+    [pushDockRecentItem, tabs]
+  );
+  const handleAddSelectedSavedTabsToDock = useCallback(() => {
+    if (selectedTabIds.size === 0) {
+      return;
+    }
+    const selectedTabs = tabs.filter((tab) => selectedTabIds.has(tab.id));
+    if (selectedTabs.length === 0) {
+      return;
+    }
+    addDockItems(
+      selectedTabs.map((tab) => ({
+        type: "tab" as const,
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.faviconUrl,
+      }))
+    );
+    showUiNotice(locale === "en" ? "Added to Dock" : "已加入 Dock");
+  }, [addDockItems, locale, selectedTabIds, showUiNotice, tabs]);
 
   const handleAddSelectedWindowTabsToDock = () => {
     if (selectedWindowTabIds.size === 0) {
@@ -1914,6 +2204,15 @@ export function App() {
       }))
     );
     setSelectedWindowTabIds(new Set());
+    selectedTabs.forEach((tab) =>
+      pushDockRecentItem({
+        type: "tab",
+        title: tab.title,
+        url: tab.url,
+        faviconUrl: tab.favIconUrl ?? null,
+        collectionId: null,
+      })
+    );
     showUiNotice(locale === "en" ? "Added to Dock" : "已加入 Dock");
   };
 
@@ -1935,8 +2234,19 @@ export function App() {
     if (selectedTabs.length === 0) {
       return;
     }
-    const name = windowMoveName.trim() || t("right.selectedTabs");
-    saveCollectionFromTabsInSpace(name, selectedTabs.map((tab) => toTabInput(tab)), windowMoveWorkspaceId, windowMoveSpaceId);
+    if (windowMoveTargetMode === "existing" && windowMoveCollectionId) {
+      selectedTabs.forEach((tab) => {
+        addTabToCollection(windowMoveCollectionId, toTabInput(tab));
+      });
+    } else {
+      const name = windowMoveName.trim() || t("right.selectedTabs");
+      saveCollectionFromTabsInSpace(
+        name,
+        selectedTabs.map((tab) => toTabInput(tab)),
+        windowMoveWorkspaceId,
+        windowMoveSpaceId
+      );
+    }
     setSelectedWindowTabIds(new Set());
     setWindowMoveOpen(false);
     showUiNotice(locale === "en" ? "Moved to space" : "已移到空間");
@@ -2060,9 +2370,6 @@ export function App() {
     }
   };
 
-  const showUiNotice = useCallback((message: string) => {
-    setUiNotice(message);
-  }, []);
   const handleMoveCollectionWithinSpace = useCallback(
     (collectionId: string, direction: "up" | "down") => {
       if (sortMode !== "custom") {
@@ -2371,58 +2678,6 @@ export function App() {
   );
 
   const dockSections = useMemo<DockSection[]>(() => {
-    const openCollection = (collectionId: string) => {
-      const urls = scopedTabs.filter((tab) => tab.collectionId === collectionId).map((tab) => tab.url);
-      if (urls.length > 0) {
-        void openTabs(urls);
-      }
-    };
-
-    const coreItems: DockEntry[] = [
-      {
-        id: "home",
-        label: locale === "en" ? "Home" : "首頁",
-        icon: <LayoutGrid className="h-5 w-5" />,
-        onClick: () => setSelectedCollectionId(null),
-      },
-      {
-        id: "org",
-        label: locale === "en" ? "Organization" : "組織",
-        icon: <Building2 className="h-5 w-5" />,
-        onClick: () => {
-          setOrgSettingsTab("preferences");
-          setOrgSettingsOpen(true);
-        },
-      },
-      {
-        id: "space",
-        label: locale === "en" ? "Spaces" : "空間",
-        icon: <Layers3 className="h-5 w-5" />,
-        onClick: () => setLeftCollapsed(false),
-      },
-      {
-        id: "inbox",
-        label: locale === "en" ? "Inbox" : "收件匣",
-        icon: <Inbox className="h-5 w-5" />,
-        onClick: () => showUiNotice(locale === "en" ? "Inbox is coming soon." : "收件匣功能開發中"),
-      },
-      {
-        id: "search",
-        label: locale === "en" ? "Search" : "搜尋",
-        icon: <Search className="h-5 w-5" />,
-        onClick: () => {
-          setSearchOpen(true);
-          searchInputRef.current?.focus();
-        },
-      },
-      {
-        id: "ai",
-        label: "AI",
-        icon: <Sparkles className="h-5 w-5" />,
-        onClick: () => showUiNotice(locale === "en" ? "AI shortcuts are coming soon." : "AI 入口準備中"),
-      },
-    ];
-
     const pinnedItems: DockEntry[] = dockPinnedItems.map((item) => ({
       id: item.id,
       label: item.title,
@@ -2431,10 +2686,17 @@ export function App() {
       faviconUrl: item.faviconUrl ?? null,
       onClick: () => {
         if (item.type === "collection" && item.collectionId) {
-          openCollection(item.collectionId);
+          openCollectionTabs(item.collectionId);
           return;
         }
         if (item.type === "tab" && item.url) {
+          pushDockRecentItem({
+            type: "tab",
+            title: item.title,
+            url: item.url,
+            faviconUrl: item.faviconUrl ?? null,
+            collectionId: null,
+          });
           void openTabs([item.url]);
         }
       },
@@ -2444,59 +2706,76 @@ export function App() {
       },
     }));
 
-    const recentItems: DockEntry[] = scopedCollections
-      .slice()
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-      .slice(0, 3)
-      .map((collection) => ({
-        id: collection.id,
-        label: collection.name,
-        text: collection.name.slice(0, 2).toUpperCase(),
-        onClick: () => openCollection(collection.id),
-      }));
-
     const stashItems: DockEntry[] = [
       {
-        id: "pin",
-        label: locale === "en" ? "Stash" : "暫放",
-        icon: <Pin className="h-5 w-5" />,
-        onClick: () => showUiNotice(locale === "en" ? "Stash is coming soon." : "暫放功能準備中"),
+        id: "stash-selected",
+        label: locale === "en" ? "Stash Selected" : "暫放選取",
+        icon: <GripVertical className="h-5 w-5" />,
+        onClick: handleStashSelectedTabs,
       },
-      {
-        id: "recent",
-        label: locale === "en" ? "Recent" : "最近使用",
-        icon: <Clock3 className="h-5 w-5" />,
-        onClick: () => showUiNotice(locale === "en" ? "Recent shortcuts are coming soon." : "最近使用入口準備中"),
-      },
-      {
-        id: "settings",
-        label: t("sidebar.settings"),
-        icon: <Settings className="h-5 w-5" />,
+      ...dockStashItems.map((item) => ({
+        id: item.id,
+        label: item.title,
+        text: item.title.slice(0, 2).toUpperCase(),
+        url: item.url ?? undefined,
+        faviconUrl: item.faviconUrl ?? null,
         onClick: () => {
-          setOrgSettingsTab("preferences");
-          setOrgSettingsOpen(true);
+          if (item.type === "collection" && item.collectionId) {
+            openCollectionTabs(item.collectionId);
+            return;
+          }
+          if (item.url) {
+            pushDockRecentItem({
+              type: "tab",
+              title: item.title,
+              url: item.url,
+              faviconUrl: item.faviconUrl ?? null,
+              collectionId: null,
+            });
+            void openTabs([item.url]);
+          }
         },
-      },
+        onRemove: () => {
+          setDockStashItems((prev) => prev.filter((entry) => entry.id !== item.id));
+          showUiNotice(locale === "en" ? "Removed from Stash" : "已從暫放移除");
+        },
+      })),
     ];
+    const recentItems: DockEntry[] = dockRecentItems.map((item) => ({
+      id: item.id,
+      label: item.title,
+      text: item.title.slice(0, 2).toUpperCase(),
+      url: item.url ?? undefined,
+      faviconUrl: item.faviconUrl ?? null,
+      onClick: () => {
+        if (item.type === "collection" && item.collectionId) {
+          openCollectionTabs(item.collectionId);
+          return;
+        }
+        if (item.url) {
+          void openTabs([item.url]);
+        }
+      },
+      onRemove: () => {
+        setDockRecentItems((prev) => prev.filter((entry) => entry.id !== item.id));
+      },
+    }));
 
     return [
-      { id: "core", label: locale === "en" ? "Core" : "核心功能", items: coreItems },
       { id: "fixed", label: locale === "en" ? "Pinned" : "固定捷徑", items: pinnedItems },
+      { id: "stash", label: locale === "en" ? "Stash" : "暫放", items: stashItems },
       { id: "recent", label: locale === "en" ? "Recent" : "最近使用", items: recentItems },
-      { id: "temp", label: locale === "en" ? "Stash & Settings" : "暫放 / 設定", items: stashItems },
     ];
   }, [
     dockPinnedItems,
+    dockRecentItems,
+    dockStashItems,
+    handleStashSelectedTabs,
     locale,
+    openCollectionTabs,
+    pushDockRecentItem,
     removeDockItem,
-    scopedCollections,
-    scopedTabs,
     showUiNotice,
-    setLeftCollapsed,
-    setOrgSettingsOpen,
-    setOrgSettingsTab,
-    setSelectedCollectionId,
-    t,
   ]);
 
   const openTabList = useMemo(
@@ -2830,7 +3109,7 @@ export function App() {
           </aside>
 
           <main className="flex h-full min-h-0 flex-col">
-            <div className="flex flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-md">
+            <div className="flex flex-col flex-1 overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-md">
               <div className="border-b border-zinc-200 px-6 py-5">
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="text-sm font-semibold text-zinc-500">
@@ -3005,6 +3284,8 @@ export function App() {
                                         viewMode="list"
                                         onDelete={deleteTab}
                                         onUpdate={updateTab}
+                                        onAddToDock={handleAddTabToDock}
+                                        onOpen={handleTrackOpenSavedTab}
                                         onMove={(tabId, workspaceId, spaceId, collectionId) => {
                                           if (
                                             collectionId === tab.collectionId &&
@@ -3131,6 +3412,8 @@ export function App() {
                                         viewMode={viewMode}
                                         onDelete={deleteTab}
                                         onUpdate={updateTab}
+                                        onAddToDock={handleAddTabToDock}
+                                        onOpen={handleTrackOpenSavedTab}
                                         onMove={(tabId, workspaceId, spaceId, collectionId) => {
                                           if (
                                             collectionId === tab.collectionId &&
@@ -3212,7 +3495,14 @@ export function App() {
 
 
             <div className="relative z-20">
-              <div className="flex items-center justify-between absolute top-[100%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+              <div className="flex items-center justify-between absolute top-[100%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 gap-2">
+                <button
+                  className="flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] text-zinc-600 hover:bg-zinc-50"
+                  onClick={() => setDockSettingsOpen(true)}
+                >
+                  <Settings className="h-3 w-3" />
+                  {locale === "en" ? "Dock settings" : "Dock 設定"}
+                </button>
                 <button
                   className="flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] text-zinc-600 hover:bg-zinc-50"
                   onClick={() => setDockCollapsed((prev) => !prev)}
@@ -3227,7 +3517,7 @@ export function App() {
               >
                 <div
                   ref={dockDrop.setNodeRef}
-                  className={`flex items-center justify-center gap-4 overflow-visible rounded-[24px] border border-zinc-200 bg-white/95 px-5 py-4 mt-2 shadow-lg backdrop-blur ${dockDropActive || dockDrop.isOver ? "ring-2 ring-zinc-300" : ""
+                  className={`mt-2 flex items-center justify-start gap-4 overflow-x-auto overflow-y-visible rounded-[24px] border border-zinc-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur ${dockDropActive || dockDrop.isOver ? "ring-2 ring-zinc-300" : ""
                     }`}
                   onDragOver={(event) => {
                     event.preventDefault();
@@ -3246,7 +3536,7 @@ export function App() {
                   {dockSections.map((section, index) => (
                     <div key={section.id} className="flex items-center gap-4 overflow-visible">
                       {section.items.map((item) => {
-                        const compact = section.id === "recent" || (section.id === "temp" && item.id !== "pin");
+                        const compact = section.id === "recent" || section.id === "stash";
                         return (
                           <DockIconButton
                             key={item.id}
@@ -3347,7 +3637,7 @@ export function App() {
                               event.dataTransfer.setData("application/x-toby-window-tab", String(tab.id));
                               event.dataTransfer.effectAllowed = "move";
                             }}
-                            className={`flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition ${tab.active
+                            className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${tab.active
                               ? "border-zinc-900 bg-zinc-900 text-white"
                               : selected
                                 ? "border-zinc-400 bg-zinc-100"
@@ -3434,10 +3724,19 @@ export function App() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="flex gap-2 text-xs text-zinc-500">
-              <span className="rounded-full bg-zinc-100 px-3 py-1.5">拖到集合</span>
-              <span className="rounded-full bg-zinc-100 px-3 py-1.5">拖到 Dock</span>
-              <span className="rounded-full bg-zinc-100 px-3 py-1.5">拖到空間</span>
+            <div className="flex gap-2 text-xs text-zinc-600">
+              <button className="rounded-full bg-zinc-100 px-3 py-1.5 hover:bg-zinc-200" onClick={handleSaveSelectedWindowTabs}>
+                加入集合
+              </button>
+              <button className="rounded-full bg-zinc-100 px-3 py-1.5 hover:bg-zinc-200" onClick={handleAddSelectedWindowTabsToDock}>
+                加入 Dock
+              </button>
+              <button className="rounded-full bg-zinc-100 px-3 py-1.5 hover:bg-zinc-200" onClick={() => setWindowMoveOpen(true)}>
+                移到空間
+              </button>
+              <button className="rounded-full bg-zinc-100 px-3 py-1.5 hover:bg-zinc-200" onClick={handleStashSelectedTabs}>
+                加入暫放
+              </button>
             </div>
           </div>
         ) : null}
@@ -3497,6 +3796,18 @@ export function App() {
                     {t("tab.openSelected")}
                   </button>
                   <button
+                    className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900"
+                    onClick={handleAddSelectedSavedTabsToDock}
+                  >
+                    {locale === "en" ? "Add to Dock" : "加入 Dock"}
+                  </button>
+                  <button
+                    className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900"
+                    onClick={handleStashSelectedTabs}
+                  >
+                    {locale === "en" ? "Stash" : "暫放"}
+                  </button>
+                  <button
                     className="flex items-center gap-2 text-rose-500 hover:text-rose-600"
                     onClick={handleDeleteSelectedTabs}
                   >
@@ -3523,6 +3834,18 @@ export function App() {
                     onClick={handleSaveSelectedWindowTabs}
                   >
                     {t("right.saveSelected")}
+                  </button>
+                  <button
+                    className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900"
+                    onClick={handleAddSelectedWindowTabsToDock}
+                  >
+                    {locale === "en" ? "Add to Dock" : "加入 Dock"}
+                  </button>
+                  <button
+                    className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900"
+                    onClick={handleStashSelectedTabs}
+                  >
+                    {locale === "en" ? "Stash" : "暫放"}
                   </button>
                 </div>
               ) : null}
@@ -3581,14 +3904,6 @@ export function App() {
               <div className="text-sm font-semibold">{locale === "en" ? "Move tabs to space" : "移動分頁到空間"}</div>
               <div className="mt-3 space-y-3 text-xs">
                 <label className="block">
-                  <div className="mb-1 text-zinc-500">{locale === "en" ? "Collection name" : "集合名稱"}</div>
-                  <input
-                    className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
-                    value={windowMoveName}
-                    onChange={(event) => setWindowMoveName(event.target.value)}
-                  />
-                </label>
-                <label className="block">
                   <div className="mb-1 text-zinc-500">{locale === "en" ? "Organization" : "組織"}</div>
                   <SelectMenu
                     value={windowMoveWorkspaceId}
@@ -3610,13 +3925,129 @@ export function App() {
                     searchPlaceholder={locale === "en" ? "Search spaces" : "搜尋空間"}
                   />
                 </label>
+                <label className="block">
+                  <div className="mb-1 text-zinc-500">{locale === "en" ? "Target collection" : "目標集合"}</div>
+                  <SelectMenu
+                    value={windowMoveTargetMode}
+                    onChange={(value) => setWindowMoveTargetMode(value as "new" | "existing")}
+                    options={[
+                      { value: "new", label: locale === "en" ? "Create new collection" : "建立新集合" },
+                      {
+                        value: "existing",
+                        label: locale === "en" ? "Add to existing collection" : "加入既有集合",
+                      },
+                    ]}
+                  />
+                </label>
+                {windowMoveTargetMode === "existing" ? (
+                  <label className="block">
+                    <div className="mb-1 text-zinc-500">{locale === "en" ? "Collection" : "集合"}</div>
+                    <SelectMenu
+                      value={windowMoveCollectionId}
+                      onChange={(value) => setWindowMoveCollectionId(value)}
+                      options={windowMoveCollections.map((collection) => ({
+                        value: collection.id,
+                        label: collection.name,
+                      }))}
+                      label={locale === "en" ? "Collection" : "集合"}
+                      searchable
+                      searchPlaceholder={locale === "en" ? "Search collections" : "搜尋集合"}
+                    />
+                    {windowMoveCollections.length === 0 ? (
+                      <div className="mt-1 text-[11px] text-rose-500">
+                        {locale === "en" ? "No collections in this space. Switch to create new." : "此空間目前沒有集合，請改用建立新集合。"}
+                      </div>
+                    ) : null}
+                  </label>
+                ) : (
+                  <label className="block">
+                    <div className="mb-1 text-zinc-500">{locale === "en" ? "Collection name" : "集合名稱"}</div>
+                    <input
+                      className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+                      value={windowMoveName}
+                      onChange={(event) => setWindowMoveName(event.target.value)}
+                    />
+                  </label>
+                )}
               </div>
               <div className="mt-4 flex justify-end gap-2">
                 <button className="rounded-lg border border-zinc-200 px-3 py-2 text-xs" onClick={() => setWindowMoveOpen(false)}>
                   {t("tab.cancel")}
                 </button>
-                <button className="rounded-lg bg-rose-500 px-3 py-2 text-xs font-semibold text-white" onClick={handleMoveSelectedWindowTabsToSpace}>
+                <button
+                  className="rounded-lg bg-rose-500 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={handleMoveSelectedWindowTabsToSpace}
+                  disabled={windowMoveTargetMode === "existing" && windowMoveCollections.length === 0}
+                >
                   {t("tab.save")}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {dockSettingsOpen ? (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setDockSettingsOpen(false)}>
+            <div className="modal-enter w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
+              <div className="text-sm font-semibold">{locale === "en" ? "Dock settings" : "Dock 設定"}</div>
+              <div className="mt-3 space-y-3 text-xs">
+                <label className="block">
+                  <div className="mb-1 text-zinc-500">
+                    {locale === "en" ? "Pinned shortcut limit" : "固定捷徑上限"}（{DOCK_LIMIT_MIN}-{DOCK_LIMIT_MAX}）
+                  </div>
+                  <input
+                    type="number"
+                    min={DOCK_LIMIT_MIN}
+                    max={DOCK_LIMIT_MAX}
+                    className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+                    value={dockPinnedLimit}
+                    onChange={(event) => setDockPinnedLimit(sanitizeDockLimit(Number(event.target.value || 0)))}
+                  />
+                </label>
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                  <div className="text-zinc-500">
+                    {locale === "en"
+                      ? `Current pinned shortcuts: ${dockPinnedItems.length}`
+                      : `目前固定捷徑：${dockPinnedItems.length}`}
+                  </div>
+                  <div className="mt-2 text-zinc-500">
+                    {locale === "en"
+                      ? `Current stash: ${dockStashItems.length}, recent: ${dockRecentItems.length}`
+                      : `目前暫放：${dockStashItems.length}，最近使用：${dockRecentItems.length}`}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-left text-xs hover:bg-zinc-50"
+                    onClick={() => {
+                      clearDockItems();
+                      showUiNotice(locale === "en" ? "Pinned shortcuts cleared" : "已清空固定捷徑");
+                    }}
+                  >
+                    {locale === "en" ? "Clear pinned shortcuts" : "清空固定捷徑"}
+                  </button>
+                  <button
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-left text-xs hover:bg-zinc-50"
+                    onClick={() => {
+                      setDockStashItems([]);
+                      showUiNotice(locale === "en" ? "Stash cleared" : "已清空暫放");
+                    }}
+                  >
+                    {locale === "en" ? "Clear stash" : "清空暫放"}
+                  </button>
+                  <button
+                    className="rounded-lg border border-zinc-200 px-3 py-2 text-left text-xs hover:bg-zinc-50"
+                    onClick={() => {
+                      setDockRecentItems([]);
+                      showUiNotice(locale === "en" ? "Recent history cleared" : "已清空最近使用");
+                    }}
+                  >
+                    {locale === "en" ? "Clear recent history" : "清空最近使用"}
+                  </button>
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button className="rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white" onClick={() => setDockSettingsOpen(false)}>
+                  {locale === "en" ? "Done" : "完成"}
                 </button>
               </div>
             </div>

@@ -38,6 +38,20 @@ export function DockIconButton({
       }}
       title={label}
     >
+      {onRemove ? (
+        <div
+          className="absolute -right-1 -top-1 z-20 hidden h-5 w-5 items-center justify-center rounded-full border border-zinc-200 bg-white text-[11px] text-zinc-500 shadow-sm group-hover:flex"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onRemove();
+          }}
+          role="button"
+          aria-label="移除"
+        >
+          ×
+        </div>
+      ) : null}
       {safeFaviconUrl ? (
         <img src={safeFaviconUrl} alt={label} className="h-5 w-5 object-contain" />
       ) : icon ? (
