@@ -25,7 +25,7 @@ export function DockIconButton({
   const safeFaviconUrl = toSafeFaviconUrl(url, faviconUrl ?? null);
   return (
     <button
-      className={`group relative flex items-center justify-center rounded-[20px] border border-zinc-200/80 bg-white/90 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:scale-105 hover:shadow-md ${
+      className={`group relative z-10 flex items-center justify-center rounded-[20px] border border-zinc-200/80 bg-white/90 shadow-sm transition-all duration-200 hover:z-30 hover:-translate-y-1 hover:scale-105 hover:shadow-md ${
         compact ? "h-11 w-11" : "h-14 w-14"
       }`}
       onClick={onClick}
@@ -61,7 +61,7 @@ export function DockIconButton({
           {text}
         </span>
       )}
-      <div className="pointer-events-none absolute bottom-full left-1/2 z-[9999] mb-3 -translate-x-1/2 whitespace-nowrap rounded-xl bg-zinc-900 px-2.5 py-1 text-[11px] text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100">
+      <div className="pointer-events-none absolute bottom-full left-1/2 z-[10001] mb-3 -translate-x-1/2 whitespace-nowrap rounded-xl bg-zinc-900 px-2.5 py-1 text-[11px] text-white opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100">
         {label}
       </div>
     </button>
