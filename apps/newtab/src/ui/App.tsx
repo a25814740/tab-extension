@@ -1116,6 +1116,10 @@ export function App() {
     () => sortedCollections.some((collection) => !(collapsedCollections[collection.id] ?? false)),
     [collapsedCollections, sortedCollections]
   );
+  const allCollectionsCollapsed = useMemo(
+    () => sortedCollections.length > 0 && !hasExpandedCollections,
+    [hasExpandedCollections, sortedCollections.length]
+  );
 
   const sortModeOptions = useMemo(() => {
     const prefix = t("toolbar.sort");
@@ -2875,19 +2879,11 @@ export function App() {
                     </div>
                     <button
                       className="flex items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-2 text-xs font-medium text-zinc-700 border border-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
-                      onClick={handleExpandAllCollections}
-                      disabled={!hasCollapsedCollections}
+                      onClick={allCollectionsCollapsed ? handleExpandAllCollections : handleCollapseAllCollections}
+                      disabled={!hasCollapsedCollections && !hasExpandedCollections}
                     >
-                      <ChevronDown className="h-4 w-4" />
-                      <span>{t("collection.expandAll")}</span>
-                    </button>
-                    <button
-                      className="flex items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-2 text-xs font-medium text-zinc-700 border border-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
-                      onClick={handleCollapseAllCollections}
-                      disabled={!hasExpandedCollections}
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                      <span>{t("collection.collapseAll")}</span>
+                      {allCollectionsCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                      <span>{allCollectionsCollapsed ? t("collection.expandAll") : t("collection.collapseAll")}</span>
                     </button>
 
                     <SelectMenu
