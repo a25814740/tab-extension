@@ -529,8 +529,8 @@ export function App() {
       const firstCollection =
         firstSpace
           ? collections.find(
-              (collection) => collection.workspaceId === best.id && collection.spaceId === firstSpace.id
-            ) ?? null
+            (collection) => collection.workspaceId === best.id && collection.spaceId === firstSpace.id
+          ) ?? null
           : null;
       setSelectedCollectionId(firstCollection?.id ?? null);
     }
@@ -582,17 +582,17 @@ export function App() {
       if (isMounted) {
         setShareNotice(t("share.notice.accepting"));
       }
-        const accessToken = await resolveAccessToken();
-        if (!accessToken) {
-          if (isMounted) {
-            setShareNotice(t("share.notice.loginRequired"));
-          }
-          return;
+      const accessToken = await resolveAccessToken();
+      if (!accessToken) {
+        if (isMounted) {
+          setShareNotice(t("share.notice.loginRequired"));
         }
-        const result = await acceptShareLink(supabaseClient, token, {
-          accessToken,
-          anonKey: effectiveSupabaseAnonKey,
-        });
+        return;
+      }
+      const result = await acceptShareLink(supabaseClient, token, {
+        accessToken,
+        anonKey: effectiveSupabaseAnonKey,
+      });
       if (!isMounted) {
         return;
       }
@@ -614,17 +614,17 @@ export function App() {
             : null;
         setSelectedCollectionId(firstCollection?.id ?? null);
       }
-        if (workspaceId) {
-          const snapshotRes = await fetchWorkspaceSnapshot(supabaseClient, workspaceId, {
-            accessToken,
-            anonKey: effectiveSupabaseAnonKey,
-          });
-          if (!snapshotRes.error && snapshotRes.data?.ok) {
-            applyRemoteSnapshot(snapshotRes.data);
-          }
+      if (workspaceId) {
+        const snapshotRes = await fetchWorkspaceSnapshot(supabaseClient, workspaceId, {
+          accessToken,
+          anonKey: effectiveSupabaseAnonKey,
+        });
+        if (!snapshotRes.error && snapshotRes.data?.ok) {
+          applyRemoteSnapshot(snapshotRes.data);
         }
-        await setLocal(SHARE_TOKEN_KEY, null);
-        setShareNotice(t("share.notice.joined"));
+      }
+      await setLocal(SHARE_TOKEN_KEY, null);
+      setShareNotice(t("share.notice.joined"));
     })();
 
     return () => {
@@ -890,15 +890,15 @@ export function App() {
     if (members.length > 0 || !authUser) {
       return;
     }
-      setMembers([
-        {
-          id: "current-user",
-          userId: authUser.id,
-          name: authUser.name ?? "You",
-          email: authUser.email ?? "",
-          role: "owner",
-        },
-      ]);
+    setMembers([
+      {
+        id: "current-user",
+        userId: authUser.id,
+        name: authUser.name ?? "You",
+        email: authUser.email ?? "",
+        role: "owner",
+      },
+    ]);
   }, [authUser, members.length]);
 
   const ensureRemoteWorkspace = useCallback(async () => {
@@ -1072,8 +1072,8 @@ export function App() {
     viewMode === "list"
       ? "grid grid-cols-1 gap-3"
       : viewMode === "image"
-      ? "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]"
-      : "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]";
+        ? "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]"
+        : "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]";
 
   const filteredCollections = useMemo(() => {
     const scopedBySpace = activeSpaceId
@@ -1108,6 +1108,14 @@ export function App() {
         return list.sort((a, b) => a.position - b.position);
     }
   }, [filteredCollections, sortMode]);
+  const hasCollapsedCollections = useMemo(
+    () => sortedCollections.some((collection) => collapsedCollections[collection.id] ?? false),
+    [collapsedCollections, sortedCollections]
+  );
+  const hasExpandedCollections = useMemo(
+    () => sortedCollections.some((collection) => !(collapsedCollections[collection.id] ?? false)),
+    [collapsedCollections, sortedCollections]
+  );
 
   const sortModeOptions = useMemo(() => {
     const prefix = t("toolbar.sort");
@@ -1701,16 +1709,16 @@ export function App() {
         setMemberStatus(insert.error.message);
         return;
       }
-        setMembers((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            userId: profile.id,
-            name: memberName.trim() || profile.full_name || profile.name || profile.email || memberEmail.trim(),
-            email: profile.email ?? memberEmail.trim(),
-            role: memberRole,
-          },
-        ]);
+      setMembers((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          userId: profile.id,
+          name: memberName.trim() || profile.full_name || profile.name || profile.email || memberEmail.trim(),
+          email: profile.email ?? memberEmail.trim(),
+          role: memberRole,
+        },
+      ]);
       setMemberName("");
       setMemberEmail("");
       setMemberRole("viewer");
@@ -2021,6 +2029,24 @@ export function App() {
       ...prev,
       [collectionId]: !prev[collectionId],
     }));
+  };
+  const handleExpandAllCollections = () => {
+    setCollapsedCollections((prev) => {
+      const next = { ...prev };
+      sortedCollections.forEach((collection) => {
+        next[collection.id] = false;
+      });
+      return next;
+    });
+  };
+  const handleCollapseAllCollections = () => {
+    setCollapsedCollections((prev) => {
+      const next = { ...prev };
+      sortedCollections.forEach((collection) => {
+        next[collection.id] = true;
+      });
+      return next;
+    });
   };
 
   const handleSync = async () => {
@@ -2575,7 +2601,7 @@ export function App() {
   if (!authUser) {
     return (
       <div className="flex h-[100vh] w-full min-w-[1280px] items-center justify-center overflow-x-auto bg-zinc-100 p-4 text-zinc-900">
-        <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
+        <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-md">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500 text-lg font-semibold text-white">
             OO
           </div>
@@ -2594,16 +2620,15 @@ export function App() {
   }
 
   return (
-    <div className="h-[100vh] w-full overflow-x-auto bg-zinc-100 p-4 text-zinc-900">
+    <div className="h-[100vh] w-full overflow-x-auto overflow-y-hidden bg-zinc-100 text-zinc-900 p-4">
       <DndContext collisionDetection={collisionDetectionStrategy} sensors={sensors} onDragEnd={handleDragEnd}>
         <main
-          className={`grid h-full min-h-full min-w-[1280px] gap-4 pb-4 ${
-            leftCollapsed
-              ? "grid-cols-[84px_minmax(420px,1fr)_360px]"
-              : rightCollapsed
-                ? "grid-cols-[280px_minmax(420px,1fr)_72px]"
-                : "grid-cols-[280px_minmax(420px,1fr)_360px]"
-          }`}
+          className={`grid h-full min-h-full min-w-[1280px] gap-4 ${leftCollapsed
+            ? "grid-cols-[84px_minmax(420px,1fr)_360px]"
+            : rightCollapsed
+              ? "grid-cols-[280px_minmax(420px,1fr)_72px]"
+              : "grid-cols-[280px_minmax(420px,1fr)_360px]"
+            }`}
         >
           {shareNotice ? (
             <div className="fixed left-1/2 top-4 z-[9999] -translate-x-1/2 rounded-full border border-zinc-200 bg-white/90 px-4 py-2 text-xs text-zinc-700 shadow-lg backdrop-blur">
@@ -2628,7 +2653,7 @@ export function App() {
               {uiNotice}
             </div>
           ) : null}
-          <aside className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+          <aside className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-md">
             <div className="border-b border-zinc-200 px-4 py-4">
               <div className="flex items-center justify-between gap-2">
                 {!leftCollapsed ? <div className="text-xs font-semibold tracking-wide text-zinc-500">組織</div> : null}
@@ -2736,24 +2761,21 @@ export function App() {
                 {scopedSpaces.map((space) => (
                   <div
                     key={space.id}
-                    className={`group flex items-center gap-2 rounded-2xl ${
-                      space.id === activeSpaceId ? "bg-zinc-900" : "bg-zinc-50 hover:bg-zinc-100"
-                    }`}
+                    className={`group flex items-center gap-2 rounded-2xl ${space.id === activeSpaceId ? "bg-zinc-900" : "bg-zinc-50 hover:bg-zinc-100"
+                      }`}
                   >
                     <button
                       onClick={() => setSelectedSpaceId(space.id)}
-                      className={`flex min-w-0 flex-1 items-center justify-between px-4 py-3 text-left ${
-                        space.id === activeSpaceId ? "text-white" : "text-zinc-700"
-                      }`}
+                      className={`flex min-w-0 flex-1 items-center justify-between px-4 py-3 text-left ${space.id === activeSpaceId ? "text-white" : "text-zinc-700"
+                        }`}
                     >
                       <span className={`text-sm font-medium ${leftCollapsed ? "mx-auto" : ""}`}>
                         {leftCollapsed ? space.name.slice(0, 1) : space.name}
                       </span>
                       {!leftCollapsed ? (
                         <span
-                          className={`rounded-full px-2 py-0.5 text-xs ${
-                            space.id === activeSpaceId ? "bg-white/15 text-white" : "bg-white text-zinc-500"
-                          }`}
+                          className={`rounded-full px-2 py-0.5 text-xs ${space.id === activeSpaceId ? "bg-white/15 text-white" : "bg-white text-zinc-500"
+                            }`}
                         >
                           {collectionCountBySpace.get(space.id) ?? 0}
                         </span>
@@ -2779,12 +2801,6 @@ export function App() {
                   </div>
                 ))}
               </div>
-
-              {!leftCollapsed ? (
-                <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500">
-                  拖曳頁籤到空白處，快速建立新集合
-                </div>
-              ) : null}
             </div>
             <div className="mt-auto space-y-2 border-t border-zinc-200 px-4 pb-4 pt-3 text-xs text-zinc-500">
               {!leftCollapsed ? <div>{t("rail.account")}</div> : null}
@@ -2809,381 +2825,398 @@ export function App() {
             </div>
           </aside>
 
-          <main className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-            <div className="border-b border-zinc-200 px-6 py-5">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="text-sm font-semibold text-zinc-500">
-                  {workspace?.name ?? t("app.loading")} / {activeSpaceName}
-                </div>
-                <div ref={searchWrapRef} className="ml-auto relative flex items-center gap-2">
-                  <div className="relative">
+          <main className="flex h-full min-h-0 flex-col">
+            <div className="flex flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-md">
+              <div className="border-b border-zinc-200 px-6 py-5">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="text-sm font-semibold text-zinc-500">
+                    {workspace?.name ?? t("app.loading")} / {activeSpaceName}
+                  </div>
+                  <div ref={searchWrapRef} className="ml-auto relative flex items-center gap-2">
+                    <div className="relative">
+                      <button
+                        onClick={() => setCreateCollectionMenuOpen((prev) => !prev)}
+                        className="flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2 text-xs font-medium text-white border border-zinc-900"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>新增集合</span>
+                      </button>
+                      {createCollectionMenuOpen ? (
+                        <div className="absolute left-0 top-full z-20 mt-2 w-56 rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
+                          <button
+                            className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
+                            onClick={() => {
+                              handleAddCollectionAction("blank");
+                              setCreateCollectionMenuOpen(false);
+                            }}
+                          >
+                            空白集合
+                          </button>
+                          <button
+                            className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
+                            onClick={() => {
+                              handleAddCollectionAction("current-window");
+                              setCreateCollectionMenuOpen(false);
+                            }}
+                          >
+                            從目前開啟分頁建立
+                          </button>
+                          <button
+                            className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
+                            onClick={() => {
+                              handleAddCollectionAction("selected-tabs");
+                              setCreateCollectionMenuOpen(false);
+                            }}
+                          >
+                            從拖放內容建立
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                     <button
-                      onClick={() => setCreateCollectionMenuOpen((prev) => !prev)}
-                      className="flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2 text-xs font-medium text-white border border-zinc-900"
+                      className="flex items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-2 text-xs font-medium text-zinc-700 border border-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={handleExpandAllCollections}
+                      disabled={!hasCollapsedCollections}
                     >
-                      <Plus className="h-4 w-4" />
-                      <span>新增集合</span>
+                      <ChevronDown className="h-4 w-4" />
+                      <span>{t("collection.expandAll")}</span>
                     </button>
-                    {createCollectionMenuOpen ? (
-                      <div className="absolute left-0 top-full z-20 mt-2 w-56 rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
-                        <button
-                          className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
-                          onClick={() => {
-                            handleAddCollectionAction("blank");
-                            setCreateCollectionMenuOpen(false);
-                          }}
-                        >
-                          空白集合
-                        </button>
-                        <button
-                          className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
-                          onClick={() => {
-                            handleAddCollectionAction("current-window");
-                            setCreateCollectionMenuOpen(false);
-                          }}
-                        >
-                          從目前開啟分頁建立
-                        </button>
-                        <button
-                          className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
-                          onClick={() => {
-                            handleAddCollectionAction("selected-tabs");
-                            setCreateCollectionMenuOpen(false);
-                          }}
-                        >
-                          從拖放內容建立
-                        </button>
+                    <button
+                      className="flex items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-2 text-xs font-medium text-zinc-700 border border-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={handleCollapseAllCollections}
+                      disabled={!hasExpandedCollections}
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                      <span>{t("collection.collapseAll")}</span>
+                    </button>
+
+                    <SelectMenu
+                      value={sortMode}
+                      onChange={setSortMode}
+                      options={sortModeOptions}
+                      size="md"
+                      buttonClassName="min-w-[150px]"
+                      showSelectedIcon
+                    />
+
+                    <SelectMenu
+                      value={viewMode}
+                      onChange={setViewMode}
+                      options={viewModeOptions}
+                      size="md"
+                      showSelectedIcon
+                      buttonClassName="min-w-[130px]"
+                    />
+                    <button
+                      className="flex h-9 w-9 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 border border-zinc-100"
+                      onClick={() => setSearchOpen((prev) => !prev)}
+                      aria-label={t("nav.search")}
+                    >
+                      <Search className="h-4 w-4" />
+                    </button>
+                    {searchOpen ? (
+                      <div className="absolute inset-y-0 left-0 right-0 z-30 flex items-center">
+                        <div className="ml-auto w-full">
+                          <div className="flex min-w-[260px] items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-2 text-xs text-zinc-500 border border-zinc-100">
+                            <Search className="h-4 w-4" />
+                            <input
+                              ref={searchInputRef}
+                              className="w-full bg-transparent text-xs text-zinc-700 outline-none placeholder:text-zinc-400"
+                              placeholder={t("app.searchPlaceholder")}
+                              value={searchQuery}
+                              onChange={(event) => setSearchQuery(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Escape") {
+                                  setSearchOpen(false);
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
                       </div>
                     ) : null}
                   </div>
-
-                  <SelectMenu
-                    value={sortMode}
-                    onChange={setSortMode}
-                    options={sortModeOptions}
-                    size="md"
-                    buttonClassName="min-w-[140px]"
-                    showSelectedIcon
-                  />
-
-                  <SelectMenu
-                    value={viewMode}
-                    onChange={setViewMode}
-                    options={viewModeOptions}
-                    size="md"
-                    showSelectedIcon
-                    buttonClassName="min-w-[140px]"
-                  />
-                  <button
-                    className="flex h-9 w-9 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 border border-zinc-100"
-                    onClick={() => setSearchOpen((prev) => !prev)}
-                    aria-label={t("nav.search")}
-                  >
-                    <Search className="h-4 w-4" />
-                  </button>
-                  {searchOpen ? (
-                    <div className="absolute inset-y-0 left-0 right-0 z-30 flex items-center">
-                      <div className="ml-auto w-full">
-                        <div className="flex min-w-[260px] items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-2 text-xs text-zinc-500 border border-zinc-100">
-                          <Search className="h-4 w-4" />
-                          <input
-                            ref={searchInputRef}
-                            className="w-full bg-transparent text-xs text-zinc-700 outline-none placeholder:text-zinc-400"
-                            placeholder={t("app.searchPlaceholder")}
-                            value={searchQuery}
-                            onChange={(event) => setSearchQuery(event.target.value)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Escape") {
-                                setSearchOpen(false);
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
+              </div>
+
+              <div
+                ref={collectionBlankAreaDrop.setNodeRef}
+                className={`min-h-0 flex-1 overflow-y-auto px-5 py-5 ${collectionBlankAreaDrop.isOver || blankCollectionDropActive ? "bg-rose-50/30" : ""
+                  }`}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                  setBlankCollectionDropActive(true);
+                }}
+                onDragEnter={() => setBlankCollectionDropActive(true)}
+                onDragLeave={(event) => {
+                  const related = event.relatedTarget;
+                  if (related instanceof Node && event.currentTarget.contains(related)) {
+                    return;
+                  }
+                  setBlankCollectionDropActive(false);
+                }}
+                onDrop={(event) => {
+                  if (event.defaultPrevented) {
+                    return;
+                  }
+                  event.preventDefault();
+                  setBlankCollectionDropActive(false);
+                  handleDropRawToBlank(event.dataTransfer);
+                }}
+              >
+                <SortableContext
+                  items={sortedCollections.map((collection) => collection.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {viewMode === "list" ? (
+                    <div className="space-y-3">
+                      {sortedCollections.map((collection) => {
+                        const list = tabsByCollection.get(collection.id) ?? [];
+                        return (
+                          <div key={collection.id} className="space-y-2">
+                            <CollectionRow
+                              id={collection.id}
+                              name={collection.name}
+                              tabCount={tabCountByCollection.get(collection.id) ?? 0}
+                              updatedAt={collection.updatedAt}
+                              entityMenu={entityMenu}
+                              setEntityMenu={setEntityMenu}
+                              menuItems={[
+                                { label: "編輯集合", icon: Pencil, onClick: () => handleEditCollectionTitle(collection.id, collection.name) },
+                                { label: "刪除集合", icon: Trash2, onClick: () => deleteCollection(collection.id) },
+                                { label: "邀請好友", icon: UserPlus, onClick: () => handleOpenCollectionInvite(collection.id) },
+                              ]}
+                              onSelect={() => setSelectedCollectionId(collection.id)}
+                            />
+                            {list.length > 0 ? (
+                              <SortableContext
+                                items={list.map((tab) => tab.id)}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                <div className="space-y-3 pl-4 pr-1">
+                                  {list.map((tab) => (
+                                    <div key={tab.id} className="group/tab relative">
+                                      <TabRow
+                                        id={tab.id}
+                                        title={tab.title}
+                                        url={tab.url}
+                                        {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
+                                        ogTitle={tab.ogTitle ?? null}
+                                        ogDescription={tab.ogDescription ?? null}
+                                        note={tab.note ?? null}
+                                        ogImage={tab.ogImage ?? null}
+                                        viewMode="list"
+                                        onDelete={deleteTab}
+                                        onUpdate={updateTab}
+                                        onMove={(tabId, workspaceId, spaceId, collectionId) => {
+                                          if (
+                                            collectionId === tab.collectionId &&
+                                            workspaceId === collection.workspaceId &&
+                                            spaceId === collection.spaceId
+                                          ) {
+                                            return;
+                                          }
+                                          moveTabToCollection(tabId, collectionId);
+                                          setMoveNotice({
+                                            message: locale === "en" ? "Tab moved" : "分頁已移動",
+                                            workspaceId,
+                                            spaceId,
+                                            collectionId,
+                                          });
+                                        }}
+                                        selected={selectedTabIds.has(tab.id)}
+                                        onToggleSelect={() =>
+                                          setSelectedTabIds((prev) => {
+                                            const next = new Set(prev);
+                                            if (next.has(tab.id)) {
+                                              next.delete(tab.id);
+                                            } else {
+                                              next.add(tab.id);
+                                            }
+                                            return next;
+                                          })
+                                        }
+                                        workspaces={workspaces}
+                                        spaces={spaces}
+                                        collections={collections}
+                                        currentWorkspaceId={collection.workspaceId}
+                                        currentSpaceId={collection.spaceId}
+                                        currentCollectionId={collection.id}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </SortableContext>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {sortedCollections.map((collection) => {
+                        const list = orderBySpace.get(collection.spaceId) ?? [];
+                        const index = list.indexOf(collection.id);
+                        const canMoveUp = index > 0;
+                        const canMoveDown = index >= 0 && index < list.length - 1;
+                        return (
+                          <div key={collection.id}>
+                            <CollectionCard
+                              id={collection.id}
+                              name={collection.name}
+                              tabCount={tabCountByCollection.get(collection.id) ?? 0}
+                              summary={summaries[collection.id]}
+                              onOpenAll={() => handleOpenAll(collection.id)}
+                              onMoveUp={() => handleMoveCollectionWithinSpace(collection.id, "up")}
+                              onMoveDown={() => handleMoveCollectionWithinSpace(collection.id, "down")}
+                              canMoveUp={canMoveUp}
+                              canMoveDown={canMoveDown}
+                              onEditTitle={(name) => handleEditCollectionTitle(collection.id, name)}
+                              onToggleStar={() => toggleCollectionStar(collection.id)}
+                              onSortAZ={() => sortTabsInCollection(collection.id)}
+                              onMove={(workspaceId, spaceId) => {
+                                moveCollectionToSpace(collection.id, workspaceId, spaceId);
+                                setMoveNotice({
+                                  message: locale === "en" ? "Collection moved" : "集合已移動",
+                                  workspaceId,
+                                  spaceId,
+                                  collectionId: collection.id,
+                                });
+                              }}
+                              onExport={() => handleExportCollection(collection.id, collection.name)}
+                              onInvite={() => handleOpenCollectionInvite(collection.id)}
+                              onDelete={() => deleteCollection(collection.id)}
+                              onDropWindowTab={(tabId) => handleDropWindowTabToCollection(tabId, collection.id)}
+                              onDropSavedTab={(tabId) => handleDropSavedTabToCollection(tabId, collection.id)}
+                              onDragEnterDropZone={() => setDragOverCollectionId(collection.id)}
+                              onDragLeaveDropZone={() => {
+                                setDragOverCollectionId((prev) => (prev === collection.id ? null : prev));
+                              }}
+                              isDropTarget={dragOverCollectionId === collection.id}
+                              starred={collection.starred ?? false}
+                              workspaces={workspaces}
+                              spaces={spaces}
+                              activeWorkspaceId={activeWorkspaceId}
+                              spaceId={collection.spaceId}
+                              isActive={selectedCollectionId === collection.id}
+                              onSelect={() => setSelectedCollectionId(collection.id)}
+                              onToggleSelect={() =>
+                                setSelectedCollectionIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(collection.id)) {
+                                    next.delete(collection.id);
+                                  } else {
+                                    next.add(collection.id);
+                                  }
+                                  return next;
+                                })
+                              }
+                              selected={selectedCollectionIds.has(collection.id)}
+                              collapsed={collapsedCollections[collection.id] ?? false}
+                              onToggleCollapse={() => handleToggleCollectionCollapse(collection.id)}
+                            >
+                              <SortableContext
+                                items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                <div className={`mt-4 ${tabGridClass}`}>
+                                  {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
+                                    <div key={tab.id} className="group/tab relative">
+                                      <TabRow
+                                        id={tab.id}
+                                        title={tab.title}
+                                        url={tab.url}
+                                        {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
+                                        ogTitle={tab.ogTitle ?? null}
+                                        ogDescription={tab.ogDescription ?? null}
+                                        note={tab.note ?? null}
+                                        ogImage={tab.ogImage ?? null}
+                                        viewMode={viewMode}
+                                        onDelete={deleteTab}
+                                        onUpdate={updateTab}
+                                        onMove={(tabId, workspaceId, spaceId, collectionId) => {
+                                          if (
+                                            collectionId === tab.collectionId &&
+                                            workspaceId === collection.workspaceId &&
+                                            spaceId === collection.spaceId
+                                          ) {
+                                            return;
+                                          }
+                                          moveTabToCollection(tabId, collectionId);
+                                          setMoveNotice({
+                                            message: locale === "en" ? "Tab moved" : "分頁已移動",
+                                            workspaceId,
+                                            spaceId,
+                                            collectionId,
+                                          });
+                                        }}
+                                        selected={selectedTabIds.has(tab.id)}
+                                        onToggleSelect={() =>
+                                          setSelectedTabIds((prev) => {
+                                            const next = new Set(prev);
+                                            if (next.has(tab.id)) {
+                                              next.delete(tab.id);
+                                            } else {
+                                              next.add(tab.id);
+                                            }
+                                            return next;
+                                          })
+                                        }
+                                        workspaces={workspaces}
+                                        spaces={spaces}
+                                        collections={collections}
+                                        currentWorkspaceId={collection.workspaceId}
+                                        currentSpaceId={collection.spaceId}
+                                        currentCollectionId={collection.id}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </SortableContext>
+                            </CollectionCard>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div
+                    ref={collectionBlankDrop.setNodeRef}
+                    className={`mt-4 flex min-h-[72px] items-center justify-center rounded-2xl border border-dashed px-4 py-4 text-xs transition ${collectionBlankDrop.isOver || blankCollectionDropActive
+                      ? "border-rose-300 bg-rose-50 text-rose-600"
+                      : "border-zinc-300 bg-zinc-50 text-zinc-500"
+                      }`}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                      setBlankCollectionDropActive(true);
+                    }}
+                    onDragEnter={() => setBlankCollectionDropActive(true)}
+                    onDragLeave={(event) => {
+                      const related = event.relatedTarget;
+                      if (related instanceof Node && event.currentTarget.contains(related)) {
+                        return;
+                      }
+                      setBlankCollectionDropActive(false);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setBlankCollectionDropActive(false);
+                      handleDropRawToBlank(event.dataTransfer);
+                    }}
+                  >
+                    {locale === "en"
+                      ? "Drop tab here to quickly create a new collection"
+                      : "將分頁拖曳到這裡，快速建立新集合"}
+                  </div>
+                </SortableContext>
               </div>
             </div>
 
-            <div
-              ref={collectionBlankAreaDrop.setNodeRef}
-              className={`min-h-0 flex-1 overflow-y-auto px-5 py-5 ${
-                collectionBlankAreaDrop.isOver || blankCollectionDropActive ? "bg-rose-50/30" : ""
-              }`}
-              onDragOver={(event) => {
-                event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
-                setBlankCollectionDropActive(true);
-              }}
-              onDragEnter={() => setBlankCollectionDropActive(true)}
-              onDragLeave={(event) => {
-                const related = event.relatedTarget;
-                if (related instanceof Node && event.currentTarget.contains(related)) {
-                  return;
-                }
-                setBlankCollectionDropActive(false);
-              }}
-              onDrop={(event) => {
-                if (event.defaultPrevented) {
-                  return;
-                }
-                event.preventDefault();
-                setBlankCollectionDropActive(false);
-                handleDropRawToBlank(event.dataTransfer);
-              }}
-            >
-              <SortableContext
-                items={sortedCollections.map((collection) => collection.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {viewMode === "list" ? (
-                  <div className="space-y-3">
-                    {sortedCollections.map((collection) => {
-                      const list = tabsByCollection.get(collection.id) ?? [];
-                      return (
-                        <div key={collection.id} className="space-y-2">
-                          <CollectionRow
-                            id={collection.id}
-                            name={collection.name}
-                            tabCount={tabCountByCollection.get(collection.id) ?? 0}
-                            updatedAt={collection.updatedAt}
-                            entityMenu={entityMenu}
-                            setEntityMenu={setEntityMenu}
-                            menuItems={[
-                              { label: "編輯集合", icon: Pencil, onClick: () => handleEditCollectionTitle(collection.id, collection.name) },
-                              { label: "刪除集合", icon: Trash2, onClick: () => deleteCollection(collection.id) },
-                              { label: "邀請好友", icon: UserPlus, onClick: () => handleOpenCollectionInvite(collection.id) },
-                            ]}
-                            onSelect={() => setSelectedCollectionId(collection.id)}
-                          />
-                          {list.length > 0 ? (
-                            <SortableContext
-                              items={list.map((tab) => tab.id)}
-                              strategy={verticalListSortingStrategy}
-                            >
-                              <div className="space-y-3 pl-4 pr-1">
-                                {list.map((tab) => (
-                                  <div key={tab.id} className="group/tab relative">
-                                    <TabRow
-                                      id={tab.id}
-                                      title={tab.title}
-                                      url={tab.url}
-                                      {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
-                                      ogTitle={tab.ogTitle ?? null}
-                                      ogDescription={tab.ogDescription ?? null}
-                                      note={tab.note ?? null}
-                                      ogImage={tab.ogImage ?? null}
-                                      viewMode="list"
-                                      onDelete={deleteTab}
-                                      onUpdate={updateTab}
-                                      onMove={(tabId, workspaceId, spaceId, collectionId) => {
-                                        if (
-                                          collectionId === tab.collectionId &&
-                                          workspaceId === collection.workspaceId &&
-                                          spaceId === collection.spaceId
-                                        ) {
-                                          return;
-                                        }
-                                        moveTabToCollection(tabId, collectionId);
-                                        setMoveNotice({
-                                          message: locale === "en" ? "Tab moved" : "分頁已移動",
-                                          workspaceId,
-                                          spaceId,
-                                          collectionId,
-                                        });
-                                      }}
-                                      selected={selectedTabIds.has(tab.id)}
-                                      onToggleSelect={() =>
-                                        setSelectedTabIds((prev) => {
-                                          const next = new Set(prev);
-                                          if (next.has(tab.id)) {
-                                            next.delete(tab.id);
-                                          } else {
-                                            next.add(tab.id);
-                                          }
-                                          return next;
-                                        })
-                                      }
-                                      workspaces={workspaces}
-                                      spaces={spaces}
-                                      collections={collections}
-                                      currentWorkspaceId={collection.workspaceId}
-                                      currentSpaceId={collection.spaceId}
-                                      currentCollectionId={collection.id}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </SortableContext>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {sortedCollections.map((collection) => {
-                      const list = orderBySpace.get(collection.spaceId) ?? [];
-                      const index = list.indexOf(collection.id);
-                      const canMoveUp = index > 0;
-                      const canMoveDown = index >= 0 && index < list.length - 1;
-                      return (
-                        <div key={collection.id}>
-                          <CollectionCard
-                            id={collection.id}
-                            name={collection.name}
-                            tabCount={tabCountByCollection.get(collection.id) ?? 0}
-                            summary={summaries[collection.id]}
-                            onOpenAll={() => handleOpenAll(collection.id)}
-                            onMoveUp={() => handleMoveCollectionWithinSpace(collection.id, "up")}
-                            onMoveDown={() => handleMoveCollectionWithinSpace(collection.id, "down")}
-                            canMoveUp={canMoveUp}
-                            canMoveDown={canMoveDown}
-                            onEditTitle={(name) => handleEditCollectionTitle(collection.id, name)}
-                            onToggleStar={() => toggleCollectionStar(collection.id)}
-                            onSortAZ={() => sortTabsInCollection(collection.id)}
-                            onMove={(workspaceId, spaceId) => {
-                              moveCollectionToSpace(collection.id, workspaceId, spaceId);
-                              setMoveNotice({
-                                message: locale === "en" ? "Collection moved" : "集合已移動",
-                                workspaceId,
-                                spaceId,
-                                collectionId: collection.id,
-                              });
-                            }}
-                            onExport={() => handleExportCollection(collection.id, collection.name)}
-                            onInvite={() => handleOpenCollectionInvite(collection.id)}
-                            onDelete={() => deleteCollection(collection.id)}
-                            onDropWindowTab={(tabId) => handleDropWindowTabToCollection(tabId, collection.id)}
-                            onDropSavedTab={(tabId) => handleDropSavedTabToCollection(tabId, collection.id)}
-                            onDragEnterDropZone={() => setDragOverCollectionId(collection.id)}
-                            onDragLeaveDropZone={() => {
-                              setDragOverCollectionId((prev) => (prev === collection.id ? null : prev));
-                            }}
-                            isDropTarget={dragOverCollectionId === collection.id}
-                            starred={collection.starred ?? false}
-                            workspaces={workspaces}
-                            spaces={spaces}
-                            activeWorkspaceId={activeWorkspaceId}
-                            spaceId={collection.spaceId}
-                            isActive={selectedCollectionId === collection.id}
-                            onSelect={() => setSelectedCollectionId(collection.id)}
-                            onToggleSelect={() =>
-                              setSelectedCollectionIds((prev) => {
-                                const next = new Set(prev);
-                                if (next.has(collection.id)) {
-                                  next.delete(collection.id);
-                                } else {
-                                  next.add(collection.id);
-                                }
-                                return next;
-                              })
-                            }
-                            selected={selectedCollectionIds.has(collection.id)}
-                            collapsed={collapsedCollections[collection.id] ?? false}
-                            onToggleCollapse={() => handleToggleCollectionCollapse(collection.id)}
-                          >
-                            <SortableContext
-                              items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
-                              strategy={verticalListSortingStrategy}
-                            >
-                              <div className={`mt-4 ${tabGridClass}`}>
-                                {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
-                                  <div key={tab.id} className="group/tab relative">
-                                    <TabRow
-                                      id={tab.id}
-                                      title={tab.title}
-                                      url={tab.url}
-                                      {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
-                                      ogTitle={tab.ogTitle ?? null}
-                                      ogDescription={tab.ogDescription ?? null}
-                                      note={tab.note ?? null}
-                                      ogImage={tab.ogImage ?? null}
-                                      viewMode={viewMode}
-                                      onDelete={deleteTab}
-                                      onUpdate={updateTab}
-                                      onMove={(tabId, workspaceId, spaceId, collectionId) => {
-                                        if (
-                                          collectionId === tab.collectionId &&
-                                          workspaceId === collection.workspaceId &&
-                                          spaceId === collection.spaceId
-                                        ) {
-                                          return;
-                                        }
-                                        moveTabToCollection(tabId, collectionId);
-                                        setMoveNotice({
-                                          message: locale === "en" ? "Tab moved" : "分頁已移動",
-                                          workspaceId,
-                                          spaceId,
-                                          collectionId,
-                                        });
-                                      }}
-                                      selected={selectedTabIds.has(tab.id)}
-                                      onToggleSelect={() =>
-                                        setSelectedTabIds((prev) => {
-                                          const next = new Set(prev);
-                                          if (next.has(tab.id)) {
-                                            next.delete(tab.id);
-                                          } else {
-                                            next.add(tab.id);
-                                          }
-                                          return next;
-                                        })
-                                      }
-                                      workspaces={workspaces}
-                                      spaces={spaces}
-                                      collections={collections}
-                                      currentWorkspaceId={collection.workspaceId}
-                                      currentSpaceId={collection.spaceId}
-                                      currentCollectionId={collection.id}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </SortableContext>
-                          </CollectionCard>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <div
-                  ref={collectionBlankDrop.setNodeRef}
-                  className={`mt-4 flex min-h-[72px] items-center justify-center rounded-2xl border border-dashed px-4 py-4 text-xs transition ${
-                    collectionBlankDrop.isOver || blankCollectionDropActive
-                      ? "border-rose-300 bg-rose-50 text-rose-600"
-                      : "border-zinc-300 bg-zinc-50 text-zinc-500"
-                  }`}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = "move";
-                    setBlankCollectionDropActive(true);
-                  }}
-                  onDragEnter={() => setBlankCollectionDropActive(true)}
-                  onDragLeave={(event) => {
-                    const related = event.relatedTarget;
-                    if (related instanceof Node && event.currentTarget.contains(related)) {
-                      return;
-                    }
-                    setBlankCollectionDropActive(false);
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setBlankCollectionDropActive(false);
-                    handleDropRawToBlank(event.dataTransfer);
-                  }}
-                >
-                  {locale === "en"
-                    ? "Drop tab here to quickly create a new collection"
-                    : "將分頁拖曳到這裡，快速建立新集合"}
-                </div>
-              </SortableContext>
-            </div>
-            <div className="relative z-20 border-t border-zinc-200 bg-white/90">
-              <div className="flex items-center justify-between px-6 py-3">
-                <div className="text-xs font-semibold text-zinc-500">Dock</div>
+
+            <div className="relative z-20">
+              <div className="flex items-center justify-between absolute top-[100%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
                 <button
                   className="flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] text-zinc-600 hover:bg-zinc-50"
                   onClick={() => setDockCollapsed((prev) => !prev)}
@@ -3193,15 +3226,13 @@ export function App() {
                 </button>
               </div>
               <div
-                className={`overflow-visible transition-all duration-300 ease-out ${
-                  dockCollapsed ? "pointer-events-none max-h-0 -translate-y-2 opacity-0" : "max-h-[220px] translate-y-0 opacity-100"
-                }`}
+                className={`overflow-visible transition-all duration-300 ease-out ${dockCollapsed ? "pointer-events-none max-h-0 -translate-y-2 opacity-0" : "max-h-[220px] translate-y-0 opacity-100"
+                  }`}
               >
                 <div
                   ref={dockDrop.setNodeRef}
-                  className={`mx-6 mb-4 flex items-end gap-4 overflow-visible rounded-[24px] border border-zinc-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur ${
-                    dockDropActive || dockDrop.isOver ? "ring-2 ring-zinc-300" : ""
-                  }`}
+                  className={`flex items-center justify-center gap-4 overflow-visible rounded-[24px] border border-zinc-200 bg-white/95 px-5 py-4 mt-2 shadow-lg backdrop-blur ${dockDropActive || dockDrop.isOver ? "ring-2 ring-zinc-300" : ""
+                    }`}
                   onDragOver={(event) => {
                     event.preventDefault();
                     event.dataTransfer.dropEffect = "copy";
@@ -3217,7 +3248,7 @@ export function App() {
                   onDrop={handleDropToDock}
                 >
                   {dockSections.map((section, index) => (
-                    <div key={section.id} className="flex items-end gap-4 overflow-visible">
+                    <div key={section.id} className="flex items-center gap-4 overflow-visible">
                       {section.items.map((item) => {
                         const compact = section.id === "recent" || (section.id === "temp" && item.id !== "pin");
                         return (
@@ -3243,9 +3274,8 @@ export function App() {
           </main>
 
           <section
-            className={`flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm ${
-              rightCollapsed ? "w-[72px]" : "w-auto"
-            }`}
+            className={`flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-md ${rightCollapsed ? "w-[72px]" : "w-auto"
+              }`}
           >
             <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-5">
               {!rightCollapsed ? (
@@ -3321,24 +3351,22 @@ export function App() {
                               event.dataTransfer.setData("application/x-toby-window-tab", String(tab.id));
                               event.dataTransfer.effectAllowed = "move";
                             }}
-                            className={`flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition ${
-                              tab.active
-                                ? "border-zinc-900 bg-zinc-900 text-white"
-                                : selected
-                                  ? "border-zinc-400 bg-zinc-100"
-                                  : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
-                            }`}
+                            className={`flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition ${tab.active
+                              ? "border-zinc-900 bg-zinc-900 text-white"
+                              : selected
+                                ? "border-zinc-400 bg-zinc-100"
+                                : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
+                              }`}
                           >
                             <div className="pt-1">
                               <button
                                 type="button"
-                                className={`flex h-4 w-4 items-center justify-center rounded border ${
-                                  selected
-                                    ? "border-zinc-900 bg-zinc-900 text-white"
-                                    : tab.active
-                                      ? "border-white/40 bg-white/10 text-white"
-                                      : "border-zinc-300 bg-white text-transparent"
-                                }`}
+                                className={`flex h-4 w-4 items-center justify-center rounded border ${selected
+                                  ? "border-zinc-900 bg-zinc-900 text-white"
+                                  : tab.active
+                                    ? "border-white/40 bg-white/10 text-white"
+                                    : "border-zinc-300 bg-white text-transparent"
+                                  }`}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   toggleWindowTabSelected(tab.id);
@@ -3382,9 +3410,8 @@ export function App() {
                       key={tab.id}
                       onClick={() => handleOpenWindowTab(tab.id, tab.windowId)}
                       onMouseDown={() => toggleWindowTabSelected(tab.id)}
-                      className={`relative flex h-12 w-12 items-center justify-center rounded-2xl ${
-                        selectedWindowTabIds.has(tab.id) ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-500"
-                      }`}
+                      className={`relative flex h-12 w-12 items-center justify-center rounded-2xl ${selectedWindowTabIds.has(tab.id) ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-500"
+                        }`}
                     >
                       {safeWindowTabFavicon ? (
                         <img src={safeWindowTabFavicon} alt={tab.title} className="h-4 w-4 object-contain" />
@@ -3425,9 +3452,8 @@ export function App() {
                 <div className="flex items-center gap-3">
                   <span className="text-zinc-500">
                     {locale === "en"
-                      ? `${selectedCollectionIds.size} ${
-                          selectedCollectionIds.size === 1 ? "collection" : "collections"
-                        } selected`
+                      ? `${selectedCollectionIds.size} ${selectedCollectionIds.size === 1 ? "collection" : "collections"
+                      } selected`
                       : `${selectedCollectionIds.size} 個集合 已選取`}
                   </span>
                   <button
@@ -3507,14 +3533,14 @@ export function App() {
             </div>
           </div>
         ) : null}
-          <PricingModal
-            open={pricingOpen}
-            onClose={() => setPricingOpen(false)}
-            onSelectPlan={(planId) => {
+        <PricingModal
+          open={pricingOpen}
+          onClose={() => setPricingOpen(false)}
+          onSelectPlan={(planId) => {
             void handleStartCheckout(planId);
             setPricingOpen(false);
           }}
-          />
+        />
         {bulkMoveOpen ? (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setBulkMoveOpen(false)}>
             <div className="modal-enter w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
@@ -3950,17 +3976,15 @@ export function App() {
                     <div className="text-xs font-semibold">{t("org.link.title")}</div>
                     <div className="mt-3 flex items-center gap-2 text-xs">
                       <button
-                        className={`rounded-full px-3 py-1 ${
-                          linkAccess === "restricted" ? "bg-rose-500 text-white" : "text-zinc-600 hover:text-zinc-900"
-                        }`}
+                        className={`rounded-full px-3 py-1 ${linkAccess === "restricted" ? "bg-rose-500 text-white" : "text-zinc-600 hover:text-zinc-900"
+                          }`}
                         onClick={() => handleToggleLinkAccess("restricted")}
                       >
                         {t("org.link.restricted")}
                       </button>
                       <button
-                        className={`rounded-full px-3 py-1 ${
-                          linkAccess === "link" ? "bg-rose-500 text-white" : "text-zinc-600 hover:text-zinc-900"
-                        }`}
+                        className={`rounded-full px-3 py-1 ${linkAccess === "link" ? "bg-rose-500 text-white" : "text-zinc-600 hover:text-zinc-900"
+                          }`}
                         onClick={() => handleToggleLinkAccess("link")}
                       >
                         {t("org.link.anyone")}
