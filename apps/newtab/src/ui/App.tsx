@@ -40,7 +40,6 @@ import {
   Clock3,
   Columns3,
   FolderPlus,
-  GripVertical,
   Grid2X2,
   LayoutGrid,
   Layers2,
@@ -208,7 +207,6 @@ export function App() {
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [dockSettingsOpen, setDockSettingsOpen] = useState(false);
   const [dockPinnedLimit, setDockPinnedLimit] = useState(40);
-  const [dockStashItems, setDockStashItems] = useState<DockQuickItem[]>([]);
   const [dockRecentItems, setDockRecentItems] = useState<DockQuickItem[]>([]);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [moveNotice, setMoveNotice] = useState<{
@@ -231,6 +229,7 @@ export function App() {
       tabs: Array<{ id: number; title: string; url: string; favIconUrl?: string; active: boolean }>;
     }>
   >([]);
+  const [collapsedWindowIds, setCollapsedWindowIds] = useState<Set<number>>(new Set());
   const [orgSettingsOpen, setOrgSettingsOpen] = useState(false);
   const [orgSettingsTab, setOrgSettingsTab] = useState<"preferences" | "members">("preferences");
   const [orgNameDraft, setOrgNameDraft] = useState("");
@@ -272,12 +271,10 @@ export function App() {
   const pulledWorkspacesRef = useRef<Set<string>>(new Set());
   const AUTH_USER_KEY = "toby_auth_user_v1";
   const DOCK_COLLAPSED_KEY = "toby_dock_collapsed_v1";
-  const DOCK_STASH_KEY = "toby_dock_stash_v1";
   const DOCK_RECENT_KEY = "toby_dock_recent_v1";
   const DOCK_PINNED_LIMIT_KEY = "toby_dock_pinned_limit_v1";
   const DOCK_LIMIT_MIN = 8;
   const DOCK_LIMIT_MAX = 120;
-  const DOCK_STASH_MAX = 40;
   const DOCK_RECENT_MAX = 40;
 
   const toDockKey = useCallback((item: Pick<DockQuickItem, "type" | "url" | "collectionId" | "title">) => {
@@ -394,34 +391,26 @@ export function App() {
   useEffect(() => {
     let active = true;
     void (async () => {
-      const [storedLimit, storedStash, storedRecent] = await Promise.all([
+      const [storedLimit, storedRecent] = await Promise.all([
         getLocal<number>(DOCK_PINNED_LIMIT_KEY, 40),
-        getLocal<unknown[]>(DOCK_STASH_KEY, []),
         getLocal<unknown[]>(DOCK_RECENT_KEY, []),
       ]);
       if (!active) {
         return;
       }
       setDockPinnedLimit(sanitizeDockLimit(storedLimit));
-      const parsedStash = Array.isArray(storedStash)
-        ? storedStash.map((item) => normalizeDockQuickItem(item)).filter((item): item is DockQuickItem => Boolean(item))
-        : [];
       const parsedRecent = Array.isArray(storedRecent)
         ? storedRecent.map((item) => normalizeDockQuickItem(item)).filter((item): item is DockQuickItem => Boolean(item))
         : [];
-      setDockStashItems(parsedStash.slice(0, DOCK_STASH_MAX));
       setDockRecentItems(parsedRecent.slice(0, DOCK_RECENT_MAX));
     })();
     return () => {
       active = false;
     };
-  }, [DOCK_PINNED_LIMIT_KEY, DOCK_RECENT_KEY, DOCK_STASH_KEY, DOCK_RECENT_MAX, DOCK_STASH_MAX, normalizeDockQuickItem, sanitizeDockLimit]);
+  }, [DOCK_PINNED_LIMIT_KEY, DOCK_RECENT_KEY, DOCK_RECENT_MAX, normalizeDockQuickItem, sanitizeDockLimit]);
   useEffect(() => {
     void setLocal(DOCK_PINNED_LIMIT_KEY, dockPinnedLimit);
   }, [DOCK_PINNED_LIMIT_KEY, dockPinnedLimit]);
-  useEffect(() => {
-    void setLocal(DOCK_STASH_KEY, dockStashItems);
-  }, [DOCK_STASH_KEY, dockStashItems]);
   useEffect(() => {
     void setLocal(DOCK_RECENT_KEY, dockRecentItems);
   }, [DOCK_RECENT_KEY, dockRecentItems]);
@@ -661,6 +650,18 @@ export function App() {
     window.history.replaceState({}, "", url.toString());
     setShareNotice(t("share.notice.detected"));
   }, [t]);
+  useEffect(() => {
+    setCollapsedWindowIds((prev) => {
+      const validIds = new Set(windowGroups.map((windowItem) => windowItem.id));
+      const next = new Set<number>();
+      prev.forEach((id) => {
+        if (validIds.has(id)) {
+          next.add(id);
+        }
+      });
+      return next;
+    });
+  }, [windowGroups]);
 
   useEffect(() => {
     let isMounted = true;
@@ -2078,55 +2079,6 @@ export function App() {
         })
       );
   };
-  const upsertDockStashItems = useCallback(
-    (items: Array<Omit<DockQuickItem, "id" | "createdAt">>) => {
-      if (items.length === 0) {
-        return;
-      }
-      const now = new Date().toISOString();
-      const mapped = items.map((item) => ({
-        id: crypto.randomUUID(),
-        createdAt: now,
-        ...item,
-      }));
-      setDockStashItems((prev) => {
-        const merged = [...mapped, ...prev].filter((entry, index, array) => {
-          const key = toDockKey(entry);
-          return array.findIndex((candidate) => toDockKey(candidate) === key) === index;
-        });
-        return merged.slice(0, DOCK_STASH_MAX);
-      });
-      showUiNotice(locale === "en" ? "Added to Stash" : "已加入暫放");
-    },
-    [DOCK_STASH_MAX, locale, showUiNotice, toDockKey]
-  );
-  const handleStashSelectedTabs = useCallback(() => {
-    const savedTabItems = scopedTabs
-      .filter((tab) => selectedTabIds.has(tab.id))
-      .map((tab) => ({
-        type: "tab" as const,
-        title: tab.title,
-        url: tab.url,
-        faviconUrl: tab.faviconUrl,
-        collectionId: null,
-      }));
-    const openTabItems = windowGroups
-      .flatMap((window) => window.tabs)
-      .filter((tab) => selectedWindowTabIds.has(tab.id))
-      .map((tab) => ({
-        type: "tab" as const,
-        title: tab.title,
-        url: tab.url,
-        faviconUrl: tab.favIconUrl ?? null,
-        collectionId: null,
-      }));
-    const combined = [...savedTabItems, ...openTabItems];
-    if (combined.length === 0) {
-      showUiNotice(locale === "en" ? "Please select tabs first." : "請先選取分頁。");
-      return;
-    }
-    upsertDockStashItems(combined);
-  }, [locale, scopedTabs, selectedTabIds, selectedWindowTabIds, showUiNotice, upsertDockStashItems, windowGroups]);
   const handleAddTabToDock = useCallback(
     (tabId: string) => {
       const tab = tabs.find((item) => item.id === tabId);
@@ -2706,46 +2658,13 @@ export function App() {
       },
     }));
 
-    const stashItems: DockEntry[] = [
-      {
-        id: "stash-selected",
-        label: locale === "en" ? "Stash Selected" : "暫放選取",
-        icon: <GripVertical className="h-5 w-5" />,
-        onClick: handleStashSelectedTabs,
-      },
+    const settingsItems: DockEntry[] = [
       {
         id: "dock-settings",
         label: locale === "en" ? "Dock settings" : "Dock 設定",
         icon: <Settings className="h-5 w-5" />,
         onClick: () => setDockSettingsOpen(true),
       },
-      ...dockStashItems.map((item) => ({
-        id: item.id,
-        label: item.title,
-        text: item.title.slice(0, 2).toUpperCase(),
-        url: item.url ?? undefined,
-        faviconUrl: item.faviconUrl ?? null,
-        onClick: () => {
-          if (item.type === "collection" && item.collectionId) {
-            openCollectionTabs(item.collectionId);
-            return;
-          }
-          if (item.url) {
-            pushDockRecentItem({
-              type: "tab",
-              title: item.title,
-              url: item.url,
-              faviconUrl: item.faviconUrl ?? null,
-              collectionId: null,
-            });
-            void openTabs([item.url]);
-          }
-        },
-        onRemove: () => {
-          setDockStashItems((prev) => prev.filter((entry) => entry.id !== item.id));
-          showUiNotice(locale === "en" ? "Removed from Stash" : "已從暫放移除");
-        },
-      })),
     ];
     const recentItems: DockEntry[] = dockRecentItems.map((item) => ({
       id: item.id,
@@ -2769,14 +2688,12 @@ export function App() {
 
     return [
       { id: "fixed", label: locale === "en" ? "Pinned" : "固定捷徑", items: pinnedItems },
-      { id: "stash", label: locale === "en" ? "Stash" : "暫放", items: stashItems },
+      { id: "settings", label: locale === "en" ? "Settings" : "設定", items: settingsItems },
       { id: "recent", label: locale === "en" ? "Recent" : "最近使用", items: recentItems },
     ];
   }, [
     dockPinnedItems,
     dockRecentItems,
-    dockStashItems,
-    handleStashSelectedTabs,
     locale,
     openCollectionTabs,
     pushDockRecentItem,
@@ -3570,7 +3487,7 @@ export function App() {
                   {dockSections.map((section, index) => (
                     <div key={section.id} className="flex items-center gap-4 overflow-visible">
                       {section.items.map((item) => {
-                        const compact = section.id === "recent" || section.id === "stash";
+                        const compact = section.id === "recent";
                         return (
                           <DockIconButton
                             key={item.id}
@@ -3633,13 +3550,6 @@ export function App() {
                           ? "Select all windows"
                           : "全選全部視窗"}
                     </button>
-                    <button
-                      className="rounded-xl bg-zinc-100 px-3 py-2 text-xs text-zinc-600 disabled:cursor-not-allowed disabled:opacity-40"
-                      onClick={handleClearSelectedWindowTabs}
-                      disabled={selectedWindowTabIds.size === 0}
-                    >
-                      {locale === "en" ? "Clear selected" : "清空選取"}
-                    </button>
                   </div>
                 </div>
 
@@ -3653,12 +3563,33 @@ export function App() {
                       windowGroups.map((windowItem, windowIndex) => {
                         const selectedCount = windowItem.tabs.filter((tab) => selectedWindowTabIds.has(tab.id)).length;
                         const allSelected = windowItem.tabs.length > 0 && selectedCount === windowItem.tabs.length;
+                        const isWindowCollapsed = collapsedWindowIds.has(windowItem.id);
                         return (
                           <div key={windowItem.id} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-2">
                             <div className="mb-2 flex items-center justify-between px-2">
-                              <div className="text-xs font-semibold text-zinc-500">
-                                {locale === "en" ? `Window ${windowIndex + 1}` : `視窗 ${windowIndex + 1}`} · {windowItem.tabs.length}
-                                {locale === "en" ? " tabs" : " 分頁"}
+                              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500">
+                                <button
+                                  type="button"
+                                  className="rounded-md p-1 text-zinc-500 hover:bg-white"
+                                  onClick={() => {
+                                    setCollapsedWindowIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(windowItem.id)) {
+                                        next.delete(windowItem.id);
+                                      } else {
+                                        next.add(windowItem.id);
+                                      }
+                                      return next;
+                                    });
+                                  }}
+                                  aria-label={isWindowCollapsed ? "展開視窗分頁" : "收合視窗分頁"}
+                                >
+                                  {isWindowCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                </button>
+                                <span>
+                                  {locale === "en" ? `Window ${windowIndex + 1}` : `視窗 ${windowIndex + 1}`} · {windowItem.tabs.length}
+                                  {locale === "en" ? " tabs" : " 分頁"}
+                                </span>
                               </div>
                               <button
                                 className="rounded-lg bg-white px-2 py-1 text-[11px] text-zinc-600 hover:bg-zinc-100"
@@ -3674,74 +3605,76 @@ export function App() {
                                     : "全選此視窗"}
                               </button>
                             </div>
-                            <div className="space-y-2">
-                              {windowItem.tabs.map((tab) => {
-                                const selected = selectedWindowTabIds.has(tab.id);
-                                const safeWindowTabFavicon = toSafeFaviconUrl(tab.url, tab.favIconUrl ?? null);
-                                return (
-                                  <div
-                                    key={tab.id}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => handleOpenWindowTab(tab.id, windowItem.id)}
-                                    onKeyDown={(event) => {
-                                      if (event.key === "Enter" || event.key === " ") {
-                                        event.preventDefault();
-                                        handleOpenWindowTab(tab.id, windowItem.id);
-                                      }
-                                    }}
-                                    draggable
-                                    onDragStart={(event) => {
-                                      event.dataTransfer.setData("application/x-toby-window-tab", String(tab.id));
-                                      event.dataTransfer.effectAllowed = "move";
-                                    }}
-                                    className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${tab.active
-                                      ? "border-zinc-900 bg-zinc-900 text-white"
-                                      : selected
-                                        ? "border-zinc-400 bg-zinc-100"
-                                        : "border-zinc-200 bg-white hover:bg-zinc-100"
-                                      }`}
-                                  >
-                                    <div className="pt-1">
-                                      <button
-                                        type="button"
-                                        className={`flex h-4 w-4 items-center justify-center rounded border ${selected
-                                          ? "border-zinc-900 bg-zinc-900 text-white"
-                                          : tab.active
-                                            ? "border-white/40 bg-white/10 text-white"
-                                            : "border-zinc-300 bg-white text-transparent"
-                                          }`}
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          toggleWindowTabSelected(tab.id);
-                                        }}
-                                        onMouseDown={(event) => event.stopPropagation()}
-                                        aria-label={selected ? "取消選取" : "選取分頁"}
-                                      >
-                                        <Check className="h-3 w-3" />
-                                      </button>
-                                    </div>
-                                    <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tab.active ? "bg-white/10" : "bg-white"}`}>
-                                      {safeWindowTabFavicon ? (
-                                        <img src={safeWindowTabFavicon} alt={tab.title} className="h-4 w-4 object-contain" />
-                                      ) : (
-                                        <Link2 className={`h-4 w-4 ${tab.active ? "text-white" : "text-zinc-500"}`} />
-                                      )}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-2">
-                                        {tab.active ? <CircleDot className="h-3.5 w-3.5 shrink-0 text-emerald-400" /> : null}
-                                        <div className="truncate text-sm font-medium">{tab.title}</div>
+                            {!isWindowCollapsed ? (
+                              <div className="space-y-2">
+                                {windowItem.tabs.map((tab) => {
+                                  const selected = selectedWindowTabIds.has(tab.id);
+                                  const safeWindowTabFavicon = toSafeFaviconUrl(tab.url, tab.favIconUrl ?? null);
+                                  return (
+                                    <div
+                                      key={tab.id}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() => handleOpenWindowTab(tab.id, windowItem.id)}
+                                      onKeyDown={(event) => {
+                                        if (event.key === "Enter" || event.key === " ") {
+                                          event.preventDefault();
+                                          handleOpenWindowTab(tab.id, windowItem.id);
+                                        }
+                                      }}
+                                      draggable
+                                      onDragStart={(event) => {
+                                        event.dataTransfer.setData("application/x-toby-window-tab", String(tab.id));
+                                        event.dataTransfer.effectAllowed = "move";
+                                      }}
+                                      className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${tab.active
+                                        ? "border-zinc-900 bg-zinc-900 text-white"
+                                        : selected
+                                          ? "border-zinc-400 bg-zinc-100"
+                                          : "border-zinc-200 bg-white hover:bg-zinc-100"
+                                        }`}
+                                    >
+                                      <div className="pt-1">
+                                        <button
+                                          type="button"
+                                          className={`flex h-4 w-4 items-center justify-center rounded border ${selected
+                                            ? "border-zinc-900 bg-zinc-900 text-white"
+                                            : tab.active
+                                              ? "border-white/40 bg-white/10 text-white"
+                                              : "border-zinc-300 bg-white text-transparent"
+                                            }`}
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            toggleWindowTabSelected(tab.id);
+                                          }}
+                                          onMouseDown={(event) => event.stopPropagation()}
+                                          aria-label={selected ? "取消選取" : "選取分頁"}
+                                        >
+                                          <Check className="h-3 w-3" />
+                                        </button>
                                       </div>
-                                      <div className={`mt-1 truncate text-xs ${tab.active ? "text-zinc-300" : "text-zinc-500"}`}>
-                                        {tab.url}
+                                      <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tab.active ? "bg-white/10" : "bg-white"}`}>
+                                        {safeWindowTabFavicon ? (
+                                          <img src={safeWindowTabFavicon} alt={tab.title} className="h-4 w-4 object-contain" />
+                                        ) : (
+                                          <Link2 className={`h-4 w-4 ${tab.active ? "text-white" : "text-zinc-500"}`} />
+                                        )}
                                       </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                          {tab.active ? <CircleDot className="h-3.5 w-3.5 shrink-0 text-emerald-400" /> : null}
+                                          <div className="truncate text-sm font-medium">{tab.title}</div>
+                                        </div>
+                                        <div className={`mt-1 truncate text-xs ${tab.active ? "text-zinc-300" : "text-zinc-500"}`}>
+                                          {tab.url}
+                                        </div>
+                                      </div>
+                                      <ChevronRight className={`mt-1 h-4 w-4 shrink-0 ${tab.active ? "text-zinc-300" : "text-zinc-400"}`} />
                                     </div>
-                                    <ChevronRight className={`mt-1 h-4 w-4 shrink-0 ${tab.active ? "text-zinc-300" : "text-zinc-400"}`} />
-                                  </div>
-                                );
-                              })}
-                            </div>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
                           </div>
                         );
                       })
@@ -3795,9 +3728,6 @@ export function App() {
               </button>
               <button className="rounded-full bg-zinc-100 px-3 py-1.5 hover:bg-zinc-200" onClick={() => setWindowMoveOpen(true)}>
                 移到空間
-              </button>
-              <button className="rounded-full bg-zinc-100 px-3 py-1.5 hover:bg-zinc-200" onClick={handleStashSelectedTabs}>
-                加入暫放
               </button>
             </div>
           </div>
@@ -3864,12 +3794,6 @@ export function App() {
                     {locale === "en" ? "Add to Dock" : "加入 Dock"}
                   </button>
                   <button
-                    className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900"
-                    onClick={handleStashSelectedTabs}
-                  >
-                    {locale === "en" ? "Stash" : "暫放"}
-                  </button>
-                  <button
                     className="flex items-center gap-2 text-rose-500 hover:text-rose-600"
                     onClick={handleDeleteSelectedTabs}
                   >
@@ -3902,12 +3826,6 @@ export function App() {
                     onClick={handleAddSelectedWindowTabsToDock}
                   >
                     {locale === "en" ? "Add to Dock" : "加入 Dock"}
-                  </button>
-                  <button
-                    className="flex items-center gap-2 text-zinc-700 hover:text-zinc-900"
-                    onClick={handleStashSelectedTabs}
-                  >
-                    {locale === "en" ? "Stash" : "暫放"}
                   </button>
                 </div>
               ) : null}
@@ -4073,8 +3991,8 @@ export function App() {
                   </div>
                   <div className="mt-2 text-zinc-500">
                     {locale === "en"
-                      ? `Current stash: ${dockStashItems.length}, recent: ${dockRecentItems.length}`
-                      : `目前暫放：${dockStashItems.length}，最近使用：${dockRecentItems.length}`}
+                      ? `Current recent history: ${dockRecentItems.length}`
+                      : `目前最近使用：${dockRecentItems.length}`}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-2">
@@ -4086,15 +4004,6 @@ export function App() {
                     }}
                   >
                     {locale === "en" ? "Clear pinned shortcuts" : "清空固定捷徑"}
-                  </button>
-                  <button
-                    className="rounded-lg border border-zinc-200 px-3 py-2 text-left text-xs hover:bg-zinc-50"
-                    onClick={() => {
-                      setDockStashItems([]);
-                      showUiNotice(locale === "en" ? "Stash cleared" : "已清空暫放");
-                    }}
-                  >
-                    {locale === "en" ? "Clear stash" : "清空暫放"}
                   </button>
                   <button
                     className="rounded-lg border border-zinc-200 px-3 py-2 text-left text-xs hover:bg-zinc-50"
