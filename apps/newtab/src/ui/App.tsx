@@ -64,10 +64,12 @@ import {
   PointerSensor,
   KeyboardSensor,
   closestCenter,
+  pointerWithin,
   useSensor,
   useSensors,
   DragEndEvent,
   useDroppable,
+  type CollisionDetection,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
@@ -1406,6 +1408,24 @@ export function App() {
     showUiNotice(locale === "en" ? "Created a new collection from tab." : "已從分頁快速建立新集合。");
   };
 
+  const handleDropRawToBlank = (dataTransfer: DataTransfer) => {
+    const savedRaw = dataTransfer.getData("application/x-toby-saved-tab");
+    if (savedRaw) {
+      handleDropSavedTabToBlank(savedRaw);
+      return true;
+    }
+    const windowRaw =
+      dataTransfer.getData("application/x-toby-window-tab") ||
+      dataTransfer.getData("application/x-toby-tab") ||
+      dataTransfer.getData("text/plain");
+    const tabId = Number(windowRaw);
+    if (Number.isFinite(tabId)) {
+      handleDropWindowTabToBlank(tabId);
+      return true;
+    }
+    return false;
+  };
+
   const addDockItemsFromTabs = (items: Array<{ title: string; url: string; faviconUrl?: string | null }>) => {
     if (items.length === 0) {
       return;
@@ -2462,7 +2482,18 @@ export function App() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+  const collisionDetectionStrategy: CollisionDetection = useCallback((args) => {
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) {
+      return pointerCollisions;
+    }
+    return closestCenter(args);
+  }, []);
   const dockDrop = useDroppable({ id: "dock-drop" });
+  const collectionBlankAreaDrop = useDroppable({
+    id: "collection-blank-area-drop",
+    data: { targetId: "collection-blank-area-drop", type: "collection-blank" },
+  });
   const collectionBlankDrop = useDroppable({
     id: "collection-blank-drop",
     data: { targetId: "collection-blank-drop", type: "collection-blank" },
@@ -2474,7 +2505,7 @@ export function App() {
     }
 
     const activeId = String(event.active.id);
-    const overData = event.over.data.current as { targetId?: string; placeAfter?: boolean } | undefined;
+    const overData = event.over.data.current as { targetId?: string; placeAfter?: boolean; type?: string } | undefined;
     const overId = String(overData?.targetId ?? event.over.id);
 
     const isSpace = spaces.some((space) => space.id === activeId);
@@ -2482,7 +2513,12 @@ export function App() {
     const isCollection = collections.some((collection) => collection.id === activeId);
     const isTab = tabs.some((tab) => tab.id === activeId);
     const isDockDrop = event.over.id === "dock-drop";
-    const isCollectionBlankDrop = event.over.id === "collection-blank-drop";
+    const isCollectionBlankDrop =
+      event.over.id === "collection-blank-drop" ||
+      event.over.id === "collection-blank-area-drop" ||
+      overData?.type === "collection-blank" ||
+      overData?.targetId === "collection-blank-drop" ||
+      overData?.targetId === "collection-blank-area-drop";
 
     if (isDockDrop && isTab) {
       const selectedTabs = selectedTabIds.has(activeId)
@@ -2559,7 +2595,7 @@ export function App() {
 
   return (
     <div className="h-[100vh] w-full overflow-x-auto bg-zinc-100 p-4 text-zinc-900">
-      <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext collisionDetection={collisionDetectionStrategy} sensors={sensors} onDragEnd={handleDragEnd}>
         <main
           className={`grid h-full min-h-full min-w-[1280px] gap-4 pb-4 ${
             leftCollapsed
@@ -2870,7 +2906,33 @@ export function App() {
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+            <div
+              ref={collectionBlankAreaDrop.setNodeRef}
+              className={`min-h-0 flex-1 overflow-y-auto px-5 py-5 ${
+                collectionBlankAreaDrop.isOver || blankCollectionDropActive ? "bg-rose-50/30" : ""
+              }`}
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setBlankCollectionDropActive(true);
+              }}
+              onDragEnter={() => setBlankCollectionDropActive(true)}
+              onDragLeave={(event) => {
+                const related = event.relatedTarget;
+                if (related instanceof Node && event.currentTarget.contains(related)) {
+                  return;
+                }
+                setBlankCollectionDropActive(false);
+              }}
+              onDrop={(event) => {
+                if (event.defaultPrevented) {
+                  return;
+                }
+                event.preventDefault();
+                setBlankCollectionDropActive(false);
+                handleDropRawToBlank(event.dataTransfer);
+              }}
+            >
               <SortableContext
                 items={sortedCollections.map((collection) => collection.id)}
                 strategy={verticalListSortingStrategy}
@@ -3108,20 +3170,9 @@ export function App() {
                   }}
                   onDrop={(event) => {
                     event.preventDefault();
+                    event.stopPropagation();
                     setBlankCollectionDropActive(false);
-                    const savedRaw = event.dataTransfer.getData("application/x-toby-saved-tab");
-                    if (savedRaw) {
-                      handleDropSavedTabToBlank(savedRaw);
-                      return;
-                    }
-                    const windowRaw =
-                      event.dataTransfer.getData("application/x-toby-window-tab") ||
-                      event.dataTransfer.getData("application/x-toby-tab") ||
-                      event.dataTransfer.getData("text/plain");
-                    const tabId = Number(windowRaw);
-                    if (Number.isFinite(tabId)) {
-                      handleDropWindowTabToBlank(tabId);
-                    }
+                    handleDropRawToBlank(event.dataTransfer);
                   }}
                 >
                   {locale === "en"
