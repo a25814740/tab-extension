@@ -30,6 +30,7 @@ export type DockItemInput = {
 
 export type AppActions = {
   hydrate: (snapshot: LocalStoreSnapshot) => void;
+  setTheme: (theme: AppState["cache"]["ui"]["theme"]) => void;
   setViewMode: (mode: AppState["cache"]["ui"]["viewMode"]) => void;
   setSelectedWorkspaceId: (workspaceId: string | null) => void;
   setSelectedSpaceId: (spaceId: string | null) => void;
@@ -333,6 +334,17 @@ export function createAppStore() {
         },
         rollbackStack: [],
       });
+    },
+    setTheme: (theme) => {
+      set((state) => ({
+        cache: {
+          ...state.cache,
+          ui: {
+            ...state.cache.ui,
+            theme,
+          },
+        },
+      }));
     },
     setViewMode: (mode) => {
       set((state) => ({

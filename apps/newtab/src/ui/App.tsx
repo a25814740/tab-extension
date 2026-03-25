@@ -50,10 +50,12 @@ import {
   Plus,
   Search,
   Settings,
+  Sun,
   Trash2,
   X,
   UserPlus,
   Pencil,
+  Moon,
 } from "lucide-react";
 import {
   DndContext,
@@ -166,7 +168,9 @@ export function App() {
   const clearDockItems = useAppStore((state) => state.clearDockItems);
   const viewMode = useAppStore((state) => state.cache.ui.viewMode);
   const sortMode = useAppStore((state) => state.cache.ui.sortMode);
+  const theme = useAppStore((state) => state.cache.ui.theme);
   const dockPinnedItems = useAppStore((state) => state.cache.dock.pinned);
+  const setTheme = useAppStore((state) => state.setTheme);
   const setViewMode = useAppStore((state) => state.setViewMode);
   const setSortMode = useAppStore((state) => state.setSortMode);
   const reorderSpaces = useAppStore((state) => state.reorderSpaces);
@@ -182,6 +186,12 @@ export function App() {
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [prefersDark, setPrefersDark] = useState<boolean>(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
   const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(new Set());
   const [selectedWindowTabIds, setSelectedWindowTabIds] = useState<Set<number>>(new Set());
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<Set<string>>(new Set());
@@ -273,6 +283,7 @@ export function App() {
   const DOCK_COLLAPSED_KEY = "toby_dock_collapsed_v1";
   const DOCK_RECENT_KEY = "toby_dock_recent_v1";
   const DOCK_PINNED_LIMIT_KEY = "toby_dock_pinned_limit_v1";
+  const DOCK_DEFAULT_SEEDED_KEY = "toby_dock_default_seeded_v1";
   const DOCK_LIMIT_MIN = 8;
   const DOCK_LIMIT_MAX = 120;
   const DOCK_RECENT_MAX = 40;
@@ -316,6 +327,12 @@ export function App() {
     return workspaceState ?? workspaces[0] ?? null;
   }, [selectedWorkspaceId, workspaceState, workspaces]);
   const activeWorkspaceId = selectedWorkspaceId ?? workspace?.id ?? null;
+  const effectiveTheme = useMemo<"light" | "dark">(() => {
+    if (theme === "system") {
+      return prefersDark ? "dark" : "light";
+    }
+    return theme;
+  }, [prefersDark, theme]);
   const effectiveSupabaseUrl = config?.supabaseUrl?.trim() || DEFAULT_SUPABASE_URL;
   const effectiveSupabaseAnonKey = config?.supabaseAnonKey?.trim() || DEFAULT_SUPABASE_ANON_KEY;
   if (typeof window !== "undefined") {
@@ -414,6 +431,34 @@ export function App() {
   useEffect(() => {
     void setLocal(DOCK_RECENT_KEY, dockRecentItems);
   }, [DOCK_RECENT_KEY, dockRecentItems]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const seeded = await getLocal<boolean>(DOCK_DEFAULT_SEEDED_KEY, false);
+        if (cancelled || seeded) {
+          return;
+        }
+        const currentPinned = appStore.getState().cache.dock.pinned;
+        if (currentPinned.length === 0) {
+          addDockItems([
+            { type: "tab", title: "Google", url: "https://www.google.com/", faviconUrl: "https://www.google.com/favicon.ico" },
+            { type: "tab", title: "Gmail", url: "https://mail.google.com/", faviconUrl: "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" },
+            { type: "tab", title: "Google Drive", url: "https://drive.google.com/", faviconUrl: "https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_32dp.png" },
+            { type: "tab", title: "Gemini", url: "https://gemini.google.com/", faviconUrl: "https://www.gstatic.com/lamda/images/gemini_sparkle_v002_192x192_6d4d6f1fef2f01f4.png" },
+          ]);
+        }
+        await setLocal(DOCK_DEFAULT_SEEDED_KEY, true);
+      })();
+    }, 1000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [DOCK_DEFAULT_SEEDED_KEY, addDockItems]);
   useEffect(() => {
     if (dockPinnedItems.length <= dockPinnedLimit) {
       return;
@@ -650,6 +695,20 @@ export function App() {
     window.history.replaceState({}, "", url.toString());
     setShareNotice(t("share.notice.detected"));
   }, [t]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = (event: MediaQueryListEvent) => setPrefersDark(event.matches);
+    setPrefersDark(media.matches);
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    }
+    media.addListener(onChange);
+    return () => media.removeListener(onChange);
+  }, []);
   useEffect(() => {
     setCollapsedWindowIds((prev) => {
       const validIds = new Set(windowGroups.map((windowItem) => windowItem.id));
@@ -2666,34 +2725,12 @@ export function App() {
         onClick: () => setDockSettingsOpen(true),
       },
     ];
-    const recentItems: DockEntry[] = dockRecentItems.map((item) => ({
-      id: item.id,
-      label: item.title,
-      text: item.title.slice(0, 2).toUpperCase(),
-      url: item.url ?? undefined,
-      faviconUrl: item.faviconUrl ?? null,
-      onClick: () => {
-        if (item.type === "collection" && item.collectionId) {
-          openCollectionTabs(item.collectionId);
-          return;
-        }
-        if (item.url) {
-          void openTabs([item.url]);
-        }
-      },
-      onRemove: () => {
-        setDockRecentItems((prev) => prev.filter((entry) => entry.id !== item.id));
-      },
-    }));
-
     return [
       { id: "fixed", label: locale === "en" ? "Pinned" : "固定捷徑", items: pinnedItems },
       { id: "settings", label: locale === "en" ? "Settings" : "設定", items: settingsItems },
-      { id: "recent", label: locale === "en" ? "Recent" : "最近使用", items: recentItems },
     ];
   }, [
     dockPinnedItems,
-    dockRecentItems,
     locale,
     openCollectionTabs,
     pushDockRecentItem,
@@ -2841,7 +2878,7 @@ export function App() {
   // Layout mirrors a Toby-like information hierarchy while keeping data wiring intact.
   if (!authUser) {
     return (
-      <div className="flex h-[100vh] w-full min-w-[1280px] items-center justify-center overflow-x-auto bg-zinc-100 p-4 text-zinc-900">
+      <div className={`flex h-[100vh] w-full min-w-[1280px] items-center justify-center overflow-x-auto bg-zinc-100 p-4 text-zinc-900 ${effectiveTheme === "dark" ? "theme-dark" : "theme-light"}`}>
         <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-md">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500 text-lg font-semibold text-white">
             OO
@@ -2861,7 +2898,7 @@ export function App() {
   }
 
   return (
-    <div className="h-[100vh] w-full overflow-x-auto overflow-y-hidden bg-zinc-100 text-zinc-900 p-4">
+    <div className={`h-[100vh] w-full overflow-x-auto overflow-y-hidden bg-zinc-100 text-zinc-900 p-4 ${effectiveTheme === "dark" ? "theme-dark" : "theme-light"}`}>
       <DndContext collisionDetection={collisionDetectionStrategy} sensors={sensors} onDragEnd={handleDragEnd}>
         <main
           className={`grid h-full min-h-full min-w-[1280px] gap-4 ${leftCollapsed
@@ -3140,6 +3177,14 @@ export function App() {
                       showSelectedIcon
                       buttonClassName="min-w-[130px]"
                     />
+                    <button
+                      className="flex h-9 w-9 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 border border-zinc-100"
+                      onClick={() => setTheme(effectiveTheme === "dark" ? "light" : "dark")}
+                      aria-label={effectiveTheme === "dark" ? "切換到淺色模式" : "切換到深色模式"}
+                      title={effectiveTheme === "dark" ? "切換到淺色模式" : "切換到深色模式"}
+                    >
+                      {effectiveTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    </button>
                     <button
                       className="flex h-9 w-9 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 border border-zinc-100"
                       onClick={() => setSearchOpen((prev) => !prev)}
@@ -3487,7 +3532,7 @@ export function App() {
                   {dockSections.map((section, index) => (
                     <div key={section.id} className="flex items-center gap-4 overflow-visible">
                       {section.items.map((item) => {
-                        const compact = section.id === "recent";
+                        const compact = false;
                         return (
                           <DockIconButton
                             key={item.id}
@@ -3989,11 +4034,6 @@ export function App() {
                       ? `Current pinned shortcuts: ${dockPinnedItems.length}`
                       : `目前固定捷徑：${dockPinnedItems.length}`}
                   </div>
-                  <div className="mt-2 text-zinc-500">
-                    {locale === "en"
-                      ? `Current recent history: ${dockRecentItems.length}`
-                      : `目前最近使用：${dockRecentItems.length}`}
-                  </div>
                 </div>
                 <div className="grid grid-cols-1 gap-2">
                   <button
@@ -4004,15 +4044,6 @@ export function App() {
                     }}
                   >
                     {locale === "en" ? "Clear pinned shortcuts" : "清空固定捷徑"}
-                  </button>
-                  <button
-                    className="rounded-lg border border-zinc-200 px-3 py-2 text-left text-xs hover:bg-zinc-50"
-                    onClick={() => {
-                      setDockRecentItems([]);
-                      showUiNotice(locale === "en" ? "Recent history cleared" : "已清空最近使用");
-                    }}
-                  >
-                    {locale === "en" ? "Clear recent history" : "清空最近使用"}
                   </button>
                 </div>
               </div>
