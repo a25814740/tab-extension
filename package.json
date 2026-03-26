@@ -1,5 +1,5 @@
 {
-  "name": "toby-like-extension",
+  "name": "taboard-extension",
   "private": true,
   "packageManager": "pnpm@9.12.0",
   "scripts": {
@@ -7,7 +7,11 @@
     "test": "pnpm -r test",
     "build": "pnpm -r build",
     "dev:newtab": "pnpm --filter @toby/newtab dev",
+    "dev:preview": "pnpm --filter @toby/newtab dev:preview",
+    "dev:creator": "pnpm --filter @toby/creator dev",
     "dev:sidepanel": "pnpm --filter @toby/sidepanel dev",
+    "build:creator": "pnpm --filter @toby/creator build",
+    "build:preview": "pnpm --filter @toby/newtab build:preview",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

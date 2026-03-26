@@ -8,5 +8,7 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "../../extension/newtab"),
     emptyOutDir: true,
+    sourcemap: true,
+    minify: false,
   },
 });

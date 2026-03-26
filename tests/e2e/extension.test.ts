@@ -11,5 +11,5 @@ test("new tab loads dashboard", async ({ context }) => {
   const background = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
   const extensionId = new URL(background.url()).host;
   await page.goto(`chrome-extension://${extensionId}/newtab/index.html`);
-  await expect(page.getByText("Toby-like Dashboard")).toBeVisible();
+  await expect(page.getByText("Taboard｜分頁與書籤儀錶板")).toBeVisible();
 });

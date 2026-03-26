@@ -56,3 +56,10 @@ This file tracks incomplete work. Keep entries short and actionable.
 - [ ] 串接 PAYUNi 結帳（目前僅 UI 占位與提示）
 - [ ] 決定並實作 Pro 月付方案卡片／比較表（或移除 `pro_monthly` 相關程式碼）
 - [ ] 首次登入時若沒有任何 Workspace，導引到建立流程（移除 sample data 後的空白體驗）
+
+## Theme Store / Template Store
+- [x] 帳號選單整合 Theme 模式切換（淺色/深色/系統）
+- [x] 主題商店第一版 UI（主題 + 模板 + 自訂配色）
+- [x] 建立 marketplace 基礎 migration（assets / purchases / installs + RLS）
+- [ ] 建立商店 API（列表、購買、安裝、上架）
+- [ ] 串接主題資產購買流程與分潤對帳

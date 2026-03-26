@@ -5,9 +5,14 @@ import type { SyncClient } from "../sync/syncEngine";
 describe("appStore sync rollback", () => {
   it("rolls back when sync fails", async () => {
     const store = createAppStore();
+    store.getState().addWorkspace("Workspace");
+    store.getState().addSpace("Space");
+    store.getState().addCollection("Collection");
+    const collectionId = store.getState().collections[0]?.id;
+    expect(collectionId).toBeTruthy();
     const initialCount = store.getState().tabs.length;
 
-    store.getState().addTabToCollection(store.getState().collections[0].id, {
+    store.getState().addTabToCollection(collectionId!, {
       title: "Test",
       url: "https://example.com",
     });

@@ -8,3 +8,5 @@ extension/sidepanel/assets/
 extension/options/
 extension/newtab/
 extension/sidepanel/
+.vercel
+.env*.local

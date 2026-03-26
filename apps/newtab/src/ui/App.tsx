@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import { getAllWindowsWithTabs, openTabs, focusTab, closeTabs, getLocal, setLocal } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
 import { CollectionCard } from "./CollectionCard";
@@ -27,6 +27,16 @@ import { SelectMenu } from "./SelectMenu";
 import { manualDriveSync, startupDriveSync } from "../sync/driveSync";
 import { DockIconButton } from "./DockIconButton";
 import { EntityMenuButton } from "./EntityMenuButton";
+import { ThemeStoreModal } from "./ThemeStoreModal";
+import { usePreviewThemeBridge } from "./usePreviewThemeBridge";
+import {
+  DEFAULT_TEMPLATE_PRESET_ID,
+  DEFAULT_THEME_PRESET_ID,
+  resolveTemplatePreset,
+  resolveThemePreset,
+  type CustomThemeDraft,
+  type ThemeTokenSet,
+} from "../theme/catalog";
 import {
   ArrowDownAZ,
   Building2,
@@ -45,17 +55,16 @@ import {
   Layers2,
   Link2,
   List,
+  Loader2,
   PanelRightClose,
   PanelRightOpen,
   Plus,
   Search,
   Settings,
-  Sun,
   Trash2,
   X,
   UserPlus,
   Pencil,
-  Moon,
 } from "lucide-react";
 import {
   DndContext,
@@ -78,7 +87,7 @@ type DockEntry = {
   label: string;
   icon?: ReactNode;
   text?: string;
-  url?: string;
+  url?: string | undefined;
   onClick: () => void;
   faviconUrl?: string | null;
   onRemove?: () => void;
@@ -97,12 +106,33 @@ type DockQuickItem = {
   faviconUrl?: string | null;
   createdAt: string;
 };
+type ThemeStoreState = {
+  themePresetId: string;
+  templatePresetId: string;
+  customTheme: CustomThemeDraft | null;
+};
 
 const PAYUNI_DRY_RUN_KEY = "toby_payuni_dry_run_v1";
 const PAYUNI_REQUIRE_CONFIRM_KEY = "toby_payuni_require_confirm_v1";
+const THEME_STORE_KEY = "toby_theme_store_v1";
+
+function extractCssBackgroundUrl(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+  const match = value.match(/url\((['"]?)(.*?)\1\)/i);
+  if (!match?.[2]) {
+    return null;
+  }
+  return match[2].trim() || null;
+}
 
 export function App() {
+  const previewEnabledFlag =
+    typeof window !== "undefined" &&
+    (window as { __TABOARD_PREVIEW__?: boolean }).__TABOARD_PREVIEW__ === true;
   useLocalCacheSync();
+  const { previewEnabled, previewTokens, previewTheme } = usePreviewThemeBridge();
   const toWindowTab = (tab: {
     id: number;
     title: string;
@@ -124,8 +154,11 @@ export function App() {
   };
 
   useEffect(() => {
+    if (previewEnabledFlag) {
+      return;
+    }
     void startupDriveSync();
-  }, []);
+  }, [previewEnabledFlag]);
   const { t, locale } = useLocale();
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
   const [upgradeNotice, setUpgradeNotice] = useState("");
@@ -183,6 +216,11 @@ export function App() {
   const selectedWorkspaceId = useAppStore((state) => state.cache.selectedWorkspaceId);
   const tabs = useAppStore((state) => state.tabs);
   const selectedCollectionId = useAppStore((state) => state.cache.selectedCollectionId ?? null);
+  const [themePresetId, setThemePresetId] = useState(DEFAULT_THEME_PRESET_ID);
+  const [templatePresetId, setTemplatePresetId] = useState(DEFAULT_TEMPLATE_PRESET_ID);
+  const [customThemeDraft, setCustomThemeDraft] = useState<CustomThemeDraft | null>(null);
+  const [themeApplying, setThemeApplying] = useState(false);
+  const [themeStoreOpen, setThemeStoreOpen] = useState(false);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -192,6 +230,7 @@ export function App() {
     }
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
+  // preview bridge now handled by usePreviewThemeBridge
   const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(new Set());
   const [selectedWindowTabIds, setSelectedWindowTabIds] = useState<Set<number>>(new Set());
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<Set<string>>(new Set());
@@ -287,6 +326,7 @@ export function App() {
   const DOCK_LIMIT_MIN = 8;
   const DOCK_LIMIT_MAX = 120;
   const DOCK_RECENT_MAX = 40;
+  const themeImageCacheRef = useRef<Set<string>>(new Set());
 
   const toDockKey = useCallback((item: Pick<DockQuickItem, "type" | "url" | "collectionId" | "title">) => {
     return `${item.type}:${item.url ?? item.collectionId ?? item.title}`;
@@ -319,6 +359,31 @@ export function App() {
       createdAt,
     };
   }, []);
+  const normalizeThemeStoreState = useCallback((value: unknown): ThemeStoreState => {
+    if (!value || typeof value !== "object") {
+      return {
+        themePresetId: DEFAULT_THEME_PRESET_ID,
+        templatePresetId: DEFAULT_TEMPLATE_PRESET_ID,
+        customTheme: null,
+      };
+    }
+    const candidate = value as Record<string, unknown>;
+    const customTheme =
+      candidate.customTheme && typeof candidate.customTheme === "object"
+        ? (candidate.customTheme as CustomThemeDraft)
+        : null;
+    return {
+      themePresetId:
+        typeof candidate.themePresetId === "string" && candidate.themePresetId.trim()
+          ? candidate.themePresetId
+          : DEFAULT_THEME_PRESET_ID,
+      templatePresetId:
+        typeof candidate.templatePresetId === "string" && candidate.templatePresetId.trim()
+          ? candidate.templatePresetId
+          : DEFAULT_TEMPLATE_PRESET_ID,
+      customTheme,
+    };
+  }, []);
 
   const workspace = useMemo(() => {
     if (selectedWorkspaceId) {
@@ -328,11 +393,139 @@ export function App() {
   }, [selectedWorkspaceId, workspaceState, workspaces]);
   const activeWorkspaceId = selectedWorkspaceId ?? workspace?.id ?? null;
   const effectiveTheme = useMemo<"light" | "dark">(() => {
+    if (previewTheme) {
+      return previewTheme;
+    }
     if (theme === "system") {
       return prefersDark ? "dark" : "light";
     }
     return theme;
-  }, [prefersDark, theme]);
+  }, [prefersDark, previewTheme, theme]);
+  const activeThemePreset = useMemo(() => resolveThemePreset(themePresetId), [themePresetId]);
+  const activeTemplatePreset = useMemo(() => resolveTemplatePreset(templatePresetId), [templatePresetId]);
+  const previewThemeTokens = useMemo<ThemeTokenSet>(
+    () => activeThemePreset.tokens[effectiveTheme],
+    [activeThemePreset, effectiveTheme]
+  );
+  const resolvedThemeTokens = useMemo<ThemeTokenSet>(() => {
+    if (!customThemeDraft) {
+      return previewThemeTokens;
+    }
+    return {
+      ...previewThemeTokens,
+      ...customThemeDraft,
+    };
+  }, [customThemeDraft, previewThemeTokens]);
+  const appliedThemeTokens = useMemo<ThemeTokenSet>(() => {
+    if (!previewTokens) {
+      return resolvedThemeTokens;
+    }
+    return {
+      ...resolvedThemeTokens,
+      ...previewTokens,
+    };
+  }, [previewTokens, resolvedThemeTokens]);
+  const rootThemeStyle = useMemo<CSSProperties>(
+    () => ({
+      background: appliedThemeTokens.background,
+      color: appliedThemeTokens.text,
+    }),
+    [appliedThemeTokens]
+  );
+  const leftPanelThemeStyle = useMemo<CSSProperties>(
+    () => ({
+      background: appliedThemeTokens.leftPanelBackground ?? appliedThemeTokens.panel,
+      borderColor: appliedThemeTokens.border,
+    }),
+    [appliedThemeTokens]
+  );
+  const mainPanelThemeStyle = useMemo<CSSProperties>(
+    () => ({
+      background: appliedThemeTokens.mainPanelBackground ?? appliedThemeTokens.panel,
+      borderColor: appliedThemeTokens.border,
+    }),
+    [appliedThemeTokens]
+  );
+  const rightPanelThemeStyle = useMemo<CSSProperties>(
+    () => ({
+      background: appliedThemeTokens.rightPanelBackground ?? appliedThemeTokens.panel,
+      borderColor: appliedThemeTokens.border,
+    }),
+    [appliedThemeTokens]
+  );
+  const dockThemeStyle = useMemo<CSSProperties>(
+    () => ({
+      background: appliedThemeTokens.panelMuted,
+      borderColor: appliedThemeTokens.border,
+    }),
+    [appliedThemeTokens]
+  );
+  const preloadThemeBackgrounds = useCallback(async (tokens: ThemeTokenSet) => {
+    const candidates = [
+      tokens.background,
+      tokens.panel,
+      tokens.leftPanelBackground ?? tokens.panel,
+      tokens.mainPanelBackground ?? tokens.panel,
+      tokens.rightPanelBackground ?? tokens.panel,
+      tokens.panelMuted,
+    ];
+    const urls = candidates
+      .map((value) => extractCssBackgroundUrl(value))
+      .filter((value): value is string => Boolean(value))
+      .filter((value) => !themeImageCacheRef.current.has(value));
+
+    if (urls.length === 0) {
+      return;
+    }
+
+    await Promise.all(
+      urls.map(
+        (url) =>
+          new Promise<void>((resolve) => {
+            const image = new Image();
+            image.onload = () => resolve();
+            image.onerror = () => resolve();
+            image.src = url;
+          })
+      )
+    );
+
+    urls.forEach((url) => themeImageCacheRef.current.add(url));
+  }, []);
+  const handleSelectTheme = useCallback(
+    async (nextThemeId: string) => {
+      const nextPreset = resolveThemePreset(nextThemeId);
+      const nextTokens = nextPreset.tokens[effectiveTheme];
+      setThemeApplying(true);
+      try {
+        await preloadThemeBackgrounds(nextTokens);
+        setThemePresetId(nextThemeId);
+      } finally {
+        window.setTimeout(() => setThemeApplying(false), 120);
+      }
+    },
+    [effectiveTheme, preloadThemeBackgrounds]
+  );
+  const handleSaveCustomTheme = useCallback(
+    async (draft: CustomThemeDraft | null) => {
+      const mergedTokens: ThemeTokenSet = {
+        ...previewThemeTokens,
+        ...(draft ?? {}),
+      };
+      setThemeApplying(true);
+      try {
+        await preloadThemeBackgrounds(mergedTokens);
+        setCustomThemeDraft(draft);
+      } finally {
+        window.setTimeout(() => setThemeApplying(false), 120);
+      }
+    },
+    [preloadThemeBackgrounds, previewThemeTokens]
+  );
+  const layoutGapClass =
+    activeTemplatePreset.density === "focused" ? "gap-5" : activeTemplatePreset.density === "compact" ? "gap-2" : "gap-4";
+  const shellPaddingClass =
+    activeTemplatePreset.density === "focused" ? "p-5" : activeTemplatePreset.density === "compact" ? "p-3" : "p-4";
   const effectiveSupabaseUrl = config?.supabaseUrl?.trim() || DEFAULT_SUPABASE_URL;
   const effectiveSupabaseAnonKey = config?.supabaseAnonKey?.trim() || DEFAULT_SUPABASE_ANON_KEY;
   if (typeof window !== "undefined") {
@@ -355,13 +548,37 @@ export function App() {
     };
   }
   const supabaseClient = useMemo(() => {
-    if (!effectiveSupabaseUrl || !effectiveSupabaseAnonKey) {
+    if (previewEnabled || !effectiveSupabaseUrl || !effectiveSupabaseAnonKey) {
       return null;
     }
     // Supabase types are intentionally untyped here to keep the UI demo buildable without schema bindings.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return createSupabaseClient({ url: effectiveSupabaseUrl, anonKey: effectiveSupabaseAnonKey }) as any;
-  }, [effectiveSupabaseAnonKey, effectiveSupabaseUrl]);
+  }, [effectiveSupabaseAnonKey, effectiveSupabaseUrl, previewEnabled]);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const stored = await getLocal<unknown>(THEME_STORE_KEY, null);
+      if (!active) {
+        return;
+      }
+      const normalized = normalizeThemeStoreState(stored);
+      setThemePresetId(normalized.themePresetId);
+      setTemplatePresetId(normalized.templatePresetId);
+      setCustomThemeDraft(normalized.customTheme);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [normalizeThemeStoreState]);
+  useEffect(() => {
+    const payload: ThemeStoreState = {
+      themePresetId,
+      templatePresetId,
+      customTheme: customThemeDraft,
+    };
+    void setLocal(THEME_STORE_KEY, payload);
+  }, [customThemeDraft, templatePresetId, themePresetId]);
   useEffect(() => {
     if (authUser || !supabaseClient) {
       return;
@@ -388,6 +605,31 @@ export function App() {
       cancelled = true;
     };
   }, [AUTH_USER_KEY, authUser, supabaseClient]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const root = document.body;
+    const applyTooltipTitles = () => {
+      root.querySelectorAll<HTMLButtonElement>("button[aria-label]").forEach((button) => {
+        const label = button.getAttribute("aria-label")?.trim();
+        if (!label || button.getAttribute("title")) {
+          return;
+        }
+        button.setAttribute("title", label);
+      });
+    };
+    applyTooltipTitles();
+    const observer = new MutationObserver(() => applyTooltipTitles());
+    observer.observe(root, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["aria-label", "title"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -553,7 +795,7 @@ export function App() {
   );
 
   useEffect(() => {
-    if (viewMode !== "image") {
+    if (previewEnabled || viewMode !== "image") {
       return;
     }
     const candidates = scopedTabs
@@ -1287,10 +1529,19 @@ export function App() {
 
   const tabGridClass =
     viewMode === "list"
-      ? "grid grid-cols-1 gap-3"
-      : viewMode === "image"
-        ? "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]"
-        : "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]";
+      ? "grid grid-cols-1 gap-3 w-full"
+      : "grid gap-3 w-full";
+  // Use inline style to guarantee grid-template-columns is applied in production builds.
+  const tabGridStyle = useMemo(() => {
+    if (viewMode === "list") {
+      return undefined;
+    }
+    const minWidth =
+      viewMode === "image" ? activeTemplatePreset.cardMinWidth.image : activeTemplatePreset.cardMinWidth.other;
+    return {
+      gridTemplateColumns: `repeat(auto-fill,minmax(${minWidth}px,1fr))`,
+    } as const;
+  }, [activeTemplatePreset.cardMinWidth.image, activeTemplatePreset.cardMinWidth.other, viewMode]);
 
   const filteredCollections = useMemo(() => {
     const scopedBySpace = activeSpaceId
@@ -1367,6 +1618,9 @@ export function App() {
   );
 
   useEffect(() => {
+    if (previewEnabled) {
+      return;
+    }
     const provider = createRuleBasedProvider();
     const run = async () => {
       const next: Record<string, string> = {};
@@ -1378,7 +1632,7 @@ export function App() {
       setSummaries(next);
     };
     void run();
-  }, [scopedCollections, tabsByCollection]);
+  }, [previewEnabled, scopedCollections, tabsByCollection]);
 
   useEffect(() => {
     if (!searchOpen) {
@@ -2875,10 +3129,13 @@ export function App() {
     }
   };
 
-  // Layout mirrors a Toby-like information hierarchy while keeping data wiring intact.
+  // Layout mirrors the Taboard information hierarchy while keeping data wiring intact.
   if (!authUser) {
     return (
-      <div className={`flex h-[100vh] w-full min-w-[1280px] items-center justify-center overflow-x-auto bg-zinc-100 p-4 text-zinc-900 ${effectiveTheme === "dark" ? "theme-dark" : "theme-light"}`}>
+      <div
+        className={`flex h-[100vh] w-full min-w-[1280px] items-center justify-center overflow-x-auto text-zinc-900 ${shellPaddingClass} ${effectiveTheme === "dark" ? "theme-dark" : "theme-light"}`}
+        style={rootThemeStyle}
+      >
         <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-md">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500 text-lg font-semibold text-white">
             OO
@@ -2898,10 +3155,13 @@ export function App() {
   }
 
   return (
-    <div className={`h-[100vh] w-full overflow-x-auto overflow-y-hidden bg-zinc-100 text-zinc-900 p-4 ${effectiveTheme === "dark" ? "theme-dark" : "theme-light"}`}>
+    <div
+      className={`h-[100vh] w-full overflow-x-auto overflow-y-hidden text-zinc-900 ${shellPaddingClass} ${effectiveTheme === "dark" ? "theme-dark" : "theme-light"}`}
+      style={rootThemeStyle}
+    >
       <DndContext collisionDetection={collisionDetectionStrategy} sensors={sensors} onDragEnd={handleDragEnd}>
         <main
-          className={`grid h-full min-h-full min-w-[1280px] gap-4 ${leftCollapsed
+          className={`grid h-full min-h-full min-w-[1280px] ${layoutGapClass} ${leftCollapsed
             ? "grid-cols-[84px_minmax(420px,1fr)_360px]"
             : rightCollapsed
               ? "grid-cols-[280px_minmax(420px,1fr)_72px]"
@@ -2931,7 +3191,13 @@ export function App() {
               {uiNotice}
             </div>
           ) : null}
-          <aside className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-md">
+          {themeApplying ? (
+            <div className="fixed left-1/2 top-28 z-[9999] flex -translate-x-1/2 items-center gap-2 rounded-full border border-zinc-200 bg-white/95 px-4 py-2 text-xs text-zinc-700 shadow-lg backdrop-blur">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span>{locale === "en" ? "Applying theme..." : "主題套用中..."}</span>
+            </div>
+          ) : null}
+          <aside className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 shadow-md" style={leftPanelThemeStyle}>
             <div className="border-b border-zinc-200 px-4 py-4">
               <div className="flex items-center justify-between gap-2">
                 {!leftCollapsed ? <div className="text-xs font-semibold tracking-wide text-zinc-500">組織</div> : null}
@@ -2939,6 +3205,7 @@ export function App() {
                   onClick={() => setLeftCollapsed((prev) => !prev)}
                   className="rounded-xl p-2 text-zinc-500 hover:bg-zinc-100"
                   aria-label={leftCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  title={leftCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                   <Columns3 className="h-4 w-4" />
                 </button>
@@ -2957,10 +3224,20 @@ export function App() {
                   </button>
 
                   <div className="absolute right-2 top-[85%] z-10 flex -translate-y-1/2 items-center gap-1 [bottom:auto]">
-                    <button className="rounded-xl p-2 text-zinc-500 transition hover:bg-white" onClick={handleCreateWorkspace}>
+                    <button
+                      className="rounded-xl p-2 text-zinc-500 transition hover:bg-white"
+                      onClick={handleCreateWorkspace}
+                      aria-label={locale === "en" ? "Create organization" : "新增組織"}
+                      title={locale === "en" ? "Create organization" : "新增組織"}
+                    >
                       <Plus className="h-4 w-4" />
                     </button>
-                    <button className="rounded-xl p-2 text-zinc-500 transition hover:bg-white" onClick={() => setOrgSettingsOpen(true)}>
+                    <button
+                      className="rounded-xl p-2 text-zinc-500 transition hover:bg-white"
+                      onClick={() => setOrgSettingsOpen(true)}
+                      aria-label={locale === "en" ? "Organization settings" : "組織設定"}
+                      title={locale === "en" ? "Organization settings" : "組織設定"}
+                    >
                       <Settings className="h-4 w-4" />
                     </button>
                     <button
@@ -2969,6 +3246,8 @@ export function App() {
                         setOrgSettingsTab("members");
                         setOrgSettingsOpen(true);
                       }}
+                      aria-label={locale === "en" ? "Invite members" : "邀請成員"}
+                      title={locale === "en" ? "Invite members" : "邀請成員"}
                     >
                       <UserPlus className="h-4 w-4" />
                     </button>
@@ -3004,7 +3283,11 @@ export function App() {
                 </div>
               ) : (
                 <div className="mt-3 flex justify-center">
-                  <button className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-white">
+                  <button
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-white"
+                    aria-label={workspace?.name ?? (locale === "en" ? "Organization" : "組織")}
+                    title={workspace?.name ?? (locale === "en" ? "Organization" : "組織")}
+                  >
                     <Building2 className="h-5 w-5" />
                   </button>
                 </div>
@@ -3080,31 +3363,28 @@ export function App() {
                 ))}
               </div>
             </div>
-            <div className="mt-auto space-y-2 border-t border-zinc-200 px-4 pb-4 pt-3 text-xs text-zinc-500">
-              {!leftCollapsed ? <div>{t("rail.account")}</div> : null}
-              <div className={`flex items-center ${leftCollapsed ? "justify-center" : "justify-between"}`}>
-                <button className="rounded-xl bg-zinc-100 px-2 py-1 text-[10px] text-zinc-600" onClick={handleSync}>
-                  {leftCollapsed ? "⟳" : t("app.syncNow")}
-                </button>
-              </div>
-              {!leftCollapsed ? (
-                <button
-                  className="w-full rounded-xl border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-600"
-                  onClick={() => setPricingOpen(true)}
-                >
-                  {locale === "en" ? "Upgrade plan" : "升級方案"}
-                </button>
-              ) : null}
-              <div className={`flex items-center ${leftCollapsed ? "justify-center" : "justify-between"}`}>
-                <div className="w-12">
-                  <AuthMiniPanel />
+            <div className="mt-auto px-4 pb-4 pt-3 text-xs text-zinc-500">
+                <div className={`flex items-center ${leftCollapsed ? "justify-center" : "justify-stretch"}`}>
+                <div className={leftCollapsed ? "w-12" : "w-full"}>
+                  <AuthMiniPanel
+                    collapsed={leftCollapsed}
+                    onSync={handleSync}
+                    onUpgrade={() => setPricingOpen(true)}
+                    themeMode={theme}
+                    effectiveTheme={effectiveTheme}
+                    onSetThemeMode={setTheme}
+                    onOpenThemeStore={() => setThemeStoreOpen(true)}
+                  />
                 </div>
               </div>
             </div>
           </aside>
 
           <main className="flex h-full min-h-0 flex-col">
-            <div className="flex flex-col flex-1 overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-md">
+            <div
+              className="flex flex-col flex-1 overflow-hidden rounded-[28px] border border-zinc-200 shadow-md"
+              style={mainPanelThemeStyle}
+            >
               <div className="border-b border-zinc-200 px-6 py-5">
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="text-sm font-semibold text-zinc-500">
@@ -3179,16 +3459,9 @@ export function App() {
                     />
                     <button
                       className="flex h-9 w-9 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 border border-zinc-100"
-                      onClick={() => setTheme(effectiveTheme === "dark" ? "light" : "dark")}
-                      aria-label={effectiveTheme === "dark" ? "切換到淺色模式" : "切換到深色模式"}
-                      title={effectiveTheme === "dark" ? "切換到淺色模式" : "切換到深色模式"}
-                    >
-                      {effectiveTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    </button>
-                    <button
-                      className="flex h-9 w-9 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 border border-zinc-100"
                       onClick={() => setSearchOpen((prev) => !prev)}
                       aria-label={t("nav.search")}
+                      title={t("nav.search")}
                     >
                       <Search className="h-4 w-4" />
                     </button>
@@ -3400,7 +3673,7 @@ export function App() {
                                 items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
                                 strategy={verticalListSortingStrategy}
                               >
-                                <div className={`mt-4 ${tabGridClass}`}>
+                                <div className={`mt-4 ${tabGridClass}`} style={tabGridStyle}>
                                   {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
                                     <div key={tab.id} className="group/tab relative">
                                       <TabRow
@@ -3513,8 +3786,9 @@ export function App() {
               >
                 <div
                   ref={dockDrop.setNodeRef}
-                  className={`mt-2 flex flex-wrap items-center justify-center gap-4 overflow-visible rounded-[24px] border border-zinc-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur ${dockDropActive || dockDrop.isOver ? "ring-2 ring-zinc-300" : ""
+                  className={`mt-2 flex flex-wrap items-center justify-center gap-4 overflow-visible rounded-[24px] border border-zinc-200 px-5 py-4 shadow-lg backdrop-blur ${dockDropActive || dockDrop.isOver ? "ring-2 ring-zinc-300" : ""
                     }`}
+                  style={dockThemeStyle}
                   onDragOver={(event) => {
                     event.preventDefault();
                     event.dataTransfer.dropEffect = "copy";
@@ -3556,8 +3830,9 @@ export function App() {
           </main>
 
           <section
-            className={`flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-md ${rightCollapsed ? "w-[72px]" : "w-auto"
+            className={`flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-200 shadow-md ${rightCollapsed ? "w-[72px]" : "w-auto"
               }`}
+            style={rightPanelThemeStyle}
           >
             <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-5">
               {!rightCollapsed ? (
@@ -3570,6 +3845,7 @@ export function App() {
                 onClick={() => setRightCollapsed((prev) => !prev)}
                 className="rounded-2xl bg-zinc-100 p-2 text-zinc-500"
                 aria-label={rightCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={rightCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {rightCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
               </button>
@@ -3628,6 +3904,7 @@ export function App() {
                                     });
                                   }}
                                   aria-label={isWindowCollapsed ? "展開視窗分頁" : "收合視窗分頁"}
+                                  title={isWindowCollapsed ? "展開視窗分頁" : "收合視窗分頁"}
                                 >
                                   {isWindowCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                                 </button>
@@ -3694,6 +3971,7 @@ export function App() {
                                           }}
                                           onMouseDown={(event) => event.stopPropagation()}
                                           aria-label={selected ? "取消選取" : "選取分頁"}
+                                          title={selected ? "取消選取" : "選取分頁"}
                                         >
                                           <Check className="h-3 w-3" />
                                         </button>
@@ -3738,6 +4016,8 @@ export function App() {
                       onMouseDown={() => toggleWindowTabSelected(tab.id)}
                       className={`relative flex h-12 w-12 items-center justify-center rounded-2xl ${selectedWindowTabIds.has(tab.id) ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-500"
                         }`}
+                      aria-label={`${locale === "en" ? "Open tab" : "開啟分頁"}：${tab.title}`}
+                      title={`${locale === "en" ? "Open tab" : "開啟分頁"}：${tab.title}`}
                     >
                       {safeWindowTabFavicon ? (
                         <img src={safeWindowTabFavicon} alt={tab.title} className="h-4 w-4 object-contain" />
@@ -3760,6 +4040,8 @@ export function App() {
               <button
                 className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100"
                 onClick={() => setSelectedWindowTabIds(new Set())}
+                aria-label={locale === "en" ? "Close quick actions" : "關閉快速操作"}
+                title={locale === "en" ? "Close quick actions" : "關閉快速操作"}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -3884,6 +4166,18 @@ export function App() {
             void handleStartCheckout(planId);
             setPricingOpen(false);
           }}
+        />
+        <ThemeStoreModal
+          open={themeStoreOpen}
+          selectedThemeId={themePresetId}
+          selectedTemplateId={templatePresetId}
+          previewTokens={previewThemeTokens}
+          customTheme={customThemeDraft}
+          isApplying={themeApplying}
+          onClose={() => setThemeStoreOpen(false)}
+          onSelectTheme={handleSelectTheme}
+          onSelectTemplate={setTemplatePresetId}
+          onSaveCustomTheme={handleSaveCustomTheme}
         />
         {bulkMoveOpen ? (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setBulkMoveOpen(false)}>
@@ -4108,7 +4402,14 @@ export function App() {
                   >
                     {locale === "en" ? "Clear" : "清空"}
                   </button>
-                  <button className="text-zinc-500 hover:text-zinc-700" onClick={() => setDedupeOpen(false)}>✕</button>
+                  <button
+                    className="text-zinc-500 hover:text-zinc-700"
+                    onClick={() => setDedupeOpen(false)}
+                    aria-label={locale === "en" ? "Close duplicate panel" : "關閉重複分頁面板"}
+                    title={locale === "en" ? "Close duplicate panel" : "關閉重複分頁面板"}
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
               <div className="h-[calc(90vh-120px)] overflow-y-auto px-6 py-4 text-xs text-zinc-700 scrollbar-hide">
@@ -4184,7 +4485,14 @@ export function App() {
               >
                 {locale === "en" ? "Jump" : "跳轉"}
               </button>
-              <button className="text-zinc-400 hover:text-zinc-700" onClick={() => setMoveNotice(null)}>✕</button>
+              <button
+                className="text-zinc-400 hover:text-zinc-700"
+                onClick={() => setMoveNotice(null)}
+                aria-label={locale === "en" ? "Close notice" : "關閉通知"}
+                title={locale === "en" ? "Close notice" : "關閉通知"}
+              >
+                ✕
+              </button>
             </div>
           </div>
         ) : null}
@@ -4289,7 +4597,14 @@ export function App() {
             <div className="modal-enter w-full max-w-4xl rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold">{t("org.settings.title")}</div>
-                <button className="text-zinc-500 hover:text-zinc-700" onClick={() => setOrgSettingsOpen(false)}>✕</button>
+                <button
+                  className="text-zinc-500 hover:text-zinc-700"
+                  onClick={() => setOrgSettingsOpen(false)}
+                  aria-label={locale === "en" ? "Close settings" : "關閉設定"}
+                  title={locale === "en" ? "Close settings" : "關閉設定"}
+                >
+                  ✕
+                </button>
               </div>
               <div className="mt-4 flex items-center gap-2 border-b border-zinc-200 pb-3 text-xs">
                 <button

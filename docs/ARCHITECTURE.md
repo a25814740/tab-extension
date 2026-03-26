@@ -32,3 +32,4 @@ Local-first state is serialized and synced as a snapshot to Google Drive `appDat
 
 - Google OAuth via `chrome.identity` for Drive access.
 - PAYUNi webhook/callback skeleton updates entitlements in Supabase.
+- Theme/Template Store uses Supabase marketplace tables for future paid assets and creator revenue split.

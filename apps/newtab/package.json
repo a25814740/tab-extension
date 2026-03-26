@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:preview": "vite --config vite.preview.config.ts",
     "build": "vite build",
+    "build:preview": "vite build --config vite.preview.config.ts",
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests",

@@ -2,22 +2,27 @@
 
 ## Tables
 
-Run the SQL migrations in order:
+Use Supabase CLI migrations from `supabase/migrations`:
 
-1. `backend/migrations/001_workspaces.sql`
-2. `backend/migrations/002_core_tables.sql`
-3. `backend/migrations/003_indexes.sql`
-4. `backend/migrations/015_business_tables.sql`
-5. `backend/migrations/016_business_policies.sql`
+1. Ensure project is linked:
+   - `supabase link --project-ref zhfibzpgabqgqgixgisk`
+2. Push latest migration:
+   - `supabase db push`
+
+Current consolidated migration:
+- `supabase/migrations/202603260001_membership_theme_store.sql`
+  - Membership / entitlement permission fixes
+  - `workspace_members.id` default fix
+  - Theme / template marketplace base tables (`theme_assets`, `theme_asset_purchases`, `theme_asset_installs`)
 
 ## RLS
 
-Business metadata policies are handled in `016_business_policies.sql`.
-Legacy content policies remain in `backend/policies/rls.sql` (not used for personal plan data).
+Business metadata and marketplace policies are included in the migration above.
+Legacy SQL in `backend/migrations/*` is kept for reference only.
 
 ## Edge Functions
 
-Deploy `backend/functions/sync_ops.ts` with:
+Deploy from `supabase/functions/*` with:
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`

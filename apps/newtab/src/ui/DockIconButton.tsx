@@ -36,6 +36,7 @@ export function DockIconButton({
         event.preventDefault();
         onRemove();
       }}
+      aria-label={label}
       title={label}
     >
       {onRemove ? (
@@ -48,6 +49,7 @@ export function DockIconButton({
           }}
           role="button"
           aria-label="移除"
+          title={`移除 ${label}`}
         >
           ×
         </div>

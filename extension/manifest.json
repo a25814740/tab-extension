@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Toby-like Tab Manager",
+  "name": "Taboard｜分頁與書籤儀錶板",
   "version": "0.1.0",
   "description": "Workspace-focused tab management with collections and sync.",
   "action": {
-    "default_title": "Toby-like",
+    "default_title": "Taboard｜分頁與書籤儀錶板",
     "default_popup": "sidepanel/index.html"
   },
   "chrome_url_overrides": {

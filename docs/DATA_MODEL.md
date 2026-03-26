@@ -12,3 +12,8 @@ Key entities:
 - ShareLink
 - WorkspaceMember
 - ActivityLog
+- Membership
+- Entitlement
+- ThemeAsset (theme/template marketplace item)
+- ThemeAssetPurchase
+- ThemeAssetInstall

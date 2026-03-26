@@ -7,7 +7,7 @@ export type Locale = "zh-TW" | "en";
 // Keep keys stable so both apps share the same semantics.
 const MESSAGES = {
   en: {
-    "app.title": "Toby-like Dashboard",
+    "app.title": "Taboard｜分頁與書籤儀錶板",
     "app.workspace": "Workspace",
     "app.loading": "Loading",
     "app.signIn": "Sign In",
@@ -215,7 +215,7 @@ const MESSAGES = {
     "login.required": "Google login required",
   },
   "zh-TW": {
-    "app.title": "Toby-like 控制台",
+    "app.title": "Taboard｜分頁與書籤儀錶板",
     "app.workspace": "工作區",
     "app.loading": "載入中",
     "app.signIn": "登入",

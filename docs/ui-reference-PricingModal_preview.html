@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TabDock 方案價格表</title>
+  <style>
+    :root {
+      --bg-overlay: rgba(0, 0, 0, 0.55);
+      --slate-900: #0f172a;
+      --slate-950: #020617;
+      --slate-300: #cbd5e1;
+      --zinc-50: #fafafa;
+      --zinc-100: #f4f4f5;
+      --zinc-200: #e4e4e7;
+      --zinc-400: #a1a1aa;
+      --zinc-500: #71717a;
+      --zinc-600: #52525b;
+      --zinc-700: #3f3f46;
+      --zinc-900: #18181b;
+      --rose-50: rgba(255, 241, 242, 0.7);
+      --rose-200: #fecdd3;
+      --rose-500: #f43f5e;
+      --emerald-500: #10b981;
+      --white: #ffffff;
+      --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.22);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+      --radius-2xl: 24px;
+      --radius-3xl: 28px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Noto Sans TC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #f5f7fb 0%, #eef2f7 100%);
+      color: var(--zinc-900);
+      line-height: 1.5;
+      padding: 24px;
+    }
+
+    .overlay {
+      min-height: calc(100vh - 48px);
+      display: flex;
+      justify-content: center;
+      background: var(--bg-overlay);
+      border-radius: 32px;
+      padding: 24px;
+    }
+
+    .modal {
+      position: relative;
+      width: 100%;
+      max-width: 1200px;
+      border-radius: var(--radius-3xl);
+      border: 1px solid var(--zinc-200);
+      background: var(--white);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid var(--zinc-200);
+      background: var(--white);
+      color: var(--zinc-500);
+      font-size: 18px;
+      z-index: 3;
+    }
+
+    .hero {
+      background: linear-gradient(to bottom right, var(--slate-900), var(--slate-900), var(--slate-950));
+      color: var(--white);
+      padding: 40px 24px;
+    }
+
+    .hero-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 6px 12px;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    .sparkle { color: #fecdd3; }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .hero p {
+      margin: 12px auto 0;
+      max-width: 720px;
+      font-size: 14px;
+      color: var(--slate-300);
+    }
+
+    .billing-toggle {
+      margin-top: 24px;
+      display: inline-flex;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px;
+      font-size: 12px;
+      gap: 4px;
+    }
+
+    .billing-toggle button {
+      border: 0;
+      background: transparent;
+      color: var(--slate-300);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .billing-toggle .active {
+      background: var(--white);
+      color: var(--slate-900);
+    }
+
+    .billing-toggle .discount {
+      font-size: 10px;
+      color: var(--rose-500);
+      margin-left: 4px;
+      font-weight: 700;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 24px;
+      padding: 32px 24px;
+      align-items: stretch;
+    }
+
+    .card {
+      position: relative;
+      border-radius: var(--radius-2xl);
+      border: 1px solid var(--zinc-200);
+      background: var(--white);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card.highlight {
+      border-color: var(--rose-200);
+      background: var(--rose-50);
+    }
+
+    .recommended {
+      position: absolute;
+      top: -12px;
+      left: 24px;
+      border-radius: 999px;
+      background: var(--rose-500);
+      color: var(--white);
+      padding: 4px 12px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .plan-name {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .plan-desc {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--zinc-500);
+      min-height: 40px;
+    }
+
+    .price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .price-main {
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .price-suffix {
+      font-size: 12px;
+      color: var(--zinc-400);
+      word-break: break-word;
+    }
+
+    .strike {
+      text-decoration: line-through;
+      color: var(--zinc-400);
+    }
+
+    .plan-note {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--zinc-400);
+      min-height: 18px;
+    }
+
+    .cta {
+      margin-top: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 42px;
+      border-radius: 14px;
+      padding: 10px 16px;
+      border: 1px solid var(--zinc-200);
+      background: var(--white);
+      color: var(--zinc-700);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .card.highlight .cta.primary {
+      background: var(--rose-500);
+      color: var(--white);
+      border-color: transparent;
+    }
+
+    .feature-list {
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--zinc-600);
+    }
+
+    .feature-list li {
+      display: grid;
+      grid-template-columns: 16px 1fr;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .check {
+      color: var(--emerald-500);
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .comparison {
+      border-top: 1px solid var(--zinc-200);
+      padding: 24px 24px 36px;
+    }
+
+    .comparison-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .comparison-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--zinc-200);
+      border-radius: 24px;
+      background: var(--white);
+    }
+
+    table {
+      width: 100%;
+      min-width: 860px;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    thead th {
+      background: var(--zinc-50);
+      color: var(--zinc-500);
+      font-weight: 700;
+      text-align: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--zinc-200);
+    }
+
+    thead th:first-child,
+    tbody th {
+      text-align: left;
+      color: var(--zinc-900);
+    }
+
+    tbody th,
+    tbody td {
+      padding: 14px 16px;
+      border-top: 1px solid var(--zinc-200);
+      vertical-align: top;
+    }
+
+    tbody td {
+      color: var(--zinc-600);
+      text-align: center;
+      word-break: break-word;
+    }
+
+    tbody tr:first-child th,
+    tbody tr:first-child td {
+      border-top: 0;
+    }
+
+    .yes {
+      color: var(--emerald-500);
+      font-weight: 700;
+    }
+
+    .muted { color: var(--zinc-400); }
+
+    .footnote {
+      margin-top: 14px;
+      font-size: 11px;
+      color: var(--zinc-400);
+    }
+
+    .notes {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .note {
+      border: 1px solid var(--zinc-200);
+      border-radius: 18px;
+      padding: 18px;
+      background: var(--zinc-50);
+    }
+
+    .note h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .note p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--zinc-600);
+    }
+
+    @media (max-width: 1024px) {
+      .cards { grid-template-columns: 1fr; }
+      .plan-desc { min-height: 0; }
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 12px; }
+      .overlay { padding: 12px; min-height: calc(100vh - 24px); }
+      .hero { padding: 32px 18px; }
+      .cards, .comparison { padding-left: 18px; padding-right: 18px; }
+      .notes { grid-template-columns: 1fr; }
+      .price-main { font-size: 30px; }
+      .billing-toggle button { padding: 8px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <div class="modal">
+      <button class="close-btn" aria-label="關閉">×</button>
+
+      <section class="hero">
+        <div class="hero-inner">
+          <div class="pill"><span class="sparkle">✦</span> 升級你的工作台</div>
+          <h1>隨需求成長的方案</h1>
+          <p>選擇最適合你的方案。個人版維持低價與 Google Drive 同步；團隊與企業版解鎖共享、協作、權限與集中管理。</p>
+          <div class="billing-toggle" aria-label="billing toggle">
+            <button>月付</button>
+            <button class="active">年付 <span class="discount">(優惠)</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="cards">
+        <article class="card highlight">
+          <div class="recommended">推薦</div>
+          <div class="plan-name">個人版</div>
+          <div class="plan-desc">適合個人長期使用，低價格擴散的主力方案，直接內含 60 天試用。</div>
+          <div class="price-row">
+            <span class="price-main">NT$ 0</span>
+            <span class="price-suffix"><span class="strike">99</span> / 月（60天試用）</span>
+          </div>
+          <div class="plan-note"><span class="strike">原價 NT$49/月</span></div>
+          <div class="cta primary">升級此方案</div>
+          <ul class="feature-list">
+            <li><span class="check">✓</span><span>內含 60 天免費試用</span></li>
+            <li><span class="check">✓</span><span>單人使用，不限集合與空間數量</span></li>
+            <li><span class="check">✓</span><span>Google Drive 同步</span></li>
+            <li><span class="check">✓</span><span>優先更新</span></li>
+            <li><span class="check">✓</span><span>本地優先，低成本維持長期使用</span></li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <div class="plan-name">團隊版</div>
+          <div class="plan-desc">適合小型團隊、工作室、接案團隊與內部共享知識空間。</div>
+          <div class="price-row">
+            <span class="price-main">NT$ 129</span>
+            <span class="price-suffix">/ 月</span>
+          </div>
+          <div class="plan-note"><span class="strike">原價 NT$149/月</span></div>
+          <div class="cta">開始團隊方案</div>
+          <ul class="feature-list">
+            <li><span class="check">✓</span><span>共享 Workspace</span></li>
+            <li><span class="check">✓</span><span>多人協作與角色權限</span></li>
+            <li><span class="check">✓</span><span>資料改存自家後端，不再以個人 Drive 為主</span></li>
+            <li><span class="check">✓</span><span>管理員後台、邀請管理、基本活動紀錄</span></li>
+            <li><span class="check">✓</span><span>集中計費</span></li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <div class="plan-name">企業版</div>
+          <div class="plan-desc">需要團隊協作、權限控管、安全稽核與導入支援的組織。</div>
+          <div class="price-row">
+            <span class="price-main">客製</span>
+            <span class="price-suffix">報價</span>
+          </div>
+          <div class="plan-note">NT$6,000 / 年起</div>
+          <div class="cta">聯絡我們</div>
+          <ul class="feature-list">
+            <li><span class="check">✓</span><span>企業級權限與管理規則</span></li>
+            <li><span class="check">✓</span><span>SSO / 稽核記錄</span></li>
+            <li><span class="check">✓</span><span>集中計費、帳務與採購支援</span></li>
+            <li><span class="check">✓</span><span>資料備份策略、匯出限制與成員停權流程</span></li>
+            <li><span class="check">✓</span><span>專屬支援與導入協助</span></li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="comparison">
+        <div class="comparison-title">功能比較</div>
+        <div class="comparison-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>項目</th>
+                <th>個人</th>
+                <th>團隊</th>
+                <th>企業</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>適合對象</th>
+                <td>單人重度使用者</td>
+                <td>小型團隊 / 工作室</td>
+                <td>中大型企業 / 部門</td>
+              </tr>
+              <tr>
+                <th>月付價格</th>
+                <td>NT$ 0 <span class="strike">29</span> / 月（60天試用）<br>首年續約 NT$19/月<br><span class="strike">原價 NT$29/月</span></td>
+                <td>NT$ 129 <span class="strike">149</span> / 月<br>首年續約 NT$129/月<br><span class="strike">原價 NT$149/月</span></td>
+                <td>客製報價<br>NT$6,000 / 年起</td>
+              </tr>
+              <tr>
+                <th>年付價格</th>
+                <td>NT$ 0 <span class="strike">99</span> / 月（60天試用）<br><span class="strike">原價 NT$49/月</span></td>
+                <td>NT$ 129 / 月<br><span class="strike">原價 NT$149/月</span></td>
+                <td>客製報價<br>NT$6,000 / 年起</td>
+              </tr>
+              <tr>
+                <th>新分頁頁面</th>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+              </tr>
+              <tr>
+                <th>側邊欄管理</th>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+              </tr>
+              <tr>
+                <th>拖拉排序 / 多層資料夾</th>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+              </tr>
+              <tr>
+                <th>基本搜尋</th>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+              </tr>
+              <tr>
+                <th>Google Drive 同步</th>
+                <td class="yes">✓</td>
+                <td class="muted">受控備份 / 匯入來源</td>
+                <td class="muted">企業受控備份</td>
+              </tr>
+              <tr>
+                <th>共享 Workspace</th>
+                <td class="muted">—</td>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+              </tr>
+              <tr>
+                <th>多人編輯</th>
+                <td class="muted">—</td>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+              </tr>
+              <tr>
+                <th>Members / 成員管理</th>
+                <td class="muted">—</td>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+              </tr>
+              <tr>
+                <th>角色權限</th>
+                <td class="muted">—</td>
+                <td>基本</td>
+                <td>進階</td>
+              </tr>
+              <tr>
+                <th>即時同步</th>
+                <td class="muted">—</td>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+              </tr>
+              <tr>
+                <th>管理員後台</th>
+                <td class="muted">—</td>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+              </tr>
+              <tr>
+                <th>活動紀錄</th>
+                <td class="muted">—</td>
+                <td>基本</td>
+                <td>進階稽核</td>
+              </tr>
+              <tr>
+                <th>集中計費</th>
+                <td class="muted">—</td>
+                <td class="yes">✓</td>
+                <td class="yes">✓</td>
+              </tr>
+              <tr>
+                <th>版本歷史</th>
+                <td>基本快照</td>
+                <td class="yes">工作區版本歷史</td>
+                <td class="yes">進階版本保留策略</td>
+              </tr>
+              <tr>
+                <th>SSO / 企業登入</th>
+                <td class="muted">—</td>
+                <td class="muted">—</td>
+                <td class="yes">✓</td>
+              </tr>
+              <tr>
+                <th>專屬支援 / 導入</th>
+                <td class="muted">—</td>
+                <td>優先支援</td>
+                <td class="yes">專屬導入支援</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footnote">付款走統一金流（PAYUNi）。提供 API 後即可啟用結帳流程。</div>
+
+        <div class="notes">
+          <div class="note">
+            <h3>個人版設計原則</h3>
+            <p>維持低價格的關鍵，是把個人版定位成單人整理工具：資料主存於本地與使用者自己的 Google Drive，避免過早承擔多人協作、權限與即時同步成本。</p>
+          </div>
+          <div class="note">
+            <h3>團隊 / 企業版設計原則</h3>
+            <p>一旦進入共享 Workspace、多人編輯、角色權限與活動紀錄，主資料應轉移到自家後端。Google Drive 可作為升級前匯入來源，或作為企業受控備份，而非一般成員自由備份空間。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

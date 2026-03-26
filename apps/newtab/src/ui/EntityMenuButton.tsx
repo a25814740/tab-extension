@@ -51,7 +51,8 @@ export function EntityMenuButton({
           setEntityMenu(isOpen ? null : { type, id });
         }}
         className={`rounded-xl p-2 text-zinc-500 transition hover:bg-zinc-100 ${className}`}
-        aria-label="menu"
+        aria-label="更多選項"
+        title="更多選項"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>

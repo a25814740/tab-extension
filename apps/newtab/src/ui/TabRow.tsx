@@ -211,12 +211,18 @@ export function TabRow({
       }
       style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}
       onClick={(event) => {
+        if (isEditing) {
+          return;
+        }
         if (shouldIgnoreOpen(event.target)) {
           return;
         }
         handleOpen();
       }}
       onKeyDown={(event) => {
+        if (isEditing) {
+          return;
+        }
         if (event.key === "Enter") {
           handleOpen();
         }
@@ -363,7 +369,7 @@ export function TabRow({
       <div className={`flex items-center justify-between gap-2 text-left ${isCompact ? "text-[10px]" : "text-xs"}`}>
         {isList ? (
           // 清單模式使用固定欄寬，避免不同長度造成排版不一致
-          <div className="grid min-w-0 flex-1 grid-cols-[24px_220px_1fr] items-center gap-3">
+          <div className="grid min-w-0 flex-1 grid-cols-[24px_minmax(0,220px)_minmax(0,1fr)] items-center gap-3">
             <div className="flex h-5 w-5 flex-none items-center justify-center overflow-hidden rounded bg-zinc-100">
               {safeFaviconUrl ? (
                 <img
@@ -386,8 +392,12 @@ export function TabRow({
                 aria-label={t("tab.select")}
               />
             </div>
-            <span className="truncate font-medium text-zinc-900">{displayTitle}</span>
-            <span className="truncate text-zinc-500">{displayDescription}</span>
+            <span className="min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-medium text-zinc-900">
+              {displayTitle}
+            </span>
+            <span className="min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-zinc-500">
+              {displayDescription}
+            </span>
           </div>
         ) : (
           <div className="flex min-w-0 flex-1 flex-col">
@@ -414,12 +424,16 @@ export function TabRow({
                 aria-label={t("tab.select")}
               />
             </div>
-              <span className="truncate font-medium text-zinc-900">{displayTitle}</span>
+              <span className="min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-medium text-zinc-900">
+                {displayTitle}
+              </span>
             </div>
             {isCompact ? null : (
               <>
                 <div className="my-1 h-px w-full bg-zinc-200" />
-                <span className="truncate text-zinc-500">{displayDescription}</span>
+                <span className="min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-zinc-500">
+                  {displayDescription}
+                </span>
               </>
             )}
           </div>
@@ -442,10 +456,19 @@ export function TabRow({
         ? createPortal(
             <div
               className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4"
-              onClick={handleCancel}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                handleCancel();
+              }}
             >
               <div
                 className="modal-enter w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl"
+                onMouseDown={(event) => event.stopPropagation()}
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="text-sm font-semibold">{t("tab.editTitle")}</div>
