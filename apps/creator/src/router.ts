@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHashHistory } from "vue-router";
 import AdminLayout from "./layouts/AdminLayout.vue";
 import Dashboard from "./pages/Dashboard.vue";
 import Assets from "./pages/Assets.vue";
@@ -7,7 +7,7 @@ import Design from "./pages/Design.vue";
 import Preview from "./pages/Preview.vue";
 
 export const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: "/",
