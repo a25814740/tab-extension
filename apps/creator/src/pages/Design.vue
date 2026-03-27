@@ -219,7 +219,15 @@ const onPreviewLoad = () => {
 };
 
 onMounted(() => {
+  const handleReady = (event: MessageEvent) => {
+    if (event.origin !== previewOrigin) return;
+    const payload = event.data as { type?: string };
+    if (payload?.type !== "TABOARD_PREVIEW_READY") return;
+    sendPreviewTokens();
+  };
+  window.addEventListener("message", handleReady);
   setTimeout(sendPreviewTokens, 600);
+  return () => window.removeEventListener("message", handleReady);
 });
 
 watch([designTokens, () => creatorState.theme], () => {

@@ -102,15 +102,44 @@ const getAllowedOrigin = () => {
   return allowedOrigin;
 };
 
+const emitPreviewReady = () => {
+  if (window.parent === window) return;
+  window.parent.postMessage({ type: "TABOARD_PREVIEW_READY" }, getAllowedOrigin());
+};
+
 const capturePreview = async () => {
-  const canvas = await html2canvas(document.body, {
+  const root = document.getElementById("root");
+  const target = root ?? document.body;
+  const canvas = await html2canvas(target, {
     backgroundColor: null,
     scale: 2,
     useCORS: true,
     allowTaint: false,
     ignoreElements: (element) => element.tagName === "IMG",
   });
-  return canvas.toDataURL("image/png");
+  const isEmpty = canvas.width === 0 || canvas.height === 0;
+  if (!isEmpty) {
+    try {
+      return canvas.toDataURL("image/png");
+    } catch {
+      // ignore
+    }
+  }
+  const fallback = document.createElement("canvas");
+  fallback.width = 1200;
+  fallback.height = 720;
+  const ctx = fallback.getContext("2d");
+  if (ctx) {
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(0, 0, fallback.width, fallback.height);
+    ctx.fillStyle = "#e2e8f0";
+    ctx.font = "28px sans-serif";
+    ctx.fillText("Taboard Preview", 48, 80);
+    ctx.font = "16px sans-serif";
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillText("Preview unavailable, fallback image generated.", 48, 120);
+  }
+  return fallback.toDataURL("image/png");
 };
 
 window.addEventListener("message", async (event) => {
@@ -133,6 +162,9 @@ window.addEventListener("message", async (event) => {
     event.origin
   );
 });
+
+window.addEventListener("load", emitPreviewReady);
+setTimeout(emitPreviewReady, 600);
 
 const root = document.getElementById("root");
 if (!root) {

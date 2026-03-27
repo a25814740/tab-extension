@@ -4,5 +4,25 @@
   "rewrites": [
     { "source": "/creator", "destination": "/creator/index.html" },
     { "source": "/creator/(.*)", "destination": "/creator/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/creator",
+      "headers": [
+        {
+          "key": "Refresh",
+          "value": "0;url=/creator/#/"
+        }
+      ]
+    },
+    {
+      "source": "/creator/",
+      "headers": [
+        {
+          "key": "Refresh",
+          "value": "0;url=/creator/#/"
+        }
+      ]
+    }
   ]
 }
