@@ -18,6 +18,7 @@
         ref="previewFrame"
         class="h-[78vh] w-full rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
         :src="previewSrc"
+        @load="onPreviewLoad"
       ></iframe>
 
       <div class="grid gap-4">
@@ -181,6 +182,7 @@ import {
   onPreviewUpload,
   previewStyle,
   saveDraft,
+  setPreviewBridge,
   publishTheme,
 } from "../store/creatorStore";
 
@@ -205,8 +207,15 @@ const sendPreviewTokens = () => {
       tokens: JSON.parse(JSON.stringify(designTokens.value)),
       theme: creatorState.theme,
     },
-    "*"
+    previewOrigin
   );
+};
+
+const onPreviewLoad = () => {
+  const frame = previewFrame.value?.contentWindow;
+  if (!frame) return;
+  setPreviewBridge(frame, previewOrigin);
+  sendPreviewTokens();
 };
 
 onMounted(() => {

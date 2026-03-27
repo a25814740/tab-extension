@@ -16,6 +16,7 @@
         ref="previewFrame"
         class="h-[72vh] w-full rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
         :src="previewSrc"
+        @load="onPreviewLoad"
       ></iframe>
     </div>
   </div>
@@ -24,7 +25,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, watchEffect } from "vue";
 import { RouterLink, useRoute } from "vue-router";
-import { creatorState, savedTokens, selectAsset } from "../store/creatorStore";
+import { creatorState, savedTokens, selectAsset, setPreviewBridge } from "../store/creatorStore";
 
 const route = useRoute();
 const previewFrame = ref<HTMLIFrameElement | null>(null);
@@ -50,8 +51,15 @@ const sendPreviewTokens = () => {
       tokens: JSON.parse(JSON.stringify(savedTokens.value)),
       theme: creatorState.theme,
     },
-    "*"
+    previewOrigin
   );
+};
+
+const onPreviewLoad = () => {
+  const frame = previewFrame.value?.contentWindow;
+  if (!frame) return;
+  setPreviewBridge(frame, previewOrigin);
+  sendPreviewTokens();
 };
 
 onMounted(() => {

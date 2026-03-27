@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./ui/App";
 import { appStore } from "./store/appStore";
 import { defaultCache, sampleWorkspaces } from "@toby/core";
+import html2canvas from "html2canvas";
 import "./styles.css";
 
 declare global {
@@ -88,6 +89,50 @@ const seedPreviewStore = () => {
 
 window.__TABOARD_PREVIEW__ = true;
 seedPreviewStore();
+
+const getAllowedOrigin = () => {
+  let allowedOrigin = window.location.origin;
+  try {
+    if (document.referrer) {
+      allowedOrigin = new URL(document.referrer).origin;
+    }
+  } catch {
+    // ignore invalid referrer
+  }
+  return allowedOrigin;
+};
+
+const capturePreview = async () => {
+  const canvas = await html2canvas(document.body, {
+    backgroundColor: null,
+    scale: 2,
+    useCORS: true,
+    allowTaint: false,
+    ignoreElements: (element) => element.tagName === "IMG",
+  });
+  return canvas.toDataURL("image/png");
+};
+
+window.addEventListener("message", async (event) => {
+  if (event.source !== window.parent) return;
+  if (event.origin !== getAllowedOrigin()) return;
+  const payload = event.data as { type?: string; requestId?: string };
+  if (payload?.type !== "TABOARD_PREVIEW_CAPTURE" || !payload.requestId) return;
+  let dataUrl = "";
+  try {
+    dataUrl = await capturePreview();
+  } catch {
+    dataUrl = "";
+  }
+  event.source?.postMessage(
+    {
+      type: "TABOARD_PREVIEW_CAPTURE_RESULT",
+      requestId: payload.requestId,
+      dataUrl,
+    },
+    event.origin
+  );
+});
 
 const root = document.getElementById("root");
 if (!root) {

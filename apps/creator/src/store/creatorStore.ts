@@ -23,6 +23,16 @@ export type PreviewStore = {
   openTabs: { id: string; title: string }[];
 };
 
+type PreviewBridge = {
+  frame: Window | null;
+  origin: string | null;
+};
+
+const previewBridge: PreviewBridge = {
+  frame: null,
+  origin: null,
+};
+
 export type PaintMode = "solid" | "gradient" | "image";
 export type GradientStop = { id: string; color: string; position: number };
 export type GradientConfig = { angle: number; stops: GradientStop[] };
@@ -83,6 +93,11 @@ export const paintModes = [
   { value: "gradient", label: "漸層" },
   { value: "image", label: "背景圖片" },
 ];
+
+export const setPreviewBridge = (frame: Window | null, origin: string | null) => {
+  previewBridge.frame = frame;
+  previewBridge.origin = origin;
+};
 
 type SupabaseWindowConfig = {
   __SUPABASE_URL__?: string;
@@ -448,6 +463,31 @@ export const loadPreviewData = async () => {
 };
 
 export const capturePreview = async (prefix: string) => {
+  if (previewBridge.frame && previewBridge.origin) {
+    const requestId = `preview_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const dataUrl = await new Promise<string>((resolve) => {
+      let settled = false;
+      const handler = (event: MessageEvent) => {
+        if (event.origin !== previewBridge.origin) return;
+        const payload = event.data as { type?: string; requestId?: string; dataUrl?: string };
+        if (payload?.type !== "TABOARD_PREVIEW_CAPTURE_RESULT" || payload.requestId !== requestId) return;
+        settled = true;
+        window.removeEventListener("message", handler);
+        resolve(payload.dataUrl ?? "");
+      };
+      window.addEventListener("message", handler);
+      previewBridge.frame?.postMessage(
+        { type: "TABOARD_PREVIEW_CAPTURE", requestId },
+        previewBridge.origin
+      );
+      window.setTimeout(() => {
+        if (settled) return;
+        window.removeEventListener("message", handler);
+        resolve("");
+      }, 2500);
+    });
+    if (dataUrl) return dataUrl;
+  }
   const element = document.getElementById(`${prefix}Root`);
   if (!element) return "";
   const canvas = await html2canvas(element, { backgroundColor: null, scale: 2 });
