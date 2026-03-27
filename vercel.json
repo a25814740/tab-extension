@@ -1,4 +1,8 @@
 {
   "buildCommand": "pnpm --filter @toby/creator build",
-  "outputDirectory": "docs/creator"
+  "outputDirectory": "docs",
+  "rewrites": [
+    { "source": "/creator", "destination": "/creator/index.html" },
+    { "source": "/creator/(.*)", "destination": "/creator/index.html" }
+  ]
 }
