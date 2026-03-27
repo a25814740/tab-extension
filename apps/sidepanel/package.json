@@ -8,11 +8,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@toby/core": "workspace:*",
+    "@toby/api-client": "workspace:*",
     "@toby/shared-ui": "workspace:*",
+    "@toby/ai": "workspace:*",
+    "@toby/chrome-adapters": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^4.5.4",

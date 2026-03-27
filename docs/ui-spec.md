@@ -1,0 +1,179 @@
+# UI Spec v0.3
+
+## 產品定位
+這是一個類似 Toby 的 Chrome Extension / New Tab App，但不是單純 Toby clone。
+
+核心資訊架構沿用以下命名：
+- 組織
+- 空間
+- 集合
+- 頁籤
+
+產品定位：
+- 新分頁工作台
+- 側重分頁管理、工作場景切換、常用入口、Dock 啟動列
+- 不是社群訊息聚合器
+- Dock 主打快速啟動、常用入口、最近使用、暫放，不主打抓官方社群未讀
+
+---
+
+## 全域版面規格
+- 整個畫面高度使用 `100vh`
+- 整體畫面 `min-width: 1280px`
+- 若寬度不足，允許橫向捲動
+- 使用 Tailwind CSS
+- 版型為三欄：
+  - 左：組織 / 空間
+  - 中：集合
+  - 右：開啟分頁
+- 各欄位內部要各自可捲動，不互相影響
+
+---
+
+## 左側 Sidebar
+
+### 功能
+- 採 Sidebar Layout 風格
+- 要可摺疊
+- 上方為組織區塊
+- 組織切換使用下拉
+- 空間列表顯示在組織下方
+- 帳號與設定放左下角
+
+### 組織區塊
+組織名稱區塊右上角有 3 個浮動 icon，不占正常排版空間：
+
+- 新增組織（Plus）
+- 編輯組織（Settings）
+- 邀請好友（UserPlus）
+
+### 組織區塊按鈕定位
+- 使用 absolute 浮動定位
+- 不要寫死 bottom 數值
+- 使用以下 Tailwind 寫法：
+
+- `right-2`
+- `top-[85%]`
+- `-translate-y-1/2`
+- `[bottom:auto]`
+
+### 組織名稱按鈕樣式
+- 組織名稱按鈕 class 的右 padding 為 `pr-4`
+
+### 空間區
+- 空間區旁邊的新增是「新增空間」，不是新增集合
+- 空間本身要有以下操作入口：
+  - 新增集合
+  - 編輯空間
+  - 刪除空間
+  - 邀請好友
+
+---
+
+## 中間主區
+
+### 標題列
+- 不需要單獨顯示「集合」兩個字
+- 只顯示 breadcrumb 樣式文字：
+  - `[組織名稱 / 空間名稱]`
+
+### 工具列
+搜尋、新增集合、排序、視圖切換放在同一排：
+
+- 新增集合
+- 排序
+- 視圖切換
+- 搜尋
+
+其中：
+- 搜尋放在該排最右邊
+
+### 集合區功能
+- 集合可切換 `grid / list` 視圖
+- 集合需支援排序
+- 集合需有新增集合按鈕
+- 新增集合需有下拉選單
+- 集合需支援假資料切換
+- 集合卡片 / 列表需要有操作入口：
+  - 編輯
+  - 刪除
+  - 邀請好友
+  - 視需要可加新增頁籤
+
+---
+
+## 右側 Sidebar
+
+### 功能
+- 顯示目前開啟分頁
+- 要可摺疊
+- 展開時顯示完整分頁清單
+- 收合時顯示窄版 icon 欄
+- 支援多選 tab 的狀態示意
+
+### 批次操作
+右側上方需有批次操作列：
+
+- 加入集合
+- 加入 Dock
+- 移到空間
+
+---
+
+## Dock
+
+### 位置
+- 位於底部
+
+### 視覺規則
+- 不顯示常駐文字
+- 使用 icon / favicon / 簡化字樣
+- 滑過才顯示 tooltip
+- tooltip 必須避免被 z-index 或 overflow 擋住
+
+### Dock 分區
+Dock 分成以下區塊：
+- 核心功能
+- 固定捷徑
+- 最近使用
+- 暫放 / 設定
+
+### Dock 產品定義
+- Dock 是工作啟動列，不是通知中心
+- 不主打抓社群平台官方未讀數
+- 主打：
+  - 快速啟動
+  - 常用入口
+  - 最近使用
+  - 暫放
+  - 設定入口
+
+---
+
+## 資料示意
+請用假資料支援以下切換示意：
+
+- 多組織
+- 多空間
+- 多集合
+- 右側開啟分頁假資料
+
+切換組織時：
+- 空間需跟著切換
+- 集合需跟著切換
+
+---
+
+## 互動原則
+- 保留目前畫面架構
+- 不要自行重做整體視覺風格
+- 以穩定化與產品化為優先
+- 若有設計衝突，優先遵守本文件
+
+## UI reference implementation
+Use `docs/ui-reference-newtab-v0.3.tsx` as the visual and interaction reference for the current New Tab UI direction.
+
+Rules:
+- Do not copy it blindly without cleanup.
+- Treat it as the approved layout and interaction reference.
+- When implementation details are ambiguous, prefer matching this reference file unless it conflicts with this spec.

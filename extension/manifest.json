@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Toby-like Tab Manager",
+  "name": "Taboard｜分頁與書籤儀錶板",
   "version": "0.1.0",
   "description": "Workspace-focused tab management with collections and sync.",
   "action": {
-    "default_title": "Toby-like",
+    "default_title": "Taboard｜分頁與書籤儀錶板",
     "default_popup": "sidepanel/index.html"
   },
   "chrome_url_overrides": {
@@ -17,11 +17,25 @@
     "service_worker": "service-worker.js",
     "type": "module"
   },
+  "oauth2": {
+    "client_id": "YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/drive.appdata"]
+  },
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  },
   "permissions": ["storage", "tabs", "sidePanel", "identity"],
   "host_permissions": ["https://*/*", "http://*/*"],
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["newtab/index.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

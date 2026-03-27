@@ -3,5 +3,106 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
+}
+
+.theme-light {
+  color-scheme: light;
+}
+
+.theme-dark {
   color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-width: 1280px;
+  overflow-x: auto;
+}
+
+/* Subtle themed scrollbar for places we do not hide. */
+*::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.theme-light *::-webkit-scrollbar-track {
+  background: #f4f4f5;
+}
+
+.theme-light *::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 999px;
+  border: 2px solid #f4f4f5;
+}
+
+.theme-light *::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+.theme-dark *::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.theme-dark *::-webkit-scrollbar-thumb {
+  background: #1f2937;
+  border-radius: 999px;
+  border: 2px solid #0f172a;
+}
+
+.theme-dark *::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Dark theme overrides for utility-heavy UI without rewriting every class. */
+.theme-dark .bg-zinc-100 {
+  background-color: #0f172a !important;
+}
+
+.theme-dark .bg-zinc-50 {
+  background-color: #111827 !important;
+}
+
+.theme-dark .bg-white,
+.theme-dark .bg-white\/95,
+.theme-dark .bg-white\/90 {
+  background-color: #0b1222 !important;
+}
+
+.theme-dark .text-zinc-900 {
+  color: #f3f4f6 !important;
+}
+
+.theme-dark .text-zinc-700 {
+  color: #e5e7eb !important;
+}
+
+.theme-dark .text-zinc-600 {
+  color: #d1d5db !important;
+}
+
+.theme-dark .text-zinc-500,
+.theme-dark .text-zinc-400 {
+  color: #9ca3af !important;
+}
+
+.theme-dark .border-zinc-200,
+.theme-dark .border-zinc-300 {
+  border-color: #243041 !important;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-enter {
+  animation: modal-in 140ms ease-out;
 }

@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --bg: radial-gradient(1200px 800px at 20% 0%, #1d2340 0%, #0d1326 55%, #080c19 100%);
+  --panel: rgba(14, 21, 40, 0.88);
+  --panel-soft: rgba(12, 18, 34, 0.78);
+  --border: rgba(148, 163, 184, 0.25);
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --brand: #f43f5e;
+}
+
+html.light {
+  color-scheme: light;
+  --bg: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  --panel: #ffffff;
+  --panel-soft: #f8fafc;
+  --border: rgba(148, 163, 184, 0.4);
+  --text: #0f172a;
+  --muted: #64748b;
+  --brand: #f43f5e;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", "Noto Sans TC", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.creator-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.28);
+}
+
+.preview-layer {
+  position: relative;
+  isolation: isolate;
+}
+.preview-layer::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  opacity: var(--bg-opacity, 0.1);
+  border-radius: inherit;
+  background: var(--bg-image, none);
+}
+.preview-layer > * {
+  position: relative;
+  z-index: 1;
+}
+
+.gear-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  height: 26px;
+  width: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.gear-btn:hover {
+  transform: scale(1.05);
+}
+
+.design-open .gear-btn {
+  opacity: 1;
+}
+
+.preview-thumb {
+  height: 90px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.88);
+  padding: 24px;
+  display: grid;
+  gap: 12px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+}
+
+.btn {
+  border-radius: 12px;
+  border: 1px solid transparent;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: white;
+}

@@ -1,5 +1,5 @@
 {
-  "name": "toby-like-extension",
+  "name": "taboard-extension",
   "private": true,
   "packageManager": "pnpm@9.12.0",
   "scripts": {
@@ -7,12 +7,21 @@
     "test": "pnpm -r test",
     "build": "pnpm -r build",
     "dev:newtab": "pnpm --filter @toby/newtab dev",
-    "dev:sidepanel": "pnpm --filter @toby/sidepanel dev"
+    "dev:preview": "pnpm --filter @toby/newtab dev:preview",
+    "dev:creator": "pnpm --filter @toby/creator dev",
+    "dev:sidepanel": "pnpm --filter @toby/sidepanel dev",
+    "build:creator": "pnpm --filter @toby/creator build",
+    "build:preview": "pnpm --filter @toby/newtab build:preview",
+    "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
-    "eslint": "^9.9.0",
     "@eslint/js": "^9.9.0",
-    "typescript": "^5.6.2",
-    "globals": "^15.9.0"
+    "@types/chrome": "^0.0.270",
+    "@typescript-eslint/eslint-plugin": "^8.57.1",
+    "@typescript-eslint/parser": "^8.57.1",
+    "eslint": "^9.9.0",
+    "globals": "^15.9.0",
+    "supabase": "^2.82.0",
+    "typescript": "^5.6.2"
   }
 }

@@ -7,10 +7,13 @@
   "types": "./src/index.ts",
   "scripts": {
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0"
+    "@toby/core": "workspace:*",
+    "@supabase/supabase-js": "^2.45.0",
+    "nanoid": "^5.0.7"
   },
   "devDependencies": {
     "typescript": "^5.6.2",

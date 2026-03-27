@@ -2,3 +2,11 @@ node_modules
 .DS_Store
 .env
 .env.*
+!.env.example
+extension/newtab/assets/
+extension/sidepanel/assets/
+extension/options/
+extension/newtab/
+extension/sidepanel/
+.vercel
+.env*.local

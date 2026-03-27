@@ -6,6 +6,10 @@ export const tabItemSchema = z.object({
   title: z.string(),
   url: z.string().url(),
   faviconUrl: z.string().nullable(),
+  ogTitle: z.string().nullable().optional(),
+  ogDescription: z.string().nullable().optional(),
+  ogImage: z.string().nullable().optional(),
+  screenshotUrl: z.string().nullable().optional(),
   note: z.string().nullable(),
   position: z.number().int(),
   createdAt: z.string(),
@@ -20,6 +24,7 @@ export const collectionSchema = z.object({
   name: z.string(),
   note: z.string().nullable(),
   color: z.string().nullable(),
+  starred: z.boolean().nullable().optional(),
   position: z.number().int(),
   createdBy: z.string(),
   createdAt: z.string(),
@@ -51,8 +56,25 @@ export const workspaceSchema = z.object({
   id: z.string(),
   ownerId: z.string(),
   name: z.string(),
+  logoUrl: z.string().nullable().optional(),
+  inviteCount: z.number().int().nullable().optional(),
+  points: z.number().int().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+export const dockItemSchema = z.object({
+  id: z.string(),
+  type: z.enum(["tab", "collection", "action"]),
+  title: z.string(),
+  url: z.string().nullable(),
+  collectionId: z.string().nullable(),
+  faviconUrl: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+export const dockSchema = z.object({
+  pinned: dockItemSchema.array(),
 });
 
 export const localCacheSchema = z.object({
@@ -60,13 +82,15 @@ export const localCacheSchema = z.object({
   currentUserId: z.string().nullable(),
   selectedWorkspaceId: z.string().nullable(),
   selectedSpaceId: z.string().nullable(),
+  selectedCollectionId: z.string().nullable().optional(),
   expandedFolderIds: z.string().array(),
   ui: z.object({
     theme: z.enum(["light", "dark", "system"]),
     sidebarCollapsed: z.boolean(),
-    viewMode: z.enum(["grid", "list"]),
+    viewMode: z.enum(["grid", "list", "compact", "image"]),
     sortMode: z.enum(["custom", "recent", "name", "createdAt"]),
   }),
+  dock: dockSchema.optional().default({ pinned: [] }),
   pendingOps: z
     .object({
       id: z.string(),
@@ -77,6 +101,20 @@ export const localCacheSchema = z.object({
     })
     .array(),
   lastSyncAt: z.string().nullable(),
+  lastSyncError: z.string().nullable().optional(),
+  nextSyncRetryAt: z.string().nullable().optional(),
 });
 
 export type LocalCacheInput = z.infer<typeof localCacheSchema>;
+
+export const localSnapshotSchema = z.object({
+  workspace: workspaceSchema.nullable(),
+  workspaces: workspaceSchema.array().optional(),
+  spaces: spaceSchema.array(),
+  folders: folderSchema.array(),
+  collections: collectionSchema.array(),
+  tabs: tabItemSchema.array(),
+  cache: localCacheSchema,
+});
+
+export type LocalStoreSnapshot = z.infer<typeof localSnapshotSchema>;

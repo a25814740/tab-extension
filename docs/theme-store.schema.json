@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://taboard.local/schemas/theme-store.schema.json",
+  "title": "Taboard Theme Store Asset",
+  "description": "Marketplace payload for both themes and templates.",
+  "type": "object",
+  "required": [
+    "id",
+    "assetType",
+    "slug",
+    "name",
+    "description",
+    "author",
+    "isOfficial",
+    "priceTwd",
+    "preview",
+    "config"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "assetType": {
+      "type": "string",
+      "enum": ["theme", "template"]
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]{2,64}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "author": {
+      "type": "object",
+      "required": ["userId", "displayName"],
+      "properties": {
+        "userId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        }
+      },
+      "additionalProperties": false
+    },
+    "isOfficial": {
+      "type": "boolean"
+    },
+    "priceTwd": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "revenueSharePercent": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 70
+    },
+    "preview": {
+      "type": "string",
+      "description": "Solid color, gradient CSS string, or preview image URL."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32
+      },
+      "maxItems": 16
+    },
+    "config": {
+      "type": "object",
+      "description": "Asset-specific configuration.",
+      "oneOf": [
+        {
+          "title": "Theme Config",
+          "required": ["tokens"],
+          "properties": {
+            "tokens": {
+              "type": "object",
+              "required": ["light", "dark"],
+              "properties": {
+                "light": {
+                  "$ref": "#/$defs/themeTokenSet"
+                },
+                "dark": {
+                  "$ref": "#/$defs/themeTokenSet"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": true
+        },
+        {
+          "title": "Template Config",
+          "required": ["density", "cardMinWidth"],
+          "properties": {
+            "density": {
+              "type": "string",
+              "enum": ["comfortable", "focused", "compact"]
+            },
+            "cardMinWidth": {
+              "type": "object",
+              "required": ["image", "other"],
+              "properties": {
+                "image": {
+                  "type": "integer",
+                  "minimum": 160,
+                  "maximum": 480
+                },
+                "other": {
+                  "type": "integer",
+                  "minimum": 140,
+                  "maximum": 400
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": true
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "themeTokenSet": {
+      "type": "object",
+      "required": ["background", "panel", "panelMuted", "border", "text", "textMuted", "accent"],
+      "properties": {
+        "background": {
+          "type": "string"
+        },
+        "panel": {
+          "type": "string"
+        },
+        "leftPanelBackground": {
+          "type": "string",
+          "description": "Optional override for left panel background. Supports color, gradient, or url(...)."
+        },
+        "mainPanelBackground": {
+          "type": "string",
+          "description": "Optional override for main panel background. Supports color, gradient, or url(...)."
+        },
+        "rightPanelBackground": {
+          "type": "string",
+          "description": "Optional override for right panel background. Supports color, gradient, or url(...)."
+        },
+        "panelMuted": {
+          "type": "string"
+        },
+        "border": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "textMuted": {
+          "type": "string"
+        },
+        "accent": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
