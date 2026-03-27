@@ -1,3 +1,4 @@
 {
+  "buildCommand": "pnpm --filter @toby/creator build",
   "outputDirectory": "apps/creator/dist"
 }
