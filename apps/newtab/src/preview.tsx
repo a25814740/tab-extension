@@ -18,9 +18,8 @@ const seedPreviewStore = () => {
     return;
   }
 
-  const spaces = active.spaces.map(({ folders, ...space }) => space);
-  const folders = active.spaces.flatMap((space) => space.folders ?? []);
-  const collections = active.collections.map(({ tabs, ...collection }) => collection);
+  const spaces = active.spaces.map((space) => ({ ...space, folders: undefined }));
+  const collections = active.collections.map((collection) => ({ ...collection, tabs: undefined }));
   const tabs = active.collections.flatMap((collection) => collection.tabs);
   const now = new Date().toISOString();
 
@@ -29,7 +28,7 @@ const seedPreviewStore = () => {
     workspaces: samples.map((item) => item.workspace),
     workspace: active.workspace,
     spaces,
-    folders,
+    folders: active.spaces.flatMap((space) => space.folders ?? []),
     collections,
     tabs,
     cache: {

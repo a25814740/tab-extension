@@ -1,4 +1,4 @@
-import { computed, reactive, ref } from "vue";
+import { computed, reactive } from "vue";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import html2canvas from "html2canvas";
 
@@ -84,8 +84,19 @@ export const paintModes = [
   { value: "image", label: "背景圖片" },
 ];
 
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || (window as any).__SUPABASE_URL__ || "";
-const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || (window as any).__SUPABASE_ANON_KEY__ || "";
+type SupabaseWindowConfig = {
+  __SUPABASE_URL__?: string;
+  __SUPABASE_ANON_KEY__?: string;
+};
+
+const supabaseUrl =
+  (import.meta.env.VITE_SUPABASE_URL as string) ||
+  ((window as SupabaseWindowConfig).__SUPABASE_URL__ ?? "") ||
+  "";
+const supabaseAnonKey =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string) ||
+  ((window as SupabaseWindowConfig).__SUPABASE_ANON_KEY__ ?? "") ||
+  "";
 let supabase: SupabaseClient | null = null;
 
 const getSupabase = () => {
@@ -139,7 +150,7 @@ export const makeEditorState = (): EditorState => ({
 export const creatorState = reactive({
   ready: false,
   configMissing: false,
-  session: null as any,
+  session: null as Awaited<ReturnType<SupabaseClient["auth"]["getSession"]>>["data"]["session"],
   assets: [] as AssetRecord[],
   editingId: null as string | null,
   previewUpload: "",
@@ -297,7 +308,7 @@ const buildGradient = (gradient: GradientConfig) => {
 
 const buildImage = (image: ImageConfig) => {
   if (!image.url) return "";
-  return `url(\"${image.url}\") ${image.positionX}% ${image.positionY}% / cover ${image.repeat} ${image.attachment}`;
+  return `url("${image.url}") ${image.positionX}% ${image.positionY}% / cover ${image.repeat} ${image.attachment}`;
 };
 
 export const buildBackground = (paint: PaintConfig) => {

@@ -66,14 +66,18 @@ export async function getCurrentWindowTabsWithScreenshots(): Promise<TabSnapshot
 }
 
 export async function openTabs(_urls: string[]) {
+  void _urls;
   return;
 }
 
 export async function focusTab(_tabId: number, _windowId?: number) {
+  void _tabId;
+  void _windowId;
   return;
 }
 
 export async function closeTabs(_tabIds: number[]) {
+  void _tabIds;
   return;
 }
 
@@ -105,6 +109,7 @@ export type AuthTokenResult = {
 };
 
 export async function getAuthToken(_interactive: boolean): Promise<AuthTokenResult | null> {
+  void _interactive;
   return null;
 }
 
@@ -114,6 +119,8 @@ export function getRedirectUrl(path?: string) {
 }
 
 export async function launchWebAuthFlow(_url: string, _interactive = true) {
+  void _url;
+  void _interactive;
   return null;
 }
 

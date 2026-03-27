@@ -104,7 +104,7 @@ export const hydrateMockStore = () => {
         ...collection,
         tabs: collection.tabs,
       })),
-    } as any;
+    };
   });
 };
 
