@@ -61,6 +61,7 @@
         <div class="text-sm font-semibold text-white">登入後才可使用主題上架後台</div>
         <div class="mt-2 text-xs text-slate-400">請先登入以存取你的作品與設定。</div>
         <div v-if="showConfigHint" class="text-xs text-rose-300">請先設定 VITE_SUPABASE_URL 與 VITE_SUPABASE_ANON_KEY</div>
+        <div v-else-if="gateMessage" class="text-xs text-rose-300">{{ gateMessage }}</div>
         <button class="btn btn-primary" @click="loginWithGoogle">使用 Google 登入</button>
       </div>
     </div>
@@ -76,6 +77,15 @@ const isDev = import.meta.env.DEV;
 const menuOpen = ref(false);
 const gateVisible = computed(() => creatorState.ready && !creatorState.session);
 const showConfigHint = computed(() => isDev && creatorState.configMissing);
+const gateMessage = computed(() => {
+  if (creatorState.statusMessage) {
+    return creatorState.statusMessage;
+  }
+  if (!isDev && creatorState.configMissing) {
+    return "登入服務尚未設定，請聯絡管理者";
+  }
+  return "";
+});
 const themeLabel = computed(() => (creatorState.theme === "dark" ? "切換亮色" : "切換暗色"));
 </script>
 

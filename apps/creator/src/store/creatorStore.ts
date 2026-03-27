@@ -293,15 +293,18 @@ export const initCreator = async () => {
 export const loginWithGoogle = async () => {
   const client = getSupabase();
   if (!client) {
-    creatorState.statusMessage = "尚未設定 Supabase 環境變數";
+    creatorState.statusMessage = "登入服務尚未設定，請聯絡管理者";
     return;
   }
-  await client.auth.signInWithOAuth({
+  const { error } = await client.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo: buildRedirectTo(),
     },
   });
+  if (error) {
+    creatorState.statusMessage = error.message;
+  }
 };
 
 export const logout = async () => {
