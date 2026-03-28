@@ -4,6 +4,7 @@ param(
     [string]$PlanSchemaFile = ".\tasks-schema.json",
     [string]$StateDir = ".\.ai-run",
     [int]$TaskTimeoutSeconds = 900,
+    [switch]$NoTimeout,
     [switch]$SkipPlanning,
     [string]$OnlyTaskId = ""
 )
@@ -163,7 +164,12 @@ function Invoke-OllamaGenerate {
     $lastError = $null
     foreach ($attempt in 1..2) {
         try {
-            $response = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:11434/api/generate" -ContentType "application/json; charset=utf-8" -Body $body -TimeoutSec $TimeoutSeconds
+            if ($TimeoutSeconds -le 0) {
+                $response = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:11434/api/generate" -ContentType "application/json; charset=utf-8" -Body $body
+            }
+            else {
+                $response = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:11434/api/generate" -ContentType "application/json; charset=utf-8" -Body $body -TimeoutSec $TimeoutSeconds
+            }
             $lastError = $null
             break
         }
@@ -483,7 +489,10 @@ function Run-Codex {
         }
     } -ArgumentList $codexExecutable, $args, $Prompt, $WorkingDirectory
 
-    if (-not (Wait-Job -Job $job -Timeout $TimeoutSeconds)) {
+    if ($TimeoutSeconds -le 0) {
+        Wait-Job -Job $job | Out-Null
+    }
+    elseif (-not (Wait-Job -Job $job -Timeout $TimeoutSeconds)) {
         Stop-Job -Job $job | Out-Null
         Remove-Job -Job $job -Force | Out-Null
         throw "Codex profile [$Profile] 執行超時（>${TimeoutSeconds}s）。請查看 task prompt 或本地模型狀態。"
@@ -1126,6 +1135,10 @@ $codexConfigPath = Join-Path $ProjectPath ".codex\config.toml"
 $logFile = Join-Path $StateDir "run-log.txt"
 Set-Content -LiteralPath $logFile -Value "===== RUN START $(Get-Date) =====`r`nPREFLIGHT START" -Encoding UTF8
 $runFinalStatus = "IN_PROGRESS"
+
+if ($NoTimeout) {
+    $TaskTimeoutSeconds = 0
+}
 
 Invoke-PreflightChecks -ConfigPath $codexConfigPath
 Add-Content -LiteralPath $logFile -Value "PREFLIGHT OK"
