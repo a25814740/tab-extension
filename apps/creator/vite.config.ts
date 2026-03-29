@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   base: "./",
   build: {
-    outDir: path.resolve(__dirname, "../../docs/creator"),
+    outDir: path.resolve(__dirname, "../../public/creator"),
     emptyOutDir: true,
   },
 });

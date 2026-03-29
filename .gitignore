@@ -3,5 +3,6 @@ node_modules
 .ai-run
 .vercel
 docs/.vercel
+public
 .env
 .env.*

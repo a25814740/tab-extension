@@ -6,6 +6,7 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "build": "pnpm -r build",
+    "build:web": "pnpm --filter @toby/newtab build && pnpm --filter @toby/creator build && node ./scripts/build-web.js",
     "dev:newtab": "pnpm --filter @toby/newtab dev",
     "dev:sidepanel": "pnpm --filter @toby/sidepanel dev"
   },
