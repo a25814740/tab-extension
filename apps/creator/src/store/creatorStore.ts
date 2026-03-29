@@ -303,8 +303,13 @@ const cleanAuthUrl = () => {
 };
 
 const parseHashTokens = () => {
-  const raw = window.location.hash.replace(/^#/, "");
-  if (!raw) return null;
+  const rawHash = window.location.hash.replace(/^#/, "");
+  if (!rawHash) return null;
+  let raw = rawHash.startsWith("/") ? rawHash.slice(1) : rawHash;
+  const tokenStart = raw.indexOf("access_token=");
+  if (tokenStart > 0) {
+    raw = raw.slice(tokenStart);
+  }
   const params = new URLSearchParams(raw);
   const accessToken = params.get("access_token");
   const refreshToken = params.get("refresh_token");
