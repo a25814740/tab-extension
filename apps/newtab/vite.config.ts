@@ -4,6 +4,7 @@ import path from "node:path";
 
 export default defineConfig({
   plugins: [react()],
+  base: "./",
   build: {
     outDir: path.resolve(__dirname, "../../extension/newtab"),
     emptyOutDir: true,
