@@ -14,12 +14,17 @@
     </header>
 
     <div class="grid gap-4 p-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <iframe
-        ref="previewFrame"
-        class="h-[78vh] w-full rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-        :src="previewSrc"
-        @load="onPreviewLoad"
-      ></iframe>
+      <div class="grid gap-2">
+        <div v-if="previewLoadError" class="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-600 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-300">
+          {{ previewLoadError }}
+        </div>
+        <iframe
+          ref="previewFrame"
+          class="h-[78vh] w-full rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          :src="previewSrc"
+          @load="onPreviewLoad"
+        ></iframe>
+      </div>
 
       <div class="grid gap-4">
         <div class="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-4 text-xs">
@@ -166,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import GradientEditor from "../components/GradientEditor.vue";
 import {
@@ -190,6 +195,9 @@ const previewFrame = ref<HTMLIFrameElement | null>(null);
 const previewOrigin = ((import.meta as { env?: Record<string, string> }).env?.VITE_PREVIEW_ORIGIN ??
   window.location.origin).replace(/\/$/, "");
 const previewSrc = computed(() => `${previewOrigin}/preview/`);
+const previewLoadError = ref("");
+let readyListener: ((event: MessageEvent) => void) | null = null;
+let previewTimeoutId: number | null = null;
 
 const sectionPreview = (key: string) => {
   const paint = creatorState.draftEditor.sections[key];
@@ -214,20 +222,38 @@ const sendPreviewTokens = () => {
 const onPreviewLoad = () => {
   const frame = previewFrame.value?.contentWindow;
   if (!frame) return;
+  previewLoadError.value = "";
+  if (previewTimeoutId) {
+    window.clearTimeout(previewTimeoutId);
+    previewTimeoutId = null;
+  }
   setPreviewBridge(frame, previewOrigin);
   sendPreviewTokens();
 };
 
 onMounted(() => {
-  const handleReady = (event: MessageEvent) => {
+  readyListener = (event: MessageEvent) => {
     if (event.origin !== previewOrigin) return;
     const payload = event.data as { type?: string };
     if (payload?.type !== "TABOARD_PREVIEW_READY") return;
     sendPreviewTokens();
   };
-  window.addEventListener("message", handleReady);
-  setTimeout(sendPreviewTokens, 600);
-  return () => window.removeEventListener("message", handleReady);
+  window.addEventListener("message", readyListener);
+  previewTimeoutId = window.setTimeout(() => {
+    previewLoadError.value = "預覽載入逾時，請重新整理頁面或稍後再試。";
+  }, 8000);
+  window.setTimeout(sendPreviewTokens, 600);
+});
+
+onUnmounted(() => {
+  if (readyListener) {
+    window.removeEventListener("message", readyListener);
+    readyListener = null;
+  }
+  if (previewTimeoutId) {
+    window.clearTimeout(previewTimeoutId);
+    previewTimeoutId = null;
+  }
 });
 
 watch([designTokens, () => creatorState.theme], () => {
