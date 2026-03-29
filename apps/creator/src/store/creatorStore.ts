@@ -274,6 +274,7 @@ export const initCreator = async () => {
     creatorState.ready = true;
     return;
   }
+  await handleAuthCallback();
   const { data } = await client.auth.getSession();
   creatorState.session = data.session;
   creatorState.ready = true;
@@ -288,6 +289,39 @@ export const initCreator = async () => {
       loadPreviewData();
     }
   });
+};
+
+export const handleAuthCallback = async () => {
+  if (typeof window === "undefined") return false;
+  const hash = window.location.hash || "";
+  const hasToken = hash.includes("access_token") || hash.includes("refresh_token");
+  const hasCode = hash.includes("code=");
+  if (!hasToken && !hasCode) {
+    return false;
+  }
+  const client = getSupabase();
+  if (!client) return false;
+  try {
+    if (hasToken && "getSessionFromUrl" in client.auth) {
+      await client.auth.getSessionFromUrl({ storeSession: true });
+    } else if (hasCode && "exchangeCodeForSession" in client.auth) {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+      if (code) {
+        await client.auth.exchangeCodeForSession(code);
+      }
+    }
+  } catch {
+    // ignore auth callback failures
+  } finally {
+    if (hasToken || hasCode) {
+      window.location.hash = "#/";
+      const url = new URL(window.location.href);
+      url.searchParams.delete("code");
+      window.history.replaceState({}, document.title, url.toString());
+    }
+  }
+  return true;
 };
 
 export const loginWithGoogle = async () => {
