@@ -297,8 +297,9 @@ const cleanAuthUrl = () => {
   url.searchParams.delete("state");
   url.searchParams.delete("error");
   url.searchParams.delete("error_description");
-  url.hash = "#/";
-  window.history.replaceState({}, "", url.toString());
+  const target = `${url.origin}${url.pathname}${url.search}#/`;
+  // Hash router needs a real navigation event; replaceState does not trigger route updates.
+  window.location.replace(target);
 };
 
 const parseHashTokens = () => {
