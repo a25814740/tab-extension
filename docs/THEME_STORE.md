@@ -38,6 +38,8 @@
   1. 寫入 `theme_asset_purchases`
   2. 寫入對帳事件（可延伸到既有 `payment_events`）
   3. 寫入作者分潤 ledger（建議新表 `creator_payout_ledger`）
+- `creator_payout_ledger` 先只記帳，不直接代表已匯款。
+- `payout` 須與收款分離，避免把收單 provider 當成多創作者分帳工具。
 
 ## 上架位置與營運建議（回答產品問題）
 ### 主題商店要上架在哪裡
@@ -51,13 +53,15 @@
   - 範例：`https://tab-extension-gamma.vercel.app/creator/`
 
 ### 設計者如何收取收益
-- 最穩做法：平台代收代付（先全部收款到平台帳戶，再做月結分潤）。
-- 建議資料流：
+- 第一版建議：平台代收，平台結算，平台人工或批次匯款給創作者。
+- 資料流建議：
   1. 使用者付款成功（PAYUNi webhook）
   2. 建立 `theme_asset_purchases`
   3. 依 `revenue_share_percent` 計算作者可分潤金額
   4. 寫入 `creator_payout_ledger`（待結算）
-  5. 每月批次出款（銀行轉帳）並標記已結算
+  5. 月結匯款到創作者預先綁定的銀行帳戶
+  6. 結算完成後標記為已支付
+- 若未來要自動匯款，才需要另外串接銀行轉帳或 payout provider 的 API。
 - 平台抽成建議：
   - 官方主題：平台 100%
   - 創作者主題：平台 30% / 設計者 70%（可在 `revenue_share_percent` 調整）
@@ -71,3 +75,4 @@
 - 接 API：商店資產列表、購買、安裝、上架
 - 資產審核流程（內容檢查、版權、惡意樣式）
 - 創作者後台（上架、更新版本、收益查詢）
+- 與 `docs/CREATOR_ROADMAP.md` 對齊 Phase 1 / 2 / 3

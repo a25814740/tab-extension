@@ -18,6 +18,7 @@
 - 更新 docs/MVP_SCOPE.md
 - 更新 docs/EXECUTION_PLAN.md
 - 明確標示 deferred 項目
+- 若 task 屬於 creator / theme / marketplace / payout，先更新 docs/CREATOR_ROADMAP.md，再決定是否可進 phase
 
 ## 禁止做的事
 - 重新打開已延後功能
@@ -37,6 +38,12 @@
 - Theme Store
 - 複雜多人協作
 - 過早商業化包裝功能
+
+## Creator 路線
+- Creator 是第二階段商業化基礎建設，不是 MVP 主線。
+- Phase 1 只允許 creator 後台穩定與 preview 對齊。
+- Phase 2 才能做受控上架與月結分潤。
+- Phase 3 才能談模板與自動結算。
 
 ## 完成定義
 - 範圍已收斂

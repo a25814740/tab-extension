@@ -1,6 +1,6 @@
 ﻿# DELIVERY_REPORT
 
-最後更新：2026-03-28
+最後更新：2026-03-29
 
 ## 本輪目標
 - 先讓 AI 自動執行框架可控、可診斷、可停損
@@ -38,6 +38,7 @@
 - [ ] 將 `appStore.ts` 巨石拆分成可測試模組
 - [ ] 以真實 smoke / regression 取代 placeholder 測試
 - [ ] 收斂 sync / membership / payment vocabulary 與狀態轉換
+- [ ] 依 `docs/CREATOR_ROADMAP.md` 把 creator Phase 1 當成獨立商業化主線，而不是混在 MVP
 
 ## Blockers / 風險
 - `App.tsx` 與 `appStore.ts` 仍是主技術債；只靠文件還不算完成
@@ -50,6 +51,7 @@
 2. 確保拆分不引入新功能、只做責任切割
 3. 在 `App.tsx` 初步拆分後，立刻補 build / lint 驗證
 4. 再進入 `appStore.ts` 拆分
+5. 若 task 觸及 creator / theme / payout，先對齊 `docs/CREATOR_ROADMAP.md` 的 Phase 1/2/3
 
 ## 是否可交付
 - [ ] 尚未可交付

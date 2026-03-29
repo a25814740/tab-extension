@@ -1,6 +1,6 @@
 ﻿# EXECUTION_PLAN
 
-最後更新：2026-03-28
+最後更新：2026-03-29
 
 ## 執行原則
 1. 先穩定自動執行框架，再讓它處理真實重構 task。
@@ -131,10 +131,39 @@
 - 複雜多人協作
 - 非 MVP 的視覺與商業擴充線
 
+## Creator 路線圖
+若 task 明確屬於 creator / theme / marketplace，請改讀 `docs/CREATOR_ROADMAP.md`，再決定是否可做。
+
+### Phase 1
+目的：修穩 creator 後台與 preview 一致性。
+- 登入
+- 路由
+- 預覽一致性
+- 建立 / 編輯 / 發佈
+
+### Phase 2
+目的：受控上架與月結分潤。
+- Theme Store
+- 購買與套用
+- ledger
+- 人工匯款
+
+### Phase 3
+目的：規模化 marketplace。
+- 自動化結算
+- 模板商店評估
+- 多創作者管理
+
+### 執行規則
+- creator 任務不得混入 MVP 重構任務
+- payout 自動化必須先有文件與資料模型
+- 未定義的金流 / 分潤行為不得直接寫碼
+
 ## 目前最近下一步
 1. 完成 T02 文件型 task 驗證。
 2. 進入 T03，先拆 `App.tsx` 的本地 UI 狀態與型別。
 3. 只在文件與 gate 足夠時，才讓 local_exec 進入多檔案重構。
+4. 若要碰 creator，先跑 `docs/CREATOR_ROADMAP.md` 對應的 Phase 1 task。
 
 <!-- T03_FREEZE_START -->
 ## T03 重構順序（凍結）

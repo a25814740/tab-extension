@@ -1,6 +1,6 @@
 ﻿# AUTONOMY_RULES
 
-最後更新：2026-03-27
+最後更新：2026-03-29
 
 ## 自動執行原則
 1. 遇到可逆修改，直接執行，不必等待人工確認。
@@ -15,6 +15,7 @@
    - `docs/PROJECT_STATUS.md`
    - `docs/EXECUTION_PLAN.md`
    - `docs/DELIVERY_REPORT.md`
+   - 若 task 屬於 creator / theme / payout，還必須對齊 `docs/CREATOR_ROADMAP.md`
 6. 若同一問題連續失敗兩次，停止並輸出 blocker 與建議處理方式。
 7. 不可為了快速完成而跳過測試 gate。
 
@@ -47,3 +48,10 @@
 - 直接推動 payment / membership / creator 商業功能擴線
 - 先做 UI 美化而不先收斂主線
 - 以 placeholder 測試假裝完成驗收
+
+## Creator 任務的額外規則
+1. creator / theme / marketplace / payout 任務必須先判斷 Phase 1 / 2 / 3。
+2. Phase 1 只能做 creator 後台穩定性與 preview 一致性。
+3. Phase 2 才能做受控上架與月結分潤。
+4. Phase 3 才能談自動結算、模板商店與規模化 marketplace。
+5. 若 task 無法明確歸類，就先停在文件收斂，不可直接寫碼。
