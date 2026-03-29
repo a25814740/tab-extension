@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./ui/App";
+import { LocaleProvider } from "./i18n";
 import { appStore } from "./store/appStore";
 import { defaultCache, sampleWorkspaces } from "@toby/core";
 import html2canvas from "html2canvas";
@@ -173,6 +174,8 @@ if (!root) {
 
 createRoot(root).render(
   <React.StrictMode>
-    <App />
+    <LocaleProvider>
+      <App />
+    </LocaleProvider>
   </React.StrictMode>
 );
