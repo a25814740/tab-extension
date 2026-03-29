@@ -7,7 +7,7 @@
   "types": "./src/index.ts",
   "scripts": {
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0"

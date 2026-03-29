@@ -7,7 +7,7 @@
   "types": "./src/index.ts",
   "scripts": {
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "clsx": "^2.1.1"
