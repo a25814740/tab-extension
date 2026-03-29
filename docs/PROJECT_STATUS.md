@@ -114,6 +114,19 @@ repo 目前已有一套雙層 AI 執行框架：
 ## 8. 目前結論
 現在的 repo 還不能視為可發布產品，但已經從「邊做邊漂」進入「主線明確、phase 清楚、可開始穩定重構」的狀態。
 
+## 9. Creator 最新修正（2026-03-29）
+- [x] 修正 creator 設計頁與預覽頁 iframe 載入時序，避免 token 初始化丟失
+- [x] 補上 preview 載入失敗可見錯誤提示，避免白屏無訊息
+- [x] 修正 creator build 輸出與 hash 路由落地，避免 `/creator/` 與 callback 流程卡空白
+- [x] 修正 preview base 路徑為 `/preview/`，避免 iframe 內資產 404
+- [x] 修正 preview 缺少 `LocaleProvider` 導致 `useLocale` 崩潰
+- [x] 已完成 `@toby/creator` lint/typecheck/test/build 與 `@toby/newtab` preview build
+- [x] 已部署到 `https://tab-extension-gamma.vercel.app`
+
+### 目前仍待追蹤
+- [ ] creator 仍有 chunk 體積偏大告警（>500KB），屬效能優化項，非阻斷上線
+- [ ] 舊版瀏覽器快取可能暫時看到過期 JS，需以硬重新整理驗證
+
 <!-- T01_SMOKE_START -->
 ## T01 Smoke 驗證（自動更新）
 - 狀態：已完成首輪 end-to-end smoke 驗證

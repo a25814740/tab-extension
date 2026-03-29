@@ -58,6 +58,31 @@
 - [x] 可作為內部重整基線
 - [ ] 可進入正式發布流程
 
+## Creator 穩定化交付（2026-03-29）
+### 已完成
+- [x] 設計頁/預覽頁改為正確的 iframe lifecycle 管理（含 `onUnmounted` 清理）
+- [x] 加入 preview 載入逾時提示，避免使用者只看到空白
+- [x] 修正 preview 站點資產路徑，避免 `/preview/` 404
+- [x] 修正 preview 缺少 `LocaleProvider` 的 runtime crash
+- [x] 修正 creator hash callback 兼容，降低 OAuth 回跳白屏機率
+- [x] 完整驗證：
+  - `pnpm --filter @toby/creator lint`
+  - `pnpm --filter @toby/creator typecheck`
+  - `pnpm --filter @toby/creator test`
+  - `pnpm --filter @toby/creator build`
+  - `pnpm --filter @toby/newtab build:preview`
+- [x] 已部署與 alias：
+  - Production deployment: `https://tab-extension-7ltwva1j4-a25814740s-projects.vercel.app`
+  - Alias: `https://tab-extension-gamma.vercel.app`
+
+### Blockers
+- 無阻斷 deployment 的 blocker；目前主要剩瀏覽器快取與非阻斷體積優化議題。
+
+### 下一步
+1. 以無痕或硬重新整理驗證 creator 登入回跳與 `/creator/#/design` 行為。
+2. 若仍有空白頁，先清除 Service Worker/快取後再驗證，避免舊資產干擾。
+3. 進入 creator 功能層（作品列表/收益頁）的真實資料整合與錯誤回復流程。
+
 <!-- T01_SMOKE_START -->
 ## T01 Smoke 驗證紀錄（自動更新）
 - 狀態：已完成
