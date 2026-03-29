@@ -5,8 +5,8 @@
     { "source": "/creator", "destination": "/creator/index.html" },
     { "source": "/creator/", "destination": "/creator/index.html" },
     { "source": "/creator/:path*", "destination": "/creator/index.html" },
-    { "source": "/preview", "destination": "/preview/index.html" },
-    { "source": "/preview/", "destination": "/preview/index.html" },
-    { "source": "/preview/:path*", "destination": "/preview/index.html" }
+    { "source": "/preview", "destination": "/preview/preview/index.html" },
+    { "source": "/preview/", "destination": "/preview/preview/index.html" },
+    { "source": "/preview/:path*", "destination": "/preview/preview/index.html" }
   ]
 }
