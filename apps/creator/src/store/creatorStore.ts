@@ -301,6 +301,17 @@ const cleanAuthUrl = () => {
   window.history.replaceState({}, "", url.toString());
 };
 
+const parseHashTokens = () => {
+  const raw = window.location.hash.replace(/^#/, "");
+  if (!raw) return null;
+  const params = new URLSearchParams(raw);
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  if (!accessToken || !refreshToken) return null;
+  const expiresIn = Number(params.get("expires_in") || 0);
+  return { accessToken, refreshToken, expiresIn };
+};
+
 const handleAuthCallback = async (client: SupabaseClient) => {
   const hasHashToken = window.location.hash.includes("access_token");
   const hasCode = new URLSearchParams(window.location.search).has("code");
@@ -308,11 +319,29 @@ const handleAuthCallback = async (client: SupabaseClient) => {
   creatorState.statusMessage = "";
 
   if (hasHashToken) {
-    const { data, error } = await client.auth.getSessionFromUrl({ storeSession: true });
-    if (error) {
-      creatorState.statusMessage = error.message;
-    } else if (data.session) {
-      creatorState.session = data.session;
+    if (typeof client.auth.getSessionFromUrl === "function") {
+      const { data, error } = await client.auth.getSessionFromUrl({ storeSession: true });
+      if (error) {
+        creatorState.statusMessage = error.message;
+      } else if (data.session) {
+        creatorState.session = data.session;
+      }
+      cleanAuthUrl();
+      return;
+    }
+    const tokens = parseHashTokens();
+    if (tokens && typeof client.auth.setSession === "function") {
+      const { data, error } = await client.auth.setSession({
+        access_token: tokens.accessToken,
+        refresh_token: tokens.refreshToken,
+      });
+      if (error) {
+        creatorState.statusMessage = error.message;
+      } else if (data.session) {
+        creatorState.session = data.session;
+      }
+    } else {
+      creatorState.statusMessage = "登入流程版本不支援，請更新";
     }
     cleanAuthUrl();
     return;

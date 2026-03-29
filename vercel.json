@@ -1,9 +1,12 @@
 {
-  "buildCommand": "pnpm --filter @toby/creator build",
+  "buildCommand": "pnpm --filter @toby/creator build && pnpm --filter @toby/newtab build:preview",
   "outputDirectory": "docs",
   "rewrites": [
     { "source": "/creator", "destination": "/creator/index.html" },
     { "source": "/creator/", "destination": "/creator/index.html" },
-    { "source": "/creator/:path*", "destination": "/creator/index.html" }
+    { "source": "/creator/:path*", "destination": "/creator/index.html" },
+    { "source": "/preview", "destination": "/preview/index.html" },
+    { "source": "/preview/", "destination": "/preview/index.html" },
+    { "source": "/preview/:path*", "destination": "/preview/index.html" }
   ]
 }
