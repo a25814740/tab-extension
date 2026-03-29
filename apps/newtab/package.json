@@ -5,19 +5,30 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:preview": "vite --config vite.preview.config.ts",
     "build": "vite build",
+    "build:preview": "vite build --config vite.preview.config.ts",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@toby/core": "workspace:*",
+    "@toby/api-client": "workspace:*",
     "@toby/shared-ui": "workspace:*",
+    "@toby/ai": "workspace:*",
+    "@toby/google-drive-sync": "workspace:*",
+    "@toby/chrome-adapters": "workspace:*",
+    "@headlessui/react": "^2.1.8",
+    "html2canvas": "^1.4.1",
+    "lucide-react": "^0.469.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^4.5.4",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^8.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@tanstack/react-query": "^5.56.2",
     "zod": "^3.23.8",
     "clsx": "^2.1.1"
@@ -29,6 +40,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.45",
     "tailwindcss": "^3.4.11",
+    "tailwind-scrollbar-hide": "^1.1.7",
     "typescript": "^5.6.2",
     "vite": "^5.4.8",
     "vitest": "^2.1.3"

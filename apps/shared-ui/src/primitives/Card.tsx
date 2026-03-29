@@ -1,15 +1,21 @@
 import clsx from "clsx";
-import type { ReactNode } from "react";
+import type { HTMLAttributes } from "react";
+import { forwardRef } from "react";
 
-export type CardProps = {
-  className?: string;
-  children: ReactNode;
-};
+export type CardProps = HTMLAttributes<HTMLDivElement>;
 
-export function Card({ className, children }: CardProps) {
-  return (
-    <div className={clsx("rounded-lg border border-slate-800 bg-slate-900/60", className)}>
-      {children}
-    </div>
-  );
-}
+export const Card = forwardRef<HTMLDivElement, CardProps>(({ className, children, ...rest }, ref) => (
+  <div
+    ref={ref}
+    // Forward native events/attrs (e.g., drag/drop handlers, aria props).
+    {...rest}
+    className={clsx(
+      "rounded-lg border border-slate-800/70 bg-slate-900/70 shadow-sm backdrop-blur-sm",
+      className
+    )}
+  >
+    {children}
+  </div>
+));
+
+Card.displayName = "Card";

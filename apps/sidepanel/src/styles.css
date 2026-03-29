@@ -5,3 +5,13 @@
 :root {
   color-scheme: dark;
 }
+
+html,
+body,
+#root {
+  min-width: 380px;
+}
+
+body {
+  overflow-x: auto;
+}

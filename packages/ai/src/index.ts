@@ -46,3 +46,31 @@ function safeDomain(url: string) {
     return "unknown";
   }
 }
+
+export type AiSummary = {
+  summary: string;
+  confidence: number;
+};
+
+export type AiProvider = {
+  summarize: (tabs: TabInput[]) => Promise<AiSummary>;
+  group: (tabs: TabInput[]) => Promise<GroupSuggestion[]>;
+};
+
+export function createRuleBasedProvider(): AiProvider {
+  return {
+    async summarize(tabs) {
+      if (tabs.length === 0) {
+        return { summary: "No tabs", confidence: 0.1 };
+      }
+      const top = tabs[0];
+      return {
+        summary: `Mainly about ${safeDomain(top.url)} and related links`,
+        confidence: 0.4,
+      };
+    },
+    async group(tabs) {
+      return suggestGroups(tabs);
+    },
+  };
+}

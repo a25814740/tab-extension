@@ -13,6 +13,9 @@ export type Workspace = {
   id: string;
   ownerId: string;
   name: string;
+  logoUrl?: string | null | undefined;
+  inviteCount?: number | null | undefined;
+  points?: number | null | undefined;
   createdAt: string;
   updatedAt: string;
 };
@@ -53,6 +56,7 @@ export type Collection = {
   name: string;
   note: string | null;
   color: string | null;
+  starred?: boolean | null | undefined;
   position: number;
   createdBy: string;
   createdAt: string;
@@ -66,6 +70,10 @@ export type TabItem = {
   title: string;
   url: string;
   faviconUrl: string | null;
+  ogTitle?: string | null | undefined;
+  ogDescription?: string | null | undefined;
+  ogImage?: string | null | undefined;
+  screenshotUrl?: string | null | undefined;
   note: string | null;
   position: number;
   createdAt: string;
@@ -127,18 +135,36 @@ export type PendingOp = {
   createdAt: string;
 };
 
+export type DockItem = {
+  id: string;
+  type: "tab" | "collection" | "action";
+  title: string;
+  url: string | null;
+  collectionId: string | null;
+  faviconUrl: string | null;
+  createdAt: string;
+};
+
+export type DockState = {
+  pinned: DockItem[];
+};
+
 export type LocalAppCache = {
   version: number;
   currentUserId: string | null;
   selectedWorkspaceId: string | null;
   selectedSpaceId: string | null;
+  selectedCollectionId?: string | null | undefined;
   expandedFolderIds: string[];
   ui: {
     theme: "light" | "dark" | "system";
     sidebarCollapsed: boolean;
-    viewMode: "grid" | "list";
+    viewMode: "grid" | "list" | "compact" | "image";
     sortMode: "custom" | "recent" | "name" | "createdAt";
   };
+  dock: DockState;
   pendingOps: PendingOp[];
   lastSyncAt: string | null;
+  lastSyncError?: string | null | undefined;
+  nextSyncRetryAt?: string | null | undefined;
 };

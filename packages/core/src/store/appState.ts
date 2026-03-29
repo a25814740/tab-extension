@@ -1,19 +1,23 @@
 import type { Collection, Folder, LocalAppCache, Space, TabItem, Workspace } from "../domain/models";
+import type { LocalStoreSnapshot } from "../schemas/appSchemas";
 
 export type AppState = {
+  workspaces: Workspace[];
   workspace: Workspace | null;
   spaces: Space[];
   folders: Folder[];
   collections: Collection[];
   tabs: TabItem[];
   cache: LocalAppCache;
+  rollbackStack: LocalStoreSnapshot[];
 };
 
 export const defaultCache: LocalAppCache = {
-  version: 1,
+  version: 2,
   currentUserId: null,
   selectedWorkspaceId: null,
   selectedSpaceId: null,
+  selectedCollectionId: null,
   expandedFolderIds: [],
   ui: {
     theme: "system",
@@ -21,15 +25,22 @@ export const defaultCache: LocalAppCache = {
     viewMode: "grid",
     sortMode: "custom",
   },
+  dock: {
+    pinned: [],
+  },
   pendingOps: [],
   lastSyncAt: null,
+  lastSyncError: null,
+  nextSyncRetryAt: null,
 };
 
 export const defaultAppState: AppState = {
+  workspaces: [],
   workspace: null,
   spaces: [],
   folders: [],
   collections: [],
   tabs: [],
   cache: defaultCache,
+  rollbackStack: [],
 };
