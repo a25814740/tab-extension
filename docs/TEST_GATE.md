@@ -1,4 +1,4 @@
-# TEST_GATE
+﻿# TEST_GATE
 
 最後更新：2026-03-28
 
@@ -107,3 +107,32 @@
 
 ## 9. 本輪執行紀錄
 - 2026-03-28：T02 文件收斂階段，先將測試 gate 寫成可執行標準，下一階段再用它約束 App.tsx / appStore.ts 拆分與 sync/payment 測試補齊。
+
+<!-- T03_PLACEHOLDER_START -->
+## T03 重構順序（凍結）
+
+### App.tsx 拆分順序（固定）
+1. shell state / 型別 / hook（先抽出，避免後續面板拆分時再補洞）
+2. sidebar（workspace / space / folder / collection tree）
+3. main content（collection / tab 主內容）
+4. overlays（share / pricing / settings 等 modal 與 facade）
+
+### ppStore.ts 拆分順序（固定）
+1. hydrate / migration（state 還原與版本遷移）
+2. sync actions / flush pending ops（推拉與 retry/rollback glue）
+3. workspace / collection actions（CRUD + 排序）
+4. tab / dock actions（move/reorder/dedupe/dock）
+
+### Placeholder / 低信任測試命中（待替換清單）
+- tests/e2e/basic.test.ts:3: test("basic e2e placeholder", async ({ page }) => {
+- tests/integration/syncFlow.test.ts:4: it("placeholder integration test", () => {
+
+更新時間：2026-03-28 21:03:30 +08:00
+<!-- T03_PLACEHOLDER_END -->
+
+
+
+
+
+
+

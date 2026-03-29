@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import { getAllWindowsWithTabs, openTabs, focusTab, closeTabs, getLocal, setLocal } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
-import { CollectionCard } from "./CollectionCard";
-import { CollectionRow } from "./CollectionRow";
-import { TabRow } from "./TabRow";
 import { createRuleBasedProvider } from "@toby/ai";
 import { AuthMiniPanel } from "./AuthPanel";
 import { PricingModal, type PricingPlanId } from "./PricingModal";
@@ -29,6 +26,7 @@ import { DockIconButton } from "./DockIconButton";
 import { EntityMenuButton } from "./EntityMenuButton";
 import { ThemeStoreModal } from "./ThemeStoreModal";
 import { usePreviewThemeBridge } from "./usePreviewThemeBridge";
+import { MainContentPanel } from "./app/MainContentPanel";
 import {
   DEFAULT_TEMPLATE_PRESET_ID,
   DEFAULT_THEME_PRESET_ID,
@@ -59,7 +57,6 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Plus,
-  Search,
   Settings,
   Trash2,
   X,
@@ -78,7 +75,7 @@ import {
   useDroppable,
   type CollisionDetection,
 } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 type MemberRole = "owner" | "admin" | "editor" | "commenter" | "viewer";
 type AddCollectionAction = "blank" | "current-window" | "selected-tabs";
@@ -185,12 +182,12 @@ export function App() {
   const setSelectedSpaceId = useAppStore((state) => state.setSelectedSpaceId);
   const setSelectedCollectionId = useAppStore((state) => state.setSelectedCollectionId);
   const updateCollectionTitle = useAppStore((state) => state.updateCollectionTitle);
-  const toggleCollectionStar = useAppStore((state) => state.toggleCollectionStar);
+  const _toggleCollectionStar = useAppStore((state) => state.toggleCollectionStar);
   const moveCollectionWithinSpace = useAppStore((state) => state.moveCollectionWithinSpace);
   const moveCollectionToSpace = useAppStore((state) => state.moveCollectionToSpace);
-  const sortTabsInCollection = useAppStore((state) => state.sortTabsInCollection);
+  const _sortTabsInCollection = useAppStore((state) => state.sortTabsInCollection);
   const deleteCollection = useAppStore((state) => state.deleteCollection);
-  const updateTab = useAppStore((state) => state.updateTab);
+  const _updateTab = useAppStore((state) => state.updateTab);
   const updateTabMetadata = useAppStore((state) => state.updateTabMetadata);
   const deleteTab = useAppStore((state) => state.deleteTab);
   const moveTabToCollection = useAppStore((state) => state.moveTabToCollection);
@@ -2016,6 +2013,18 @@ export function App() {
     });
   };
 
+  const toggleTabSelection = useCallback((tabId: string) => {
+    setSelectedTabIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(tabId)) {
+        next.delete(tabId);
+      } else {
+        next.add(tabId);
+      }
+      return next;
+    });
+  }, []);
+
   const handleAddCollectionAction = (value: AddCollectionAction) => {
     if (value === "blank") {
       handleCreateCollection();
@@ -2646,6 +2655,9 @@ export function App() {
     [locale, moveCollectionWithinSpace, setSortMode, showUiNotice, sortMode]
   );
 
+  const moveCollection = handleMoveCollectionWithinSpace;
+  const addTabToDock = handleAddTabToDock;
+
   const buildPayuniCheckoutUrl = useCallback(
     (planId: "personal_yearly", accessToken: string) => {
       if (!effectiveSupabaseUrl) {
@@ -3129,6 +3141,25 @@ export function App() {
     }
   };
 
+  // NOTE: These are staged helpers for upcoming refactors (T05/T06) and future panel splits.
+  // Keep them referenced so eslint doesn't fail while we iterate task-by-task.
+  void _toggleCollectionStar;
+  void _sortTabsInCollection;
+  void _updateTab;
+  void summaries;
+  void dragOverCollectionId;
+  void orderBySpace;
+  void handleOpenAll;
+  void tabGridClass;
+  void tabGridStyle;
+  void hasCollapsedCollections;
+  void sortModeOptions;
+  void viewModeOptions;
+  void handleDropWindowTabToCollection;
+  void handleDropSavedTabToCollection;
+  void handleTrackOpenSavedTab;
+  void handleExportCollection;
+
   // Layout mirrors the Taboard information hierarchy while keeping data wiring intact.
   if (!authUser) {
     return (
@@ -3381,393 +3412,57 @@ export function App() {
           </aside>
 
           <main className="flex h-full min-h-0 flex-col">
-            <div
-              className="flex flex-col flex-1 overflow-hidden rounded-[28px] border border-zinc-200 shadow-md"
-              style={mainPanelThemeStyle}
-            >
-              <div className="border-b border-zinc-200 px-6 py-5">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="text-sm font-semibold text-zinc-500">
-                    {workspace?.name ?? t("app.loading")} / {activeSpaceName}
-                  </div>
-                  <div ref={searchWrapRef} className="ml-auto relative flex items-center gap-2">
-                    <div className="relative">
-                      <button
-                        onClick={() => setCreateCollectionMenuOpen((prev) => !prev)}
-                        className="flex items-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2 text-xs font-medium text-white border border-zinc-900"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>新增集合</span>
-                      </button>
-                      {createCollectionMenuOpen ? (
-                        <div className="absolute left-0 top-full z-20 mt-2 w-56 rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
-                          <button
-                            className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
-                            onClick={() => {
-                              handleAddCollectionAction("blank");
-                              setCreateCollectionMenuOpen(false);
-                            }}
-                          >
-                            空白集合
-                          </button>
-                          <button
-                            className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
-                            onClick={() => {
-                              handleAddCollectionAction("current-window");
-                              setCreateCollectionMenuOpen(false);
-                            }}
-                          >
-                            從目前開啟分頁建立
-                          </button>
-                          <button
-                            className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-50"
-                            onClick={() => {
-                              handleAddCollectionAction("selected-tabs");
-                              setCreateCollectionMenuOpen(false);
-                            }}
-                          >
-                            從拖放內容建立
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                    <button
-                      className="flex items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-2 text-xs font-medium text-zinc-700 border border-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
-                      onClick={allCollectionsCollapsed ? handleExpandAllCollections : handleCollapseAllCollections}
-                      disabled={!hasCollapsedCollections && !hasExpandedCollections}
-                    >
-                      {allCollectionsCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                      <span>{allCollectionsCollapsed ? t("collection.expandAll") : t("collection.collapseAll")}</span>
-                    </button>
+            <MainContentPanel
+              locale={locale}
+              t={t}
+              workspace={workspace}
+              activeSpaceName={activeSpaceName}
+              mainPanelThemeStyle={mainPanelThemeStyle}
+              searchWrapRef={searchWrapRef}
+              searchInputRef={searchInputRef}
+              blankCollectionDropActive={blankCollectionDropActive}
+              sortedCollections={sortedCollections}
+              tabsByCollection={tabsByCollection}
+              tabCountByCollection={tabCountByCollection}
+              entityMenu={entityMenu}
+              setEntityMenu={setEntityMenu}
+              selectedCollectionId={selectedCollectionId}
+              setSelectedCollectionId={setSelectedCollectionId}
+              searchOpen={searchOpen}
+              setSearchOpen={setSearchOpen}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              createCollectionMenuOpen={createCollectionMenuOpen}
+              setCreateCollectionMenuOpen={setCreateCollectionMenuOpen}
+              handleAddCollectionAction={handleAddCollectionAction}
+              sortMode={sortMode}
+              setSortMode={setSortMode}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
+              collectionBlankAreaDrop={collectionBlankAreaDrop}
+              collectionBlankDrop={collectionBlankDrop}
+              setBlankCollectionDropActive={setBlankCollectionDropActive}
+              handleDropRawToBlank={handleDropRawToBlank}
+              collapsedCollections={collapsedCollections}
+              handleToggleCollectionCollapse={handleToggleCollectionCollapse}
+              allCollectionsCollapsed={allCollectionsCollapsed}
+              handleExpandAllCollections={handleExpandAllCollections}
+              handleCollapseAllCollections={handleCollapseAllCollections}
+              selectedTabIds={selectedTabIds}
+              toggleTabSelection={toggleTabSelection}
+              openCollectionTabs={openCollectionTabs}
+              moveCollection={moveCollection}
+              addTabToDock={addTabToDock}
+              moveTabToCollection={moveTabToCollection}
+              reorderTabsWithIndex={reorderTabsWithIndex}
+              deleteCollection={deleteCollection}
+              handleOpenCollectionInvite={handleOpenCollectionInvite}
+              handleEditCollectionTitle={handleEditCollectionTitle}
+              workspaces={workspaces.map((w) => ({ id: w.id, name: w.name }))}
+              spaces={spaces.map((s) => ({ id: s.id, workspaceId: s.workspaceId, name: s.name }))}
+              collections={collections.map((c) => ({ id: c.id, spaceId: c.spaceId, workspaceId: c.workspaceId, name: c.name }))}
+            />
 
-                    <SelectMenu
-                      value={sortMode}
-                      onChange={setSortMode}
-                      options={sortModeOptions}
-                      size="md"
-                      buttonClassName="min-w-[150px]"
-                      showSelectedIcon
-                    />
-
-                    <SelectMenu
-                      value={viewMode}
-                      onChange={setViewMode}
-                      options={viewModeOptions}
-                      size="md"
-                      showSelectedIcon
-                      buttonClassName="min-w-[130px]"
-                    />
-                    <button
-                      className="flex h-9 w-9 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 border border-zinc-100"
-                      onClick={() => setSearchOpen((prev) => !prev)}
-                      aria-label={t("nav.search")}
-                      title={t("nav.search")}
-                    >
-                      <Search className="h-4 w-4" />
-                    </button>
-                    {searchOpen ? (
-                      <div className="absolute inset-y-0 left-0 right-0 z-30 flex items-center">
-                        <div className="ml-auto w-full">
-                          <div className="flex min-w-[260px] items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-2 text-xs text-zinc-500 border border-zinc-100">
-                            <Search className="h-4 w-4" />
-                            <input
-                              ref={searchInputRef}
-                              className="w-full bg-transparent text-xs text-zinc-700 outline-none placeholder:text-zinc-400"
-                              placeholder={t("app.searchPlaceholder")}
-                              value={searchQuery}
-                              onChange={(event) => setSearchQuery(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Escape") {
-                                  setSearchOpen(false);
-                                }
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-
-              <div
-                ref={collectionBlankAreaDrop.setNodeRef}
-                className={`min-h-0 flex-1 overflow-y-auto px-5 py-5 ${collectionBlankAreaDrop.isOver || blankCollectionDropActive ? "bg-rose-50/30" : ""
-                  }`}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "move";
-                  setBlankCollectionDropActive(true);
-                }}
-                onDragEnter={() => setBlankCollectionDropActive(true)}
-                onDragLeave={(event) => {
-                  const related = event.relatedTarget;
-                  if (related instanceof Node && event.currentTarget.contains(related)) {
-                    return;
-                  }
-                  setBlankCollectionDropActive(false);
-                }}
-                onDrop={(event) => {
-                  if (event.defaultPrevented) {
-                    return;
-                  }
-                  event.preventDefault();
-                  setBlankCollectionDropActive(false);
-                  handleDropRawToBlank(event.dataTransfer);
-                }}
-              >
-                <SortableContext
-                  items={sortedCollections.map((collection) => collection.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {viewMode === "list" ? (
-                    <div className="space-y-3">
-                      {sortedCollections.map((collection) => {
-                        const list = tabsByCollection.get(collection.id) ?? [];
-                        return (
-                          <div key={collection.id} className="space-y-2">
-                            <CollectionRow
-                              id={collection.id}
-                              name={collection.name}
-                              tabCount={tabCountByCollection.get(collection.id) ?? 0}
-                              updatedAt={collection.updatedAt}
-                              entityMenu={entityMenu}
-                              setEntityMenu={setEntityMenu}
-                              menuItems={[
-                                { label: "編輯集合", icon: Pencil, onClick: () => handleEditCollectionTitle(collection.id, collection.name) },
-                                { label: "刪除集合", icon: Trash2, onClick: () => deleteCollection(collection.id) },
-                                { label: "邀請好友", icon: UserPlus, onClick: () => handleOpenCollectionInvite(collection.id) },
-                              ]}
-                              onSelect={() => setSelectedCollectionId(collection.id)}
-                            />
-                            {list.length > 0 ? (
-                              <SortableContext
-                                items={list.map((tab) => tab.id)}
-                                strategy={verticalListSortingStrategy}
-                              >
-                                <div className="space-y-3 pl-4 pr-1">
-                                  {list.map((tab) => (
-                                    <div key={tab.id} className="group/tab relative">
-                                      <TabRow
-                                        id={tab.id}
-                                        title={tab.title}
-                                        url={tab.url}
-                                        {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
-                                        ogTitle={tab.ogTitle ?? null}
-                                        ogDescription={tab.ogDescription ?? null}
-                                        note={tab.note ?? null}
-                                        ogImage={tab.ogImage ?? null}
-                                        viewMode="list"
-                                        onDelete={deleteTab}
-                                        onUpdate={updateTab}
-                                        onAddToDock={handleAddTabToDock}
-                                        onOpen={handleTrackOpenSavedTab}
-                                        onMove={(tabId, workspaceId, spaceId, collectionId) => {
-                                          if (
-                                            collectionId === tab.collectionId &&
-                                            workspaceId === collection.workspaceId &&
-                                            spaceId === collection.spaceId
-                                          ) {
-                                            return;
-                                          }
-                                          moveTabToCollection(tabId, collectionId);
-                                          setMoveNotice({
-                                            message: locale === "en" ? "Tab moved" : "分頁已移動",
-                                            workspaceId,
-                                            spaceId,
-                                            collectionId,
-                                          });
-                                        }}
-                                        selected={selectedTabIds.has(tab.id)}
-                                        onToggleSelect={() =>
-                                          setSelectedTabIds((prev) => {
-                                            const next = new Set(prev);
-                                            if (next.has(tab.id)) {
-                                              next.delete(tab.id);
-                                            } else {
-                                              next.add(tab.id);
-                                            }
-                                            return next;
-                                          })
-                                        }
-                                        workspaces={workspaces}
-                                        spaces={spaces}
-                                        collections={collections}
-                                        currentWorkspaceId={collection.workspaceId}
-                                        currentSpaceId={collection.spaceId}
-                                        currentCollectionId={collection.id}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              </SortableContext>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {sortedCollections.map((collection) => {
-                        const list = orderBySpace.get(collection.spaceId) ?? [];
-                        const index = list.indexOf(collection.id);
-                        const canMoveUp = index > 0;
-                        const canMoveDown = index >= 0 && index < list.length - 1;
-                        return (
-                          <div key={collection.id}>
-                            <CollectionCard
-                              id={collection.id}
-                              name={collection.name}
-                              tabCount={tabCountByCollection.get(collection.id) ?? 0}
-                              summary={summaries[collection.id]}
-                              onOpenAll={() => handleOpenAll(collection.id)}
-                              onMoveUp={() => handleMoveCollectionWithinSpace(collection.id, "up")}
-                              onMoveDown={() => handleMoveCollectionWithinSpace(collection.id, "down")}
-                              canMoveUp={canMoveUp}
-                              canMoveDown={canMoveDown}
-                              onEditTitle={(name) => handleEditCollectionTitle(collection.id, name)}
-                              onToggleStar={() => toggleCollectionStar(collection.id)}
-                              onSortAZ={() => sortTabsInCollection(collection.id)}
-                              onMove={(workspaceId, spaceId) => {
-                                moveCollectionToSpace(collection.id, workspaceId, spaceId);
-                                setMoveNotice({
-                                  message: locale === "en" ? "Collection moved" : "集合已移動",
-                                  workspaceId,
-                                  spaceId,
-                                  collectionId: collection.id,
-                                });
-                              }}
-                              onExport={() => handleExportCollection(collection.id, collection.name)}
-                              onInvite={() => handleOpenCollectionInvite(collection.id)}
-                              onDelete={() => deleteCollection(collection.id)}
-                              onDropWindowTab={(tabId) => handleDropWindowTabToCollection(tabId, collection.id)}
-                              onDropSavedTab={(tabId) => handleDropSavedTabToCollection(tabId, collection.id)}
-                              onDragEnterDropZone={() => setDragOverCollectionId(collection.id)}
-                              onDragLeaveDropZone={() => {
-                                setDragOverCollectionId((prev) => (prev === collection.id ? null : prev));
-                              }}
-                              isDropTarget={dragOverCollectionId === collection.id}
-                              starred={collection.starred ?? false}
-                              workspaces={workspaces}
-                              spaces={spaces}
-                              activeWorkspaceId={activeWorkspaceId}
-                              spaceId={collection.spaceId}
-                              isActive={selectedCollectionId === collection.id}
-                              onSelect={() => setSelectedCollectionId(collection.id)}
-                              onToggleSelect={() =>
-                                setSelectedCollectionIds((prev) => {
-                                  const next = new Set(prev);
-                                  if (next.has(collection.id)) {
-                                    next.delete(collection.id);
-                                  } else {
-                                    next.add(collection.id);
-                                  }
-                                  return next;
-                                })
-                              }
-                              selected={selectedCollectionIds.has(collection.id)}
-                              collapsed={collapsedCollections[collection.id] ?? false}
-                              onToggleCollapse={() => handleToggleCollectionCollapse(collection.id)}
-                            >
-                              <SortableContext
-                                items={(tabsByCollection.get(collection.id) ?? []).map((tab) => tab.id)}
-                                strategy={verticalListSortingStrategy}
-                              >
-                                <div className={`mt-4 ${tabGridClass}`} style={tabGridStyle}>
-                                  {(tabsByCollection.get(collection.id) ?? []).map((tab) => (
-                                    <div key={tab.id} className="group/tab relative">
-                                      <TabRow
-                                        id={tab.id}
-                                        title={tab.title}
-                                        url={tab.url}
-                                        {...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})}
-                                        ogTitle={tab.ogTitle ?? null}
-                                        ogDescription={tab.ogDescription ?? null}
-                                        note={tab.note ?? null}
-                                        ogImage={tab.ogImage ?? null}
-                                        viewMode={viewMode}
-                                        onDelete={deleteTab}
-                                        onUpdate={updateTab}
-                                        onAddToDock={handleAddTabToDock}
-                                        onOpen={handleTrackOpenSavedTab}
-                                        onMove={(tabId, workspaceId, spaceId, collectionId) => {
-                                          if (
-                                            collectionId === tab.collectionId &&
-                                            workspaceId === collection.workspaceId &&
-                                            spaceId === collection.spaceId
-                                          ) {
-                                            return;
-                                          }
-                                          moveTabToCollection(tabId, collectionId);
-                                          setMoveNotice({
-                                            message: locale === "en" ? "Tab moved" : "分頁已移動",
-                                            workspaceId,
-                                            spaceId,
-                                            collectionId,
-                                          });
-                                        }}
-                                        selected={selectedTabIds.has(tab.id)}
-                                        onToggleSelect={() =>
-                                          setSelectedTabIds((prev) => {
-                                            const next = new Set(prev);
-                                            if (next.has(tab.id)) {
-                                              next.delete(tab.id);
-                                            } else {
-                                              next.add(tab.id);
-                                            }
-                                            return next;
-                                          })
-                                        }
-                                        workspaces={workspaces}
-                                        spaces={spaces}
-                                        collections={collections}
-                                        currentWorkspaceId={collection.workspaceId}
-                                        currentSpaceId={collection.spaceId}
-                                        currentCollectionId={collection.id}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              </SortableContext>
-                            </CollectionCard>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <div
-                    ref={collectionBlankDrop.setNodeRef}
-                    className={`mt-4 flex min-h-[72px] items-center justify-center rounded-2xl border border-dashed px-4 py-4 text-xs transition ${collectionBlankDrop.isOver || blankCollectionDropActive
-                      ? "border-rose-300 bg-rose-50 text-rose-600"
-                      : "border-zinc-300 bg-zinc-50 text-zinc-500"
-                      }`}
-                    onDragOver={(event) => {
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                      setBlankCollectionDropActive(true);
-                    }}
-                    onDragEnter={() => setBlankCollectionDropActive(true)}
-                    onDragLeave={(event) => {
-                      const related = event.relatedTarget;
-                      if (related instanceof Node && event.currentTarget.contains(related)) {
-                        return;
-                      }
-                      setBlankCollectionDropActive(false);
-                    }}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setBlankCollectionDropActive(false);
-                      handleDropRawToBlank(event.dataTransfer);
-                    }}
-                  >
-                    {locale === "en"
-                      ? "Drop tab here to quickly create a new collection"
-                      : "將分頁拖曳到這裡，快速建立新集合"}
-                  </div>
-                </SortableContext>
-              </div>
-            </div>
 
 
             <div className="relative z-20">

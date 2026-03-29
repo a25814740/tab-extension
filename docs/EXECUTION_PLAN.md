@@ -1,4 +1,4 @@
-# EXECUTION_PLAN
+﻿# EXECUTION_PLAN
 
 最後更新：2026-03-28
 
@@ -135,3 +135,32 @@
 1. 完成 T02 文件型 task 驗證。
 2. 進入 T03，先拆 `App.tsx` 的本地 UI 狀態與型別。
 3. 只在文件與 gate 足夠時，才讓 local_exec 進入多檔案重構。
+
+<!-- T03_FREEZE_START -->
+## T03 重構順序（凍結）
+
+### App.tsx 拆分順序（固定）
+1. shell state / 型別 / hook（先抽出，避免後續面板拆分時再補洞）
+2. sidebar（workspace / space / folder / collection tree）
+3. main content（collection / tab 主內容）
+4. overlays（share / pricing / settings 等 modal 與 facade）
+
+### ppStore.ts 拆分順序（固定）
+1. hydrate / migration（state 還原與版本遷移）
+2. sync actions / flush pending ops（推拉與 retry/rollback glue）
+3. workspace / collection actions（CRUD + 排序）
+4. tab / dock actions（move/reorder/dedupe/dock）
+
+### Placeholder / 低信任測試命中（待替換清單）
+- tests/e2e/basic.test.ts:3: test("basic e2e placeholder", async ({ page }) => {
+- tests/integration/syncFlow.test.ts:4: it("placeholder integration test", () => {
+
+更新時間：2026-03-28 21:03:30 +08:00
+<!-- T03_FREEZE_END -->
+
+
+
+
+
+
+

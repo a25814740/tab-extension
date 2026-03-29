@@ -4,8 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Taboard Creator Portal</title>
-    <script type="module" crossorigin src="./assets/index-zY9V2rfE.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Dsg-R87x.css">
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        var hash = window.location.hash;
+        var search = window.location.search || "";
+
+        if ((path === "/creator" || path === "/creator/") && !hash) {
+          window.location.replace(path.replace(/\/?$/, "/") + "#" + "/" + search);
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-B9wPBtn4.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Co35PZs3.css">
   </head>
   <body class="min-h-screen">
     <div id="app"></div>

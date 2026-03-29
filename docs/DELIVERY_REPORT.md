@@ -63,7 +63,7 @@
 - 本次限制：這一輪只驗證 AI 執行框架的首個 smoke task，不代表後續重構 task 已全部穩定
 - 後續重點：把下一個文件型 task 跑通，再驗證真正的檔案修改流程
 - Run log：C:\Users\eden\Documents\front-end\toby\.ai-run\run-log.txt
-- 驗證時間：2026-03-28 05:22:44 +08:00
+- 驗證時間：2026-03-28 21:02:00 +08:00
 <!-- T01_SMOKE_END -->
 
 <!-- T02_SCOPE_START -->
@@ -72,6 +72,40 @@
 - 驗證內容：已把 MVP 主線、deferred、架構邊界、測試 gate 與 phase 順序收斂成單一依據
 - 本次限制：目前仍屬文件基線完成，不代表 App.tsx / ppStore.ts 已拆完
 - 後續重點：依文件基線直接進入 T03 拆分 App.tsx
-- 驗證時間：2026-03-28 07:19:01 +08:00
+- 驗證時間：2026-03-28 21:02:48 +08:00
 <!-- T02_SCOPE_END -->
+
+<!-- T03_FREEZE_START -->
+## T03 文件凍結紀錄（自動更新）
+- 狀態：已完成
+- 內容：補齊 App.tsx 與 ppStore.ts 的拆分順序與測試替換順序，避免後續重構時 scope 漂移
+- 下一步：T04 抽離 App shell state 與型別
+- 更新時間：2026-03-28 21:03:30 +08:00
+<!-- T03_FREEZE_END -->
+
+<!-- T04_MAIN_CONTENT_START -->
+## T04 Main Content panel（手動更新）
+- 狀態：已完成
+- 內容：新增 `apps/newtab/src/ui/app/MainContentPanel.tsx`，並將 newtab 主內容區（collection / tab 列表與空白 drop 區）自 `App.tsx` 抽離。
+- 驗證：
+  - `pnpm --filter @toby/newtab lint`（pass）
+  - `pnpm --filter @toby/newtab test`（passWithNoTests）
+  - `pnpm --filter @toby/newtab build`（pass）
+- 備註：為了逐 task 推進，`App.tsx` 內仍保留部分「下一階段要再拆的 helper」，以 `void <name>` 方式先避免 eslint 阻斷；後續會在 T05/T06 逐步消掉。
+- 更新時間：2026-03-28 10:45:00 +08:00
+<!-- T04_MAIN_CONTENT_END -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

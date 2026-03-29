@@ -1,0 +1,14 @@
+profile = "cloud_review"
+oss_provider = "ollama"
+
+[profiles.cloud_review]
+model = "gpt-5.4"
+model_provider = "openai"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[profiles.local_exec]
+model = "qwen2.5-coder:14b"
+model_provider = "ollama"
+approval_policy = "never"
+sandbox_mode = "workspace-write"

@@ -95,7 +95,7 @@ repo 目前已有一套雙層 AI 執行框架：
 - 目前結論：planning -> local_exec smoke -> cloud_review 鏈路已可產生可審核 evidence
 - 仍待後續驗證：多檔案修改 task、較長 prompt 與 revision flow 的穩定性
 - Run log：C:\Users\eden\Documents\front-end\toby\.ai-run\run-log.txt
-- 驗證時間：2026-03-28 05:22:44 +08:00
+- 驗證時間：2026-03-28 21:02:00 +08:00
 <!-- T01_SMOKE_END -->
 
 <!-- T02_SCOPE_START -->
@@ -104,6 +104,36 @@ repo 目前已有一套雙層 AI 執行框架：
 - 驗證方式：由 orchestration 直接驗證 MVP scope、deferred、架構邊界與測試 gate 文件，並同步更新 phase / blocker / next step
 - 目前結論：MVP_SCOPE / ARCHITECTURE_BOUNDARIES / TEST_GATE / EXECUTION_PLAN / PROJECT_STATUS / DELIVERY_REPORT 已形成可執行基線，可直接支援下一階段 App.tsx 拆分
 - 後續重點：進入 T03，先抽離 App.tsx 的本地 UI state 與型別
-- 驗證時間：2026-03-28 07:19:01 +08:00
+- 驗證時間：2026-03-28 21:02:48 +08:00
 <!-- T02_SCOPE_END -->
+
+<!-- T03_FREEZE_START -->
+## T03 文件凍結（自動更新）
+- 狀態：已完成
+- 內容：已凍結 App.tsx / ppStore.ts 拆分順序與 placeholder 測試替換清單（見 EXECUTION_PLAN 與 TEST_GATE 的 T03 區塊）
+- 下一步：進入 T04，開始抽離 pps/newtab/src/ui/App.tsx 的本地 UI state 與型別（不改行為）
+- 更新時間：2026-03-28 21:03:30 +08:00
+<!-- T03_FREEZE_END -->
+
+<!-- T04_MAIN_CONTENT_START -->
+## T04 Main Content Panel（手動更新）
+- 狀態：已完成
+- 內容：已新增 `apps/newtab/src/ui/app/MainContentPanel.tsx`，並將主內容區從 `App.tsx` 抽離（dock / 右側面板維持在 `App.tsx`）。
+- 驗證：`pnpm --filter @toby/newtab lint`、`pnpm --filter @toby/newtab test`、`pnpm --filter @toby/newtab build`
+- 下一步：T05 拆 overlays，或回到 SidebarPanel / shell state 的進一步拆分（依 EXECUTION_PLAN）。
+- 更新時間：2026-03-28 10:45:00 +08:00
+<!-- T04_MAIN_CONTENT_END -->
+
+
+
+
+
+
+
+
+
+
+
+
+
 
