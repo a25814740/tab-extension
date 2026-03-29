@@ -1,6 +1,7 @@
 import { computed, reactive } from "vue";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import html2canvas from "html2canvas";
+import { hasAuthHashToken, parseHashTokens } from "./authCallback";
 
 export type AssetRecord = {
   id: string;
@@ -101,11 +102,12 @@ export const setPreviewBridge = (frame: Window | null, origin: string | null) =>
 
 export const capturePreviewFromBridge = async () => {
   if (!previewBridge.frame || !previewBridge.origin) return "";
+  const origin = previewBridge.origin;
   const requestId = `preview_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   return await new Promise<string>((resolve) => {
     let settled = false;
     const handler = (event: MessageEvent) => {
-      if (event.origin !== previewBridge.origin) return;
+      if (event.origin !== origin) return;
       const payload = event.data as { type?: string; requestId?: string; dataUrl?: string };
       if (payload?.type !== "TABOARD_PREVIEW_CAPTURE_RESULT" || payload.requestId !== requestId) return;
       settled = true;
@@ -113,7 +115,7 @@ export const capturePreviewFromBridge = async () => {
       resolve(payload.dataUrl ?? "");
     };
     window.addEventListener("message", handler);
-    previewBridge.frame?.postMessage({ type: "TABOARD_PREVIEW_CAPTURE", requestId }, previewBridge.origin);
+    previewBridge.frame?.postMessage({ type: "TABOARD_PREVIEW_CAPTURE", requestId }, origin);
     window.setTimeout(() => {
       if (settled) return;
       window.removeEventListener("message", handler);
@@ -302,31 +304,21 @@ const cleanAuthUrl = () => {
   window.location.replace(target);
 };
 
-const parseHashTokens = () => {
-  const rawHash = window.location.hash.replace(/^#/, "");
-  if (!rawHash) return null;
-  let raw = rawHash.startsWith("/") ? rawHash.slice(1) : rawHash;
-  const tokenStart = raw.indexOf("access_token=");
-  if (tokenStart > 0) {
-    raw = raw.slice(tokenStart);
-  }
-  const params = new URLSearchParams(raw);
-  const accessToken = params.get("access_token");
-  const refreshToken = params.get("refresh_token");
-  if (!accessToken || !refreshToken) return null;
-  const expiresIn = Number(params.get("expires_in") || 0);
-  return { accessToken, refreshToken, expiresIn };
-};
-
 const handleAuthCallback = async (client: SupabaseClient) => {
-  const hasHashToken = window.location.hash.includes("access_token");
+  const hasHashToken = hasAuthHashToken(window.location.hash);
   const hasCode = new URLSearchParams(window.location.search).has("code");
   if (!hasHashToken && !hasCode) return;
   creatorState.statusMessage = "";
 
   if (hasHashToken) {
-    if (typeof client.auth.getSessionFromUrl === "function") {
-      const { data, error } = await client.auth.getSessionFromUrl({ storeSession: true });
+    const auth = client.auth as typeof client.auth & {
+      getSessionFromUrl?: (options: { storeSession: boolean }) => Promise<{
+        data: { session: Awaited<ReturnType<SupabaseClient["auth"]["getSession"]>>["data"]["session"] };
+        error: { message: string } | null;
+      }>;
+    };
+    if (typeof auth.getSessionFromUrl === "function") {
+      const { data, error } = await auth.getSessionFromUrl({ storeSession: true });
       if (error) {
         creatorState.statusMessage = error.message;
       } else if (data.session) {
@@ -335,7 +327,7 @@ const handleAuthCallback = async (client: SupabaseClient) => {
       cleanAuthUrl();
       return;
     }
-    const tokens = parseHashTokens();
+    const tokens = parseHashTokens(window.location.hash);
     if (tokens && typeof client.auth.setSession === "function") {
       const { data, error } = await client.auth.setSession({
         access_token: tokens.accessToken,
