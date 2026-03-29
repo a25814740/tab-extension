@@ -274,6 +274,7 @@ export const initCreator = async () => {
     creatorState.ready = true;
     return;
   }
+  await handleAuthCallback(client);
   const { data } = await client.auth.getSession();
   creatorState.session = data.session;
   creatorState.ready = true;
@@ -288,6 +289,44 @@ export const initCreator = async () => {
       loadPreviewData();
     }
   });
+};
+
+const cleanAuthUrl = () => {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("code");
+  url.searchParams.delete("state");
+  url.searchParams.delete("error");
+  url.searchParams.delete("error_description");
+  url.hash = "#/";
+  window.history.replaceState({}, "", url.toString());
+};
+
+const handleAuthCallback = async (client: SupabaseClient) => {
+  const hasHashToken = window.location.hash.includes("access_token");
+  const hasCode = new URLSearchParams(window.location.search).has("code");
+  if (!hasHashToken && !hasCode) return;
+  creatorState.statusMessage = "";
+
+  if (hasHashToken) {
+    const { data, error } = await client.auth.getSessionFromUrl({ storeSession: true });
+    if (error) {
+      creatorState.statusMessage = error.message;
+    } else if (data.session) {
+      creatorState.session = data.session;
+    }
+    cleanAuthUrl();
+    return;
+  }
+
+  if (hasCode) {
+    const { data, error } = await client.auth.exchangeCodeForSession(window.location.href);
+    if (error) {
+      creatorState.statusMessage = error.message;
+    } else if (data.session) {
+      creatorState.session = data.session;
+    }
+    cleanAuthUrl();
+  }
 };
 
 export const loginWithGoogle = async () => {

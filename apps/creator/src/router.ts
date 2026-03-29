@@ -6,8 +6,19 @@ import Revenue from "./pages/Revenue.vue";
 import Design from "./pages/Design.vue";
 import Preview from "./pages/Preview.vue";
 
+const resolveBase = () => {
+  const envBase = import.meta.env.BASE_URL;
+  if (envBase && envBase !== "./" && envBase !== "/") {
+    return envBase;
+  }
+  if (typeof window !== "undefined" && window.location.pathname.includes("/creator")) {
+    return "/creator/";
+  }
+  return "/";
+};
+
 export const router = createRouter({
-  history: createWebHashHistory(import.meta.env.BASE_URL),
+  history: createWebHashHistory(resolveBase()),
   routes: [
     {
       path: "/",
