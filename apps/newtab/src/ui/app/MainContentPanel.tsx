@@ -189,25 +189,23 @@ export function MainContentPanel(props: MainContentPanelProps) {
             <SelectMenu
               value={sortMode}
               onChange={(value) => setSortMode(value as SortMode)}
-              items={[
+              options={[
                 { value: "custom", label: "排序：自訂" },
                 { value: "recent", label: "排序：最近" },
               ]}
               buttonClassName="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-medium text-zinc-700 border border-zinc-200 hover:bg-zinc-50"
-              title="排序"
             />
 
             <SelectMenu
               value={viewMode}
               onChange={(value) => setViewMode(value as ViewMode)}
-              items={[
+              options={[
                 { value: "image", label: "圖片" },
                 { value: "card", label: "卡片" },
                 { value: "compact", label: "精簡" },
                 { value: "list", label: "列表" },
               ]}
               buttonClassName="flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-medium text-zinc-700 border border-zinc-200 hover:bg-zinc-50"
-              title="檢視"
             />
 
             <button
