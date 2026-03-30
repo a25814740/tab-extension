@@ -4,6 +4,7 @@ import { App } from "./ui/App";
 import { LocaleProvider } from "./i18n";
 import { appStore } from "./store/appStore";
 import { defaultCache, sampleWorkspaces } from "@toby/core";
+import { setLocal } from "@toby/chrome-adapters";
 import html2canvas from "html2canvas";
 import "./styles.css";
 
@@ -88,8 +89,16 @@ const seedPreviewStore = () => {
   }));
 };
 
-window.__TABOARD_PREVIEW__ = true;
-seedPreviewStore();
+const seedPreviewAuth = async () => {
+  // Preview build uses in-memory chrome adapter mocks.
+  // We seed a local auth user before App mounts so auth gate won't block iframe rendering.
+  await setLocal("toby_auth_user_v1", {
+    id: "preview-user",
+    email: "preview@taboard.local",
+    name: "Preview User",
+    avatarUrl: null,
+  });
+};
 
 const getAllowedOrigin = () => {
   let allowedOrigin = window.location.origin;
@@ -172,10 +181,18 @@ if (!root) {
   throw new Error("Preview root element not found.");
 }
 
-createRoot(root).render(
-  <React.StrictMode>
-    <LocaleProvider>
-      <App />
-    </LocaleProvider>
-  </React.StrictMode>
-);
+const bootstrap = async () => {
+  window.__TABOARD_PREVIEW__ = true;
+  seedPreviewStore();
+  await seedPreviewAuth();
+
+  createRoot(root).render(
+    <React.StrictMode>
+      <LocaleProvider>
+        <App />
+      </LocaleProvider>
+    </React.StrictMode>
+  );
+};
+
+void bootstrap();
