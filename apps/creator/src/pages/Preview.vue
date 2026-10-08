@@ -2,12 +2,15 @@
   <div class="min-h-screen min-w-[1280px] bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
     <header class="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
       <div>
-        <div class="text-lg font-semibold">é è¦½æ¨¡å¼</div>
-        <div class="text-xs text-slate-400">é€™æ˜¯å¥—ç”¨åˆ°å‰å°çš„é è¦½ç•«é¢</div>
+        <div class="text-lg font-semibold">¥DÃD¹wÄı</div>
+        <div class="text-xs text-slate-400">³o­Ó­¶­±¼ÒÀÀ¶R®a·|¬İ¨ìªº³]­pµ²ªG¡A¤£­t³d¥I´Ú¬yµ{¡C</div>
       </div>
       <div class="flex items-center gap-2">
-        <RouterLink class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" to="/design">è¿”å›è¨­è¨ˆ</RouterLink>
-        <button class="rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white">è³¼è²·</button>
+        <RouterLink class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" to="/assets">ªğ¦^§@«~¦Cªí</RouterLink>
+        <RouterLink class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" :to="editRoute">¦^½s¿è</RouterLink>
+        <button class="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white dark:bg-white dark:text-slate-900" disabled>
+          ÁÊ¶R¬yµ{«İ±µ¤J
+        </button>
       </div>
     </header>
 
@@ -32,10 +35,10 @@ import { creatorState, savedTokens, selectAsset, setPreviewBridge } from "../sto
 
 const route = useRoute();
 const previewFrame = ref<HTMLIFrameElement | null>(null);
-const previewOrigin = ((import.meta as { env?: Record<string, string> }).env?.VITE_PREVIEW_ORIGIN ??
-  window.location.origin).replace(/\/$/, "");
+const previewOrigin = ((import.meta as { env?: Record<string, string> }).env?.VITE_PREVIEW_ORIGIN ?? window.location.origin).replace(/\/$/, "");
 const previewSrc = computed(() => `${previewOrigin}/preview/`);
 const previewLoadError = ref("");
+const editRoute = computed(() => (creatorState.editingId ? `/design/${creatorState.editingId}` : "/design"));
 let readyListener: ((event: MessageEvent) => void) | null = null;
 let previewTimeoutId: number | null = null;
 
@@ -82,7 +85,7 @@ onMounted(() => {
   };
   window.addEventListener("message", readyListener);
   previewTimeoutId = window.setTimeout(() => {
-    previewLoadError.value = "é è¦½è¼‰å…¥é€¾æ™‚ï¼Œè«‹é‡æ–°æ•´ç†é é¢æˆ–ç¨å¾Œå†è©¦ã€‚";
+    previewLoadError.value = "¹wÄı iframe ¸ü¤J¶W®É¡A½Ğ½T»{ /preview/ ¬O§_¤w¥¿½T³¡¸p¡C";
   }, 8000);
   window.setTimeout(sendPreviewTokens, 600);
 });

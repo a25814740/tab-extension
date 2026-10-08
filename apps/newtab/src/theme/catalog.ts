@@ -1,11 +1,16 @@
 export type ThemeTokenSet = {
   // Accepts plain color, gradient, or background-image expression (e.g. url(...)).
   background: string;
+  backgroundImageOpacity?: number;
   panel: string;
   leftPanelBackground?: string;
+  leftPanelImageOpacity?: number;
   mainPanelBackground?: string;
+  mainPanelImageOpacity?: number;
   rightPanelBackground?: string;
+  rightPanelImageOpacity?: number;
   panelMuted: string;
+  dockImageOpacity?: number;
   border: string;
   text: string;
   textMuted: string;

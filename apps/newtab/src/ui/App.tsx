@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import { getAllWindowsWithTabs, openTabs, focusTab, closeTabs, getLocal, setLocal } from "@toby/chrome-adapters";
 import { useAppStore, useLocalCacheSync } from "../store/appStore";
 import { createRuleBasedProvider } from "@toby/ai";
@@ -35,6 +35,16 @@ import {
   type CustomThemeDraft,
   type ThemeTokenSet,
 } from "../theme/catalog";
+import {
+  activateThemeInstall,
+  buildThemeAssetCheckoutUrl,
+  createEmptyThemeEntitlements,
+  fetchPublicThemeAssets,
+  fetchThemeEntitlements,
+  normalizeThemeTokenSet,
+  type ThemeMarketplaceAsset,
+  type ThemeMarketplaceEntitlements,
+} from "../services/themeStore";
 import {
   ArrowDownAZ,
   Building2,
@@ -107,6 +117,9 @@ type ThemeStoreState = {
   themePresetId: string;
   templatePresetId: string;
   customTheme: CustomThemeDraft | null;
+  themeSelectionMode: "preset" | "asset";
+  themeAssetId: string | null;
+  themeAssetTokens: ThemeTokenSet | null;
 };
 
 const PAYUNI_DRY_RUN_KEY = "toby_payuni_dry_run_v1";
@@ -125,6 +138,7 @@ function extractCssBackgroundUrl(value: string | null | undefined) {
 }
 
 export function App() {
+  const chromeApi = typeof globalThis !== "undefined" ? globalThis.chrome : undefined;
   const previewEnabledFlag =
     typeof window !== "undefined" &&
     (window as { __TABOARD_PREVIEW__?: boolean }).__TABOARD_PREVIEW__ === true;
@@ -164,6 +178,19 @@ export function App() {
     setUiNotice(message);
   }, []);
   const authUser = useAuthUser();
+  const effectiveAuthUser = useMemo(
+    () =>
+      authUser ??
+      (previewEnabledFlag
+        ? {
+            id: "preview-user",
+            email: "preview@taboard.local",
+            name: "Preview User",
+            avatarUrl: null,
+          }
+        : null),
+    [authUser, previewEnabledFlag]
+  );
   const { handleGoogle, status, config } = useAuthLogic();
   const workspaceState = useAppStore((state) => state.workspace);
   const workspaces = useAppStore((state) => state.workspaces);
@@ -216,8 +243,17 @@ export function App() {
   const [themePresetId, setThemePresetId] = useState(DEFAULT_THEME_PRESET_ID);
   const [templatePresetId, setTemplatePresetId] = useState(DEFAULT_TEMPLATE_PRESET_ID);
   const [customThemeDraft, setCustomThemeDraft] = useState<CustomThemeDraft | null>(null);
+  const [themeSelectionMode, setThemeSelectionMode] = useState<"preset" | "asset">("preset");
+  const [themeAssetId, setThemeAssetId] = useState<string | null>(null);
+  const [themeAssetTokens, setThemeAssetTokens] = useState<ThemeTokenSet | null>(null);
   const [themeApplying, setThemeApplying] = useState(false);
   const [themeStoreOpen, setThemeStoreOpen] = useState(false);
+  const [marketThemeAssets, setMarketThemeAssets] = useState<ThemeMarketplaceAsset[]>([]);
+  const [marketThemeLoading, setMarketThemeLoading] = useState(false);
+  const [marketThemeError, setMarketThemeError] = useState("");
+  const [marketThemeEntitlements, setMarketThemeEntitlements] = useState<ThemeMarketplaceEntitlements>(
+    createEmptyThemeEntitlements()
+  );
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -362,6 +398,9 @@ export function App() {
         themePresetId: DEFAULT_THEME_PRESET_ID,
         templatePresetId: DEFAULT_TEMPLATE_PRESET_ID,
         customTheme: null,
+        themeSelectionMode: "preset",
+        themeAssetId: null,
+        themeAssetTokens: null,
       };
     }
     const candidate = value as Record<string, unknown>;
@@ -379,6 +418,9 @@ export function App() {
           ? candidate.templatePresetId
           : DEFAULT_TEMPLATE_PRESET_ID,
       customTheme,
+      themeSelectionMode: candidate.themeSelectionMode === "asset" ? "asset" : "preset",
+      themeAssetId: typeof candidate.themeAssetId === "string" && candidate.themeAssetId.trim() ? candidate.themeAssetId : null,
+      themeAssetTokens: normalizeThemeTokenSet(candidate.themeAssetTokens),
     };
   }, []);
 
@@ -401,8 +443,11 @@ export function App() {
   const activeThemePreset = useMemo(() => resolveThemePreset(themePresetId), [themePresetId]);
   const activeTemplatePreset = useMemo(() => resolveTemplatePreset(templatePresetId), [templatePresetId]);
   const previewThemeTokens = useMemo<ThemeTokenSet>(
-    () => activeThemePreset.tokens[effectiveTheme],
-    [activeThemePreset, effectiveTheme]
+    () =>
+      themeSelectionMode === "asset" && themeAssetTokens
+        ? themeAssetTokens
+        : activeThemePreset.tokens[effectiveTheme],
+    [activeThemePreset, effectiveTheme, themeAssetTokens, themeSelectionMode]
   );
   const resolvedThemeTokens = useMemo<ThemeTokenSet>(() => {
     if (!customThemeDraft) {
@@ -489,14 +534,17 @@ export function App() {
 
     urls.forEach((url) => themeImageCacheRef.current.add(url));
   }, []);
-  const handleSelectTheme = useCallback(
+  const handleSelectPresetTheme = useCallback(
     async (nextThemeId: string) => {
       const nextPreset = resolveThemePreset(nextThemeId);
       const nextTokens = nextPreset.tokens[effectiveTheme];
       setThemeApplying(true);
       try {
         await preloadThemeBackgrounds(nextTokens);
+        setThemeSelectionMode("preset");
         setThemePresetId(nextThemeId);
+        setThemeAssetId(null);
+        setThemeAssetTokens(null);
       } finally {
         window.setTimeout(() => setThemeApplying(false), 120);
       }
@@ -563,19 +611,135 @@ export function App() {
       setThemePresetId(normalized.themePresetId);
       setTemplatePresetId(normalized.templatePresetId);
       setCustomThemeDraft(normalized.customTheme);
+      setThemeSelectionMode(normalized.themeSelectionMode);
+      setThemeAssetId(normalized.themeAssetId);
+      setThemeAssetTokens(normalized.themeAssetTokens);
     })();
     return () => {
       active = false;
     };
   }, [normalizeThemeStoreState]);
+  const loadThemeMarketplace = useCallback(async () => {
+    if (previewEnabled || !supabaseClient) {
+      setMarketThemeAssets([]);
+      setMarketThemeEntitlements(createEmptyThemeEntitlements());
+      setMarketThemeError("");
+      return;
+    }
+
+    setMarketThemeLoading(true);
+    setMarketThemeError("");
+    try {
+      const [assets, entitlements] = await Promise.all([
+        fetchPublicThemeAssets(supabaseClient),
+        effectiveAuthUser
+          ? fetchThemeEntitlements(supabaseClient, effectiveAuthUser.id)
+          : Promise.resolve(createEmptyThemeEntitlements()),
+      ]);
+      setMarketThemeAssets(assets);
+      setMarketThemeEntitlements(entitlements);
+    } catch (error) {
+      setMarketThemeAssets([]);
+      setMarketThemeEntitlements(createEmptyThemeEntitlements());
+      setMarketThemeError(error instanceof Error ? error.message : "無法載入主題商店。");
+    } finally {
+      setMarketThemeLoading(false);
+    }
+  }, [effectiveAuthUser, previewEnabled, supabaseClient]);
+  useEffect(() => {
+    if (!themeStoreOpen) {
+      return;
+    }
+    void loadThemeMarketplace();
+  }, [loadThemeMarketplace, themeStoreOpen]);
+  useEffect(() => {
+    if (!themeStoreOpen || previewEnabled || !effectiveAuthUser) {
+      return;
+    }
+
+    const handleWindowFocus = () => {
+      void loadThemeMarketplace();
+    };
+
+    window.addEventListener("focus", handleWindowFocus);
+    return () => {
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, [effectiveAuthUser, loadThemeMarketplace, previewEnabled, themeStoreOpen]);
+  useEffect(() => {
+    if (themeSelectionMode !== "asset") {
+      return;
+    }
+    if (!themeAssetId) {
+      setThemeSelectionMode("preset");
+      setThemeAssetTokens(null);
+      return;
+    }
+    const matched = marketThemeAssets.find((asset) => asset.id === themeAssetId) ?? null;
+    if (matched?.tokens) {
+      setThemeAssetTokens(matched.tokens);
+    }
+  }, [marketThemeAssets, themeAssetId, themeSelectionMode]);
   useEffect(() => {
     const payload: ThemeStoreState = {
       themePresetId,
       templatePresetId,
       customTheme: customThemeDraft,
+      themeSelectionMode,
+      themeAssetId,
+      themeAssetTokens,
     };
     void setLocal(THEME_STORE_KEY, payload);
-  }, [customThemeDraft, templatePresetId, themePresetId]);
+  }, [customThemeDraft, templatePresetId, themeAssetId, themeAssetTokens, themePresetId, themeSelectionMode]);
+  const handleApplyMarketplaceTheme = useCallback(
+    async (asset: ThemeMarketplaceAsset) => {
+      if (!asset.tokens) {
+        showUiNotice(locale === "en" ? "This theme is missing usable tokens." : "這個主題缺少可套用的樣式資料。");
+        return;
+      }
+
+      const canAccess = asset.priceTwd <= 0 || marketThemeEntitlements.purchasedIds.has(asset.id);
+      if (!canAccess) {
+        showUiNotice(
+          locale === "en"
+            ? "Theme checkout is not connected yet. Please complete purchase flow first."
+            : "這個付費主題尚未串好購買流程，這版先完成展示、安裝與套用。"
+        );
+        return;
+      }
+
+      setThemeApplying(true);
+      try {
+        await preloadThemeBackgrounds(asset.tokens);
+        setThemeSelectionMode("asset");
+        setThemeAssetId(asset.id);
+        setThemeAssetTokens(asset.tokens);
+
+        if (supabaseClient && effectiveAuthUser) {
+          await activateThemeInstall(supabaseClient, {
+            userId: effectiveAuthUser.id,
+            assetId: asset.id,
+            workspaceId: activeWorkspaceId,
+          });
+          await loadThemeMarketplace();
+        }
+      } catch (error) {
+        showUiNotice(error instanceof Error ? error.message : locale === "en" ? "Failed to apply theme." : "套用主題失敗。");
+      } finally {
+        window.setTimeout(() => setThemeApplying(false), 120);
+      }
+    },
+    [
+      activeWorkspaceId,
+      effectiveAuthUser,
+      loadThemeMarketplace,
+      locale,
+      marketThemeEntitlements.purchasedIds,
+      preloadThemeBackgrounds,
+      showUiNotice,
+      supabaseClient,
+    ]
+  );
   useEffect(() => {
     if (authUser || !supabaseClient) {
       return;
@@ -853,16 +1017,16 @@ export function App() {
       const next = changes[MEMBERSHIP_KEY].newValue as { status?: MembershipStatus } | null;
       setMembershipStatus(next?.status ?? null);
     };
-    if (chrome?.storage?.onChanged) {
-      chrome.storage.onChanged.addListener(onChanged);
+    if (chromeApi?.storage?.onChanged) {
+      chromeApi.storage.onChanged.addListener(onChanged);
     }
     return () => {
       isMounted = false;
-      if (chrome?.storage?.onChanged) {
-        chrome.storage.onChanged.removeListener(onChanged);
+      if (chromeApi?.storage?.onChanged) {
+        chromeApi.storage.onChanged.removeListener(onChanged);
       }
     };
-  }, []);
+  }, [chromeApi]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1312,22 +1476,22 @@ export function App() {
   }, [linkStatus, orgSettingsOpen, orgSettingsTab, supabaseClient, t, workspace]);
 
   useEffect(() => {
-    if (members.length > 0 || !authUser) {
+    if (members.length > 0 || !effectiveAuthUser) {
       return;
     }
     setMembers([
       {
         id: "current-user",
-        userId: authUser.id,
-        name: authUser.name ?? "You",
-        email: authUser.email ?? "",
+        userId: effectiveAuthUser.id,
+        name: effectiveAuthUser.name ?? "You",
+        email: effectiveAuthUser.email ?? "",
         role: "owner",
       },
     ]);
-  }, [authUser, members.length]);
+  }, [effectiveAuthUser, members.length]);
 
   const ensureRemoteWorkspace = useCallback(async () => {
-    if (!workspace || !supabaseClient || !authUser?.id) {
+    if (!workspace || !supabaseClient || !effectiveAuthUser?.id) {
       return {
         ok: false as const,
         message: `${t("auth.status.missingSupabase")} (client)`,
@@ -1344,7 +1508,7 @@ export function App() {
     const upsertRes = await supabaseClient.from("workspaces").upsert(
       {
         id: workspace.id,
-        owner_id: authUser.id,
+        owner_id: effectiveAuthUser.id,
         name: workspace.name,
       },
       { onConflict: "id", ignoreDuplicates: true }
@@ -1356,7 +1520,7 @@ export function App() {
       };
     }
     return { ok: true as const };
-  }, [authUser?.id, locale, supabaseClient, t, workspace]);
+  }, [effectiveAuthUser?.id, locale, supabaseClient, t, workspace]);
 
   const loadMembers = useCallback(async () => {
     if (!workspace || !supabaseClient) {
@@ -1450,15 +1614,17 @@ export function App() {
   }, [memberSearch, members]);
 
   const currentMemberRole = useMemo(() => {
-    if (!authUser) {
+    if (!effectiveAuthUser) {
       return null;
     }
-    if (workspace?.ownerId && authUser.id === workspace.ownerId) {
+    if (workspace?.ownerId && effectiveAuthUser.id === workspace.ownerId) {
       return "owner";
     }
-    const member = members.find((item) => item.userId === authUser.id || item.email === authUser.email);
+    const member = members.find(
+      (item) => item.userId === effectiveAuthUser.id || item.email === effectiveAuthUser.email
+    );
     return member?.role ?? null;
-  }, [authUser, members, workspace?.ownerId]);
+  }, [effectiveAuthUser, members, workspace?.ownerId]);
 
   const canManageMembers = currentMemberRole === "owner" || currentMemberRole === "admin";
   const canAssignOwner = currentMemberRole === "owner";
@@ -2954,6 +3120,168 @@ export function App() {
     ]
   );
 
+  const handleThemePurchaseRequest = useCallback(
+    async (asset: ThemeMarketplaceAsset) => {
+      const popup = window.open("about:blank", "_blank");
+      if (!popup) {
+        showUiNotice(locale === "en" ? "Please allow pop-ups to continue." : "請允許彈出視窗以完成付款。");
+        return;
+      }
+
+      popup.document.open();
+      popup.document.write(
+        buildPayuniStatusHtml(
+          locale === "en" ? "Preparing checkout" : "正在準備付款",
+          locale === "en" ? `Creating an order for ${asset.name}...` : `正在為「${asset.name}」建立付款訂單...`
+        )
+      );
+      popup.document.close();
+
+      if (!supabaseClient || !effectiveSupabaseUrl) {
+        showUiNotice(t("auth.status.missingSupabase"));
+        popup.document.open();
+        popup.document.write(
+          buildPayuniStatusHtml(locale === "en" ? "Checkout failed" : "付款建立失敗", t("auth.status.missingSupabase"))
+        );
+        popup.document.close();
+        return;
+      }
+
+      const accessToken = await resolveAccessToken();
+      if (!accessToken) {
+        showUiNotice(locale === "en" ? "Please sign in again." : "請重新登入後再嘗試。");
+        popup.document.open();
+        popup.document.write(
+          buildPayuniStatusHtml(
+            locale === "en" ? "Need sign in" : "需要重新登入",
+            locale === "en" ? "Please sign in again, then retry checkout." : "請重新登入後再重新購買主題。"
+          )
+        );
+        popup.document.close();
+        return;
+      }
+
+      const checkoutUrl = buildThemeAssetCheckoutUrl(effectiveSupabaseUrl, accessToken, asset.id, locale);
+      if (!checkoutUrl) {
+        showUiNotice(locale === "en" ? "Missing checkout URL." : "金流連結未設定。");
+        popup.document.open();
+        popup.document.write(
+          buildPayuniStatusHtml(
+            locale === "en" ? "Checkout failed" : "付款建立失敗",
+            locale === "en" ? "Missing checkout URL." : "金流連結未設定。"
+          )
+        );
+        popup.document.close();
+        return;
+      }
+
+      try {
+        const response = await fetch(checkoutUrl, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            kind: "theme_asset",
+            assetId: asset.id,
+          }),
+        });
+        const data = (await response.json()) as {
+          ok: boolean;
+          checkout?: {
+            merId: string;
+            encryptInfo: string;
+            hashInfo: string;
+            version: string;
+            checkoutUrl: string;
+          };
+          error?: string;
+        };
+
+        if (!response.ok || !data?.ok || !data.checkout) {
+          const message =
+            data?.error === "asset_already_owned"
+              ? locale === "en"
+                ? "You already own this theme."
+                : "這個主題你已經買過了。"
+              : locale === "en"
+                ? "Checkout failed. Please try again."
+                : "付款建立失敗，請稍後再試。";
+          showUiNotice(message);
+          popup.document.open();
+          popup.document.write(
+            buildPayuniStatusHtml(
+              locale === "en" ? "Checkout failed" : "付款建立失敗",
+              message,
+              locale === "en" ? "Open fallback page" : "開啟備援頁面",
+              checkoutUrl
+            )
+          );
+          popup.document.close();
+          void loadThemeMarketplace();
+          return;
+        }
+
+        const dryRun = await getLocal<boolean>(PAYUNI_DRY_RUN_KEY, false);
+        if (dryRun) {
+          showUiNotice(locale === "en" ? "Checkout dry-run mode: not submitted." : "乾跑模式：已建立但未送出付款。");
+          popup.document.open();
+          popup.document.write(
+            buildPayuniStatusHtml(
+              locale === "en" ? "Dry run enabled" : "乾跑模式已啟用",
+              locale === "en"
+                ? "Theme checkout payload is ready, but submission is blocked in dry-run mode."
+                : "主題付款資料已建立，但目前為乾跑模式，系統不會送出到金流。",
+              locale === "en" ? "Open PAYUNi page manually" : "手動開啟金流頁",
+              data.checkout.checkoutUrl
+            )
+          );
+          popup.document.close();
+          return;
+        }
+
+        const requireConfirm = await getLocal<boolean>(PAYUNI_REQUIRE_CONFIRM_KEY, true);
+        if (requireConfirm) {
+          renderPayuniConfirmPage(popup, data.checkout);
+        } else {
+          submitPayuniFormInPopup(popup, data.checkout);
+        }
+
+        showUiNotice(
+          locale === "en"
+            ? `Checkout created for ${asset.name}. Return here after payment to install it.`
+            : `「${asset.name}」的付款訂單已建立，付款完成後回到主題商店就能安裝套用。`
+        );
+      } catch {
+        showUiNotice(locale === "en" ? "Checkout failed. Please try again." : "付款建立失敗，請稍後再試。");
+        popup.document.open();
+        popup.document.write(
+          buildPayuniStatusHtml(
+            locale === "en" ? "Checkout failed" : "付款建立失敗",
+            locale === "en" ? "Network error while creating checkout." : "建立付款時發生網路錯誤。",
+            locale === "en" ? "Open fallback page" : "開啟備援頁面",
+            checkoutUrl
+          )
+        );
+        popup.document.close();
+      }
+    },
+    [
+      buildPayuniStatusHtml,
+      effectiveSupabaseUrl,
+      loadThemeMarketplace,
+      locale,
+      renderPayuniConfirmPage,
+      resolveAccessToken,
+      showUiNotice,
+      submitPayuniFormInPopup,
+      supabaseClient,
+      t,
+    ]
+  );
+
   const dockSections = useMemo<DockSection[]>(() => {
     const pinnedItems: DockEntry[] = dockPinnedItems.map((item) => ({
       id: item.id,
@@ -3161,7 +3489,7 @@ export function App() {
   void handleExportCollection;
 
   // Layout mirrors the Taboard information hierarchy while keeping data wiring intact.
-  if (!authUser) {
+  if (!effectiveAuthUser) {
     return (
       <div
         className={`flex h-[100vh] w-full min-w-[1280px] items-center justify-center overflow-x-auto text-zinc-900 ${shellPaddingClass} ${effectiveTheme === "dark" ? "theme-dark" : "theme-light"}`}
@@ -3866,13 +4194,22 @@ export function App() {
           open={themeStoreOpen}
           selectedThemeId={themePresetId}
           selectedTemplateId={templatePresetId}
+          selectedThemeMode={themeSelectionMode}
+          selectedThemeAssetId={themeAssetId}
           previewTokens={previewThemeTokens}
           customTheme={customThemeDraft}
+          marketThemes={marketThemeAssets}
+          marketThemeEntitlements={marketThemeEntitlements}
+          marketLoading={marketThemeLoading}
+          marketError={marketThemeError}
           isApplying={themeApplying}
           onClose={() => setThemeStoreOpen(false)}
-          onSelectTheme={handleSelectTheme}
+          onSelectPresetTheme={handleSelectPresetTheme}
+          onApplyMarketplaceTheme={handleApplyMarketplaceTheme}
+          onRequestThemePurchase={handleThemePurchaseRequest}
           onSelectTemplate={setTemplatePresetId}
           onSaveCustomTheme={handleSaveCustomTheme}
+          onRefreshMarketplace={loadThemeMarketplace}
         />
         {bulkMoveOpen ? (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4" onClick={() => setBulkMoveOpen(false)}>

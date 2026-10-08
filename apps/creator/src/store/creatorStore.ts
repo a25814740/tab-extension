@@ -14,7 +14,88 @@ export type AssetRecord = {
   revenue_share_percent: number;
   tags: string[];
   updated_at: string;
+  created_at: string;
+  is_public: boolean;
+  is_official: boolean;
 };
+
+export type CreatorAnalyticsOrder = {
+  id: string;
+  assetId: string;
+  assetName: string;
+  amountTwd: number;
+  status: string;
+  createdAt: string;
+};
+
+export type CreatorAnalytics = {
+  mode: "live" | "fallback";
+  publishedCount: number;
+  draftCount: number;
+  paidOrderCount: number;
+  installCount: number;
+  grossRevenueTwd: number;
+  creatorRevenueTwd: number;
+  recentOrders: CreatorAnalyticsOrder[];
+  note: string;
+  updatedAt: string | null;
+};
+
+export type CreatorPayoutLedgerEntry = {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  currency: string;
+  grossRevenueTwd: number;
+  creatorSharePercent: number;
+  creatorShareTwd: number;
+  platformFeeTwd: number;
+  payoutAmountTwd: number;
+  payoutStatus: "pending" | "approved" | "paid" | "reversed" | "cancelled";
+  payoutMethod: string;
+  payoutReference: string | null;
+  notes: string;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type CreatorDashboardResponse = {
+  ok: boolean;
+  analytics?: {
+    publishedCount: number;
+    draftCount: number;
+    paidOrderCount: number;
+    installCount: number;
+    grossRevenueTwd: number;
+    creatorRevenueTwd: number;
+    recentOrders: CreatorAnalyticsOrder[];
+    updatedAt: string | null;
+  };
+  error?: string;
+  message?: string;
+};
+
+type CreatorPayoutLedgerRow = {
+  id: string;
+  period_start: string;
+  period_end: string;
+  currency: string;
+  gross_revenue_twd: number;
+  creator_share_percent: number;
+  creator_share_twd: number;
+  platform_fee_twd: number;
+  payout_amount_twd: number;
+  payout_status: CreatorPayoutLedgerEntry["payoutStatus"];
+  payout_method: string;
+  payout_reference: string | null;
+  notes: string;
+  paid_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type SessionType = Awaited<ReturnType<SupabaseClient["auth"]["getSession"]>>["data"]["session"];
 
 export type PreviewStore = {
   workspace: { id: string; name: string };
@@ -81,48 +162,7 @@ export type TokenSet = {
   accent: string;
 };
 
-export const revenueOptions = [0, 10, 20, 30, 40, 50, 60, 70];
-export const sectionOptions = [
-  { key: "root", label: "整體背景" },
-  { key: "left", label: "左側面板" },
-  { key: "main", label: "主內容" },
-  { key: "right", label: "右側面板" },
-  { key: "dock", label: "Dock" },
-];
-export const paintModes = [
-  { value: "solid", label: "單色" },
-  { value: "gradient", label: "漸層" },
-  { value: "image", label: "背景圖片" },
-];
-
-export const setPreviewBridge = (frame: Window | null, origin: string | null) => {
-  previewBridge.frame = frame;
-  previewBridge.origin = origin;
-};
-
-export const capturePreviewFromBridge = async () => {
-  if (!previewBridge.frame || !previewBridge.origin) return "";
-  const origin = previewBridge.origin;
-  const requestId = `preview_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-  return await new Promise<string>((resolve) => {
-    let settled = false;
-    const handler = (event: MessageEvent) => {
-      if (event.origin !== origin) return;
-      const payload = event.data as { type?: string; requestId?: string; dataUrl?: string };
-      if (payload?.type !== "TABOARD_PREVIEW_CAPTURE_RESULT" || payload.requestId !== requestId) return;
-      settled = true;
-      window.removeEventListener("message", handler);
-      resolve(payload.dataUrl ?? "");
-    };
-    window.addEventListener("message", handler);
-    previewBridge.frame?.postMessage({ type: "TABOARD_PREVIEW_CAPTURE", requestId }, origin);
-    window.setTimeout(() => {
-      if (settled) return;
-      window.removeEventListener("message", handler);
-      resolve("");
-    }, 2500);
-  });
-};
+type StatusTone = "success" | "error" | "info";
 
 type SupabaseWindowConfig = {
   __SUPABASE_URL__?: string;
@@ -148,6 +188,19 @@ const getSupabase = () => {
   supabase = createClient(supabaseUrl, supabaseAnonKey);
   return supabase;
 };
+
+const emptyAnalytics = (): CreatorAnalytics => ({
+  mode: "fallback",
+  publishedCount: 0,
+  draftCount: 0,
+  paidOrderCount: 0,
+  installCount: 0,
+  grossRevenueTwd: 0,
+  creatorRevenueTwd: 0,
+  recentOrders: [],
+  note: "尚未載入收益資料。",
+  updatedAt: null,
+});
 
 const defaultPaint = (color: string): PaintConfig => ({
   mode: "solid",
@@ -187,11 +240,128 @@ export const makeEditorState = (): EditorState => ({
   },
 });
 
+const cloneEditorState = (editor: EditorState): EditorState => JSON.parse(JSON.stringify(editor)) as EditorState;
+
+const makeFallbackPreviewStore = (): PreviewStore => ({
+  workspace: { id: "preview-workspace", name: "Main Workspace" },
+  spaces: [
+    { id: "space-personal", name: "Personal" },
+    { id: "space-work", name: "Work" },
+    { id: "space-side", name: "Design Lab" },
+  ],
+  activeSpaceId: "space-personal",
+  collections: [
+    {
+      id: "collection-1",
+      name: "AI Research",
+      tabs: [
+        { id: "tab-1", title: "OpenAI Docs" },
+        { id: "tab-2", title: "Supabase Auth" },
+      ],
+    },
+    {
+      id: "collection-2",
+      name: "Launch Tasks",
+      tabs: [
+        { id: "tab-3", title: "Pricing copy" },
+        { id: "tab-4", title: "Chrome Store assets" },
+      ],
+    },
+  ],
+  openTabs: [
+    { id: "open-1", title: "Theme Store Overview" },
+    { id: "open-2", title: "Creator payout SOP" },
+    { id: "open-3", title: "Support inbox" },
+    { id: "open-4", title: "Vercel deployment" },
+  ],
+});
+
+const formatDateSafe = (value?: string, options?: Intl.DateTimeFormatOptions) => {
+  if (!value) return "尚未更新";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "尚未更新";
+  return date.toLocaleString("zh-TW", options ?? { year: "numeric", month: "short", day: "numeric" });
+};
+
+const setStatus = (message: string, tone: StatusTone = "info") => {
+  creatorState.statusMessage = message;
+  creatorState.statusTone = tone;
+};
+
+const clearStatus = () => {
+  creatorState.statusMessage = "";
+  creatorState.statusTone = "info";
+};
+
+const buildFallbackAnalytics = (assets: AssetRecord[]): CreatorAnalytics => ({
+  mode: "fallback",
+  publishedCount: assets.filter((asset) => asset.is_public).length,
+  draftCount: assets.filter((asset) => !asset.is_public).length,
+  paidOrderCount: 0,
+  installCount: 0,
+  grossRevenueTwd: 0,
+  creatorRevenueTwd: 0,
+  recentOrders: [],
+  note: "目前顯示的是作品狀態統計。真實收益需要部署 creator_dashboard Edge Function 後才會出現。",
+  updatedAt: new Date().toISOString(),
+});
+
+const normalizePayoutLedgerEntry = (row: CreatorPayoutLedgerRow): CreatorPayoutLedgerEntry => ({
+  id: row.id,
+  periodStart: row.period_start,
+  periodEnd: row.period_end,
+  currency: row.currency,
+  grossRevenueTwd: row.gross_revenue_twd ?? 0,
+  creatorSharePercent: row.creator_share_percent ?? 0,
+  creatorShareTwd: row.creator_share_twd ?? 0,
+  platformFeeTwd: row.platform_fee_twd ?? 0,
+  payoutAmountTwd: row.payout_amount_twd ?? 0,
+  payoutStatus: row.payout_status,
+  payoutMethod: row.payout_method,
+  payoutReference: row.payout_reference,
+  notes: row.notes ?? "",
+  paidAt: row.paid_at,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const normalizeTags = (raw: string) =>
+  raw
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]+/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+export const revenueOptions = [0, 10, 20, 30, 40, 50, 60, 70];
+export const sectionOptions = [
+  { key: "root", label: "整體背景" },
+  { key: "left", label: "左側欄" },
+  { key: "main", label: "主內容區" },
+  { key: "right", label: "右側欄" },
+  { key: "dock", label: "Dock" },
+] as const;
+export const paintModes = [
+  { value: "solid", label: "單色" },
+  { value: "gradient", label: "漸層" },
+  { value: "image", label: "背景圖片" },
+] as const;
+
 export const creatorState = reactive({
   ready: false,
   configMissing: false,
-  session: null as Awaited<ReturnType<SupabaseClient["auth"]["getSession"]>>["data"]["session"],
+  session: null as SessionType,
   assets: [] as AssetRecord[],
+  analytics: emptyAnalytics(),
+  analyticsLoading: false,
+  payouts: [] as CreatorPayoutLedgerEntry[],
+  payoutsLoading: false,
   editingId: null as string | null,
   previewUpload: "",
   fallbackPreview: "",
@@ -204,53 +374,67 @@ export const creatorState = reactive({
     tags: "",
   },
   activeSection: "root",
-  previewStore: {
-    workspace: { id: "w1", name: "Main Workspace" },
-    spaces: [
-      { id: "s1", name: "Personal" },
-      { id: "s2", name: "Work" },
-      { id: "s3", name: "Projects" },
-    ],
-    activeSpaceId: "s1",
-    collections: [
-      {
-        id: "c1",
-        name: "AI Research",
-        tabs: [
-          { id: "t1", title: "OpenAI Docs" },
-          { id: "t2", title: "Chrome Extensions" },
-        ],
-      },
-      {
-        id: "c2",
-        name: "Weekend",
-        tabs: [
-          { id: "t3", title: "Travel Ideas" },
-          { id: "t4", title: "Coffee beans" },
-        ],
-      },
-    ],
-    openTabs: [
-      { id: "ot1", title: "Chrome 擴充功能" },
-      { id: "ot2", title: "Supabase Dashboard" },
-      { id: "ot3", title: "Vercel Deployments" },
-      { id: "ot4", title: "Gmail" },
-    ],
-  } as PreviewStore,
+  previewStore: makeFallbackPreviewStore(),
   draftEditor: makeEditorState(),
   savedEditor: makeEditorState(),
   theme: (localStorage.getItem("creator_theme") as "dark" | "light") || "dark",
   statusMessage: "",
+  statusTone: "info" as StatusTone,
+  pendingAction: "idle" as "idle" | "loading" | "saving" | "publishing" | "deleting",
 });
 
-export const profileName = computed(() => creatorState.session?.user?.user_metadata?.full_name || creatorState.session?.user?.email || "使用者");
+export const profileName = computed(
+  () => creatorState.session?.user?.user_metadata?.full_name || creatorState.session?.user?.email || "訪客"
+);
 export const profileEmail = computed(() => creatorState.session?.user?.email || "");
 export const avatarUrl = computed(() => creatorState.session?.user?.user_metadata?.avatar_url || "");
 export const activePaint = computed(() => creatorState.draftEditor.sections[creatorState.activeSection]);
 export const lastUpdatedLabel = computed(() => {
   if (creatorState.assets.length === 0) return "尚無更新";
-  return formatDate(creatorState.assets[0].updated_at);
+  return formatDateSafe(creatorState.assets[0]?.updated_at);
 });
+export const publishedAssets = computed(() => creatorState.assets.filter((asset) => asset.is_public));
+export const draftAssets = computed(() => creatorState.assets.filter((asset) => !asset.is_public));
+export const recentAssets = computed(() => creatorState.assets.slice(0, 5));
+export const designTokens = computed(() => buildTokens(creatorState.draftEditor));
+export const savedTokens = computed(() => buildTokens(creatorState.savedEditor));
+export const creatorHealthSummary = computed(() => ({
+  totalAssets: creatorState.assets.length,
+  publishedCount: publishedAssets.value.length,
+  draftCount: draftAssets.value.length,
+  pendingRevenue: creatorState.analytics.creatorRevenueTwd,
+  pendingPayouts: creatorState.payouts.filter((entry) => entry.payoutStatus === "pending" || entry.payoutStatus === "approved").length,
+  analyticsMode: creatorState.analytics.mode,
+}));
+
+export const setPreviewBridge = (frame: Window | null, origin: string | null) => {
+  previewBridge.frame = frame;
+  previewBridge.origin = origin;
+};
+
+export const capturePreviewFromBridge = async () => {
+  if (!previewBridge.frame || !previewBridge.origin) return "";
+  const origin = previewBridge.origin;
+  const requestId = `preview_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  return await new Promise<string>((resolve) => {
+    let settled = false;
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== origin) return;
+      const payload = event.data as { type?: string; requestId?: string; dataUrl?: string };
+      if (payload?.type !== "TABOARD_PREVIEW_CAPTURE_RESULT" || payload.requestId !== requestId) return;
+      settled = true;
+      window.removeEventListener("message", handler);
+      resolve(payload.dataUrl ?? "");
+    };
+    window.addEventListener("message", handler);
+    previewBridge.frame?.postMessage({ type: "TABOARD_PREVIEW_CAPTURE", requestId }, origin);
+    window.setTimeout(() => {
+      if (settled) return;
+      window.removeEventListener("message", handler);
+      resolve("");
+    }, 2500);
+  });
+};
 
 export const buildRedirectTo = () => {
   const { origin, pathname } = window.location;
@@ -269,30 +453,6 @@ export const toggleTheme = () => {
   setTheme(creatorState.theme === "dark" ? "light" : "dark");
 };
 
-export const initCreator = async () => {
-  const client = getSupabase();
-  setTheme(creatorState.theme);
-  if (!client) {
-    creatorState.ready = true;
-    return;
-  }
-  await handleAuthCallback(client);
-  const { data } = await client.auth.getSession();
-  creatorState.session = data.session;
-  creatorState.ready = true;
-  if (creatorState.session) {
-    await loadAssets();
-    await loadPreviewData();
-  }
-  client.auth.onAuthStateChange((_event, newSession) => {
-    creatorState.session = newSession;
-    if (newSession) {
-      loadAssets();
-      loadPreviewData();
-    }
-  });
-};
-
 const cleanAuthUrl = () => {
   const url = new URL(window.location.href);
   url.searchParams.delete("code");
@@ -300,7 +460,6 @@ const cleanAuthUrl = () => {
   url.searchParams.delete("error");
   url.searchParams.delete("error_description");
   const target = `${url.origin}${url.pathname}${url.search}#/`;
-  // Hash router needs a real navigation event; replaceState does not trigger route updates.
   window.location.replace(target);
 };
 
@@ -308,25 +467,27 @@ const handleAuthCallback = async (client: SupabaseClient) => {
   const hasHashToken = hasAuthHashToken(window.location.hash);
   const hasCode = new URLSearchParams(window.location.search).has("code");
   if (!hasHashToken && !hasCode) return;
-  creatorState.statusMessage = "";
+  clearStatus();
 
   if (hasHashToken) {
     const auth = client.auth as typeof client.auth & {
       getSessionFromUrl?: (options: { storeSession: boolean }) => Promise<{
-        data: { session: Awaited<ReturnType<SupabaseClient["auth"]["getSession"]>>["data"]["session"] };
+        data: { session: SessionType };
         error: { message: string } | null;
       }>;
     };
+
     if (typeof auth.getSessionFromUrl === "function") {
       const { data, error } = await auth.getSessionFromUrl({ storeSession: true });
       if (error) {
-        creatorState.statusMessage = error.message;
+        setStatus(error.message, "error");
       } else if (data.session) {
         creatorState.session = data.session;
       }
       cleanAuthUrl();
       return;
     }
+
     const tokens = parseHashTokens(window.location.hash);
     if (tokens && typeof client.auth.setSession === "function") {
       const { data, error } = await client.auth.setSession({
@@ -334,12 +495,12 @@ const handleAuthCallback = async (client: SupabaseClient) => {
         refresh_token: tokens.refreshToken,
       });
       if (error) {
-        creatorState.statusMessage = error.message;
+        setStatus(error.message, "error");
       } else if (data.session) {
         creatorState.session = data.session;
       }
     } else {
-      creatorState.statusMessage = "登入流程版本不支援，請更新";
+      setStatus("登入流程版本不相容，請更新前端後再試一次。", "error");
     }
     cleanAuthUrl();
     return;
@@ -348,7 +509,7 @@ const handleAuthCallback = async (client: SupabaseClient) => {
   if (hasCode) {
     const { data, error } = await client.auth.exchangeCodeForSession(window.location.href);
     if (error) {
-      creatorState.statusMessage = error.message;
+      setStatus(error.message, "error");
     } else if (data.session) {
       creatorState.session = data.session;
     }
@@ -356,44 +517,203 @@ const handleAuthCallback = async (client: SupabaseClient) => {
   }
 };
 
+export const loadAssets = async () => {
+  if (!creatorState.session) return;
+  const client = getSupabase();
+  if (!client) return;
+
+  const { data, error } = await client
+    .from("theme_assets")
+    .select(
+      "id,slug,name,description,preview,config,price_twd,revenue_share_percent,tags,updated_at,created_at,is_public,is_official"
+    )
+    .eq("author_user_id", creatorState.session.user.id)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    setStatus(error.message, "error");
+    return;
+  }
+
+  creatorState.assets = (data || []) as AssetRecord[];
+};
+
+export const loadCreatorAnalytics = async () => {
+  if (!creatorState.session) {
+    creatorState.analytics = emptyAnalytics();
+    return;
+  }
+
+  const client = getSupabase();
+  if (!client) {
+    creatorState.analytics = buildFallbackAnalytics(creatorState.assets);
+    return;
+  }
+
+  creatorState.analyticsLoading = true;
+  try {
+    const { data, error } = await client.functions.invoke<CreatorDashboardResponse>("creator_dashboard", {
+      body: {},
+    });
+
+    if (error || !data?.ok || !data.analytics) {
+      creatorState.analytics = buildFallbackAnalytics(creatorState.assets);
+      creatorState.analytics.note = data?.message || error?.message || creatorState.analytics.note;
+      return;
+    }
+
+    creatorState.analytics = {
+      mode: "live",
+      publishedCount: data.analytics.publishedCount,
+      draftCount: data.analytics.draftCount,
+      paidOrderCount: data.analytics.paidOrderCount,
+      installCount: data.analytics.installCount,
+      grossRevenueTwd: data.analytics.grossRevenueTwd,
+      creatorRevenueTwd: data.analytics.creatorRevenueTwd,
+      recentOrders: data.analytics.recentOrders,
+      updatedAt: data.analytics.updatedAt,
+      note: "收益資料來自 server-side 聚合結果。",
+    };
+  } catch (error) {
+    creatorState.analytics = buildFallbackAnalytics(creatorState.assets);
+    creatorState.analytics.note = error instanceof Error ? error.message : creatorState.analytics.note;
+  } finally {
+    creatorState.analyticsLoading = false;
+  }
+};
+
+export const loadCreatorPayouts = async () => {
+  if (!creatorState.session) {
+    creatorState.payouts = [];
+    return;
+  }
+
+  const client = getSupabase();
+  if (!client) {
+    creatorState.payouts = [];
+    return;
+  }
+
+  creatorState.payoutsLoading = true;
+  try {
+    const { data, error } = await client
+      .from("creator_payout_ledger")
+      .select(
+        "id,period_start,period_end,currency,gross_revenue_twd,creator_share_percent,creator_share_twd,platform_fee_twd,payout_amount_twd,payout_status,payout_method,payout_reference,notes,paid_at,created_at,updated_at"
+      )
+      .order("period_end", { ascending: false })
+      .limit(12);
+
+    if (error) {
+      setStatus(error.message, "error");
+      creatorState.payouts = [];
+      return;
+    }
+
+    creatorState.payouts = ((data ?? []) as CreatorPayoutLedgerRow[]).map(normalizePayoutLedgerEntry);
+  } finally {
+    creatorState.payoutsLoading = false;
+  }
+};
+
+export const loadPreviewData = async () => {
+  if (!creatorState.session) return;
+  try {
+    const client = getSupabase();
+    if (!client) return;
+    const { data: workspace } = await client
+      .from("workspaces")
+      .select("id,name")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (workspace) {
+      creatorState.previewStore.workspace = { id: workspace.id, name: workspace.name };
+    }
+  } catch {
+    // Ignore preview hydration errors.
+  }
+};
+
+export const refreshCreatorData = async () => {
+  await loadAssets();
+  await loadPreviewData();
+  await loadCreatorAnalytics();
+  await loadCreatorPayouts();
+};
+
+export const initCreator = async () => {
+  const client = getSupabase();
+  setTheme(creatorState.theme);
+  if (!client) {
+    creatorState.ready = true;
+    return;
+  }
+
+  await handleAuthCallback(client);
+  const { data } = await client.auth.getSession();
+  creatorState.session = data.session;
+  creatorState.ready = true;
+
+  if (creatorState.session) {
+    await refreshCreatorData();
+  }
+
+  client.auth.onAuthStateChange((_event, newSession) => {
+    creatorState.session = newSession;
+    if (newSession) {
+      void refreshCreatorData();
+    } else {
+      creatorState.assets = [];
+      creatorState.analytics = emptyAnalytics();
+      creatorState.payouts = [];
+      resetForm();
+    }
+  });
+};
+
 export const loginWithGoogle = async () => {
   const client = getSupabase();
   if (!client) {
-    creatorState.statusMessage = "登入服務尚未設定，請聯絡管理者";
+    setStatus("登入服務尚未設定完成，請先補上 Supabase 環境變數。", "error");
     return;
   }
+
   const { error } = await client.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo: buildRedirectTo(),
     },
   });
+
   if (error) {
-    creatorState.statusMessage = error.message;
+    setStatus(error.message, "error");
   }
 };
 
 export const logout = async () => {
   const client = getSupabase();
   if (!client) {
-    creatorState.statusMessage = "尚未設定 Supabase 環境變數";
+    setStatus("尚未設定 Supabase 環境變數。", "error");
     return;
   }
   await client.auth.signOut();
   creatorState.session = null;
 };
 
-export const formatDate = (value?: string) => {
-  if (!value) return "—";
-  const date = new Date(value);
-  return date.toLocaleDateString("zh-TW", { year: "numeric", month: "short", day: "numeric" });
-};
+export const formatDate = formatDateSafe;
+
+export const formatCurrencyTwd = (amount = 0) =>
+  new Intl.NumberFormat("zh-TW", {
+    style: "currency",
+    currency: "TWD",
+    maximumFractionDigits: 0,
+  }).format(amount);
 
 const hexToRgb = (hex: string) => {
   const normalized = hex.replace("#", "");
-  const value = normalized.length === 3
-    ? normalized.split("").map((char) => char + char).join("")
-    : normalized;
+  const value = normalized.length === 3 ? normalized.split("").map((char) => char + char).join("") : normalized;
   const int = parseInt(value, 16);
   return {
     r: (int >> 16) & 255,
@@ -450,11 +770,11 @@ export const buildTokens = (editor: EditorState): TokenSet => {
   };
 };
 
-export const savedTokens = computed(() => buildTokens(creatorState.savedEditor));
-export const designTokens = computed(() => buildTokens(creatorState.draftEditor));
-
 export const previewStyle = (url: string) => ({
-  backgroundImage: url ? `url(${url})` : "none",
+  backgroundImage: url ? `url(${url})` : "linear-gradient(135deg, rgba(244,63,94,0.25), rgba(15,23,42,0.75))",
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  backgroundRepeat: "no-repeat",
 });
 
 export const setActiveSection = (key: string) => {
@@ -465,14 +785,6 @@ export const setPaintMode = (mode: PaintMode) => {
   activePaint.value.mode = mode;
 };
 
-const slugify = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[\s_]+/g, "-")
-    .replace(/[^a-z0-9-]+/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-
 export const ensureSlug = () => {
   if (!creatorState.form.slug && creatorState.form.name) {
     creatorState.form.slug = slugify(creatorState.form.name);
@@ -481,9 +793,9 @@ export const ensureSlug = () => {
 
 export const applyEditorState = (target: EditorState, source: EditorState) => {
   target.base = { ...source.base };
-  Object.keys(source.sections).forEach((key) => {
-    target.sections[key] = JSON.parse(JSON.stringify(source.sections[key]));
-  });
+  target.sections = Object.fromEntries(
+    Object.entries(source.sections).map(([key, value]) => [key, JSON.parse(JSON.stringify(value)) as PaintConfig])
+  );
 };
 
 export const resetForm = () => {
@@ -495,8 +807,15 @@ export const resetForm = () => {
   creatorState.form.revenueShare = 70;
   creatorState.form.tags = "";
   creatorState.previewUpload = "";
+  creatorState.fallbackPreview = "";
+  creatorState.activeSection = "root";
   applyEditorState(creatorState.draftEditor, makeEditorState());
   applyEditorState(creatorState.savedEditor, makeEditorState());
+  clearStatus();
+};
+
+export const createNewAsset = () => {
+  resetForm();
 };
 
 export const selectAsset = (asset: AssetRecord) => {
@@ -506,10 +825,10 @@ export const selectAsset = (asset: AssetRecord) => {
   creatorState.form.description = asset.description || "";
   creatorState.form.price = asset.price_twd || 0;
   creatorState.form.revenueShare = asset.revenue_share_percent || 70;
-  creatorState.form.tags = (asset.tags || []).join(",");
+  creatorState.form.tags = (asset.tags || []).join(", ");
   creatorState.previewUpload = asset.preview || "";
   creatorState.fallbackPreview = asset.preview || creatorState.fallbackPreview;
-  const config = (asset.config || {}) as { tokens?: TokenSet; editor?: EditorState };
+  const config = (asset.config || {}) as { editor?: EditorState };
   if (config.editor) {
     applyEditorState(creatorState.draftEditor, config.editor);
     applyEditorState(creatorState.savedEditor, config.editor);
@@ -517,41 +836,7 @@ export const selectAsset = (asset: AssetRecord) => {
     applyEditorState(creatorState.draftEditor, makeEditorState());
     applyEditorState(creatorState.savedEditor, makeEditorState());
   }
-};
-
-export const loadAssets = async () => {
-  if (!creatorState.session) return;
-  const client = getSupabase();
-  if (!client) return;
-  const { data, error } = await client
-    .from("theme_assets")
-    .select("id,slug,name,description,preview,config,price_twd,revenue_share_percent,tags,updated_at")
-    .eq("author_user_id", creatorState.session.user.id)
-    .order("updated_at", { ascending: false });
-  if (error) {
-    creatorState.statusMessage = error.message;
-    return;
-  }
-  creatorState.assets = (data || []) as AssetRecord[];
-};
-
-export const loadPreviewData = async () => {
-  if (!creatorState.session) return;
-  try {
-    const client = getSupabase();
-    if (!client) return;
-    const { data: workspace } = await client
-      .from("workspaces")
-      .select("id,name")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (workspace) {
-      creatorState.previewStore.workspace = { id: workspace.id, name: workspace.name };
-    }
-  } catch {
-    // ignore
-  }
+  clearStatus();
 };
 
 export const capturePreview = async (prefix: string) => {
@@ -563,22 +848,22 @@ export const capturePreview = async (prefix: string) => {
   return canvas.toDataURL("image/png");
 };
 
-export const saveDraft = async () => {
+const upsertAsset = async (makePublic: boolean) => {
+  clearStatus();
   ensureSlug();
-  applyEditorState(creatorState.savedEditor, JSON.parse(JSON.stringify(creatorState.draftEditor)));
-  const captured = await capturePreview("design");
-  if (!creatorState.previewUpload) {
-    creatorState.fallbackPreview = captured || creatorState.fallbackPreview;
-  }
-};
 
-export const publishTheme = async () => {
-  creatorState.statusMessage = "";
-  ensureSlug();
   if (!creatorState.form.name.trim() || !creatorState.form.slug.trim()) {
-    creatorState.statusMessage = "名稱與 slug 必填";
-    return;
+    setStatus("名稱與 slug 都是必填。", "error");
+    return null;
   }
+
+  if (!creatorState.session) {
+    setStatus("請先登入後再儲存主題。", "error");
+    return null;
+  }
+
+  applyEditorState(creatorState.savedEditor, cloneEditorState(creatorState.draftEditor));
+
   let preview = creatorState.previewUpload || creatorState.fallbackPreview;
   if (!preview) {
     preview = await capturePreview("design");
@@ -586,51 +871,129 @@ export const publishTheme = async () => {
       creatorState.fallbackPreview = preview;
     }
   }
+
   const payload = {
     asset_type: "theme",
     slug: creatorState.form.slug.trim(),
     name: creatorState.form.name.trim(),
     description: creatorState.form.description.trim(),
-    author_user_id: creatorState.session?.user?.id,
+    author_user_id: creatorState.session.user.id,
     author_name: profileName.value,
-    is_public: false,
+    is_public: makePublic,
     is_official: false,
-    price_twd: creatorState.form.price,
-    revenue_share_percent: creatorState.form.revenueShare,
+    price_twd: Number(creatorState.form.price || 0),
+    revenue_share_percent: Number(creatorState.form.revenueShare || 0),
     preview,
-    tags: creatorState.form.tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean),
+    tags: normalizeTags(creatorState.form.tags),
     config: {
       tokens: savedTokens.value,
       editor: creatorState.savedEditor,
     },
   };
 
-  if (!creatorState.session) {
-    creatorState.statusMessage = "請先登入";
-    return;
-  }
-
   const client = getSupabase();
-  if (!client) return;
-
-  if (creatorState.editingId) {
-    const { error } = await client.from("theme_assets").update(payload).eq("id", creatorState.editingId);
-    if (error) {
-      creatorState.statusMessage = error.message;
-      return;
-    }
-  } else {
-    const { error } = await client.from("theme_assets").insert(payload);
-    if (error) {
-      creatorState.statusMessage = error.message;
-      return;
-    }
+  if (!client) {
+    setStatus("尚未設定 Supabase 環境變數。", "error");
+    return null;
   }
-  await loadAssets();
-  creatorState.statusMessage = "已儲存";
+
+  let savedAssetId = creatorState.editingId;
+  if (creatorState.editingId) {
+    const { data, error } = await client
+      .from("theme_assets")
+      .update(payload)
+      .eq("id", creatorState.editingId)
+      .select("id")
+      .single();
+
+    if (error) {
+      setStatus(error.message, "error");
+      return null;
+    }
+    savedAssetId = data?.id ?? creatorState.editingId;
+  } else {
+    const { data, error } = await client.from("theme_assets").insert(payload).select("id").single();
+    if (error) {
+      setStatus(error.message, "error");
+      return null;
+    }
+    savedAssetId = data?.id ?? null;
+  }
+
+  creatorState.editingId = savedAssetId;
+  await refreshCreatorData();
+  const freshAsset = creatorState.assets.find((asset) => asset.id === savedAssetId) ?? null;
+  if (freshAsset) {
+    selectAsset(freshAsset);
+  }
+
+  setStatus(makePublic ? "主題已公開上架。" : "草稿已儲存。", "success");
+  return freshAsset;
+};
+
+export const saveDraft = async () => {
+  creatorState.pendingAction = "saving";
+  try {
+    return await upsertAsset(false);
+  } finally {
+    creatorState.pendingAction = "idle";
+  }
+};
+
+export const publishTheme = async () => {
+  creatorState.pendingAction = "publishing";
+  try {
+    return await upsertAsset(true);
+  } finally {
+    creatorState.pendingAction = "idle";
+  }
+};
+
+export const setAssetVisibility = async (asset: AssetRecord, isPublic: boolean) => {
+  const client = getSupabase();
+  if (!client) {
+    setStatus("尚未設定 Supabase 環境變數。", "error");
+    return false;
+  }
+
+  creatorState.pendingAction = isPublic ? "publishing" : "saving";
+  try {
+    const { error } = await client.from("theme_assets").update({ is_public: isPublic }).eq("id", asset.id);
+    if (error) {
+      setStatus(error.message, "error");
+      return false;
+    }
+    await refreshCreatorData();
+    setStatus(isPublic ? "作品已重新公開。" : "作品已下架並改回草稿。", "success");
+    return true;
+  } finally {
+    creatorState.pendingAction = "idle";
+  }
+};
+
+export const deleteAsset = async (assetId: string) => {
+  const client = getSupabase();
+  if (!client) {
+    setStatus("尚未設定 Supabase 環境變數。", "error");
+    return false;
+  }
+
+  creatorState.pendingAction = "deleting";
+  try {
+    const { error } = await client.from("theme_assets").delete().eq("id", assetId);
+    if (error) {
+      setStatus(error.message, "error");
+      return false;
+    }
+    if (creatorState.editingId === assetId) {
+      resetForm();
+    }
+    await refreshCreatorData();
+    setStatus("作品已刪除。", "success");
+    return true;
+  } finally {
+    creatorState.pendingAction = "idle";
+  }
 };
 
 export const onPreviewUpload = (event: Event) => {
@@ -652,3 +1015,6 @@ export const onImageUpload = (event: Event) => {
   };
   reader.readAsDataURL(file);
 };
+
+export const getAssetStatusLabel = (asset: AssetRecord) => (asset.is_public ? "已上架" : "草稿");
+export const getAssetStatusTone = (asset: AssetRecord) => (asset.is_public ? "emerald" : "amber");

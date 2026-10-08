@@ -1,5 +1,4 @@
 import React, { useMemo } from "react";
-import { appStore } from "../store/appStore";
 import { DEFAULT_THEME_PRESET_ID, resolveThemePreset, type CustomThemeDraft } from "../theme/catalog";
 
 export type PreviewTokenSet = {
@@ -37,37 +36,25 @@ export const applyPreviewTokens = (tokens: PreviewTokenSet | null) => {
   if (tokens.rightPanelBackground) root.style.setProperty("--preview-right", tokens.rightPanelBackground);
 };
 
-const buildMockSnapshot = () => {
-  return {
-    workspace: { id: "preview", name: "Preview Workspace" },
-    spaces: [
-      { id: "s1", name: "Personal" },
-      { id: "s2", name: "Work" },
-    ],
-    collections: [
-      {
-        id: "c1",
-        name: "AI Research",
-        spaceId: "s1",
-        position: 1000,
-        tabs: [
-          { id: "t1", title: "OpenAI Docs", url: "https://platform.openai.com/docs" },
-          { id: "t2", title: "Chrome Extensions", url: "https://developer.chrome.com/docs/extensions" },
-        ],
-      },
-      {
-        id: "c2",
-        name: "Weekend",
-        spaceId: "s1",
-        position: 2000,
-        tabs: [
-          { id: "t3", title: "Travel Ideas", url: "https://example.com/travel" },
-          { id: "t4", title: "Coffee Beans", url: "https://example.com/coffee" },
-        ],
-      },
-    ],
-  };
-};
+const buildMockSnapshot = () => ({
+  workspace: { id: "preview", name: "Preview Workspace" },
+  spaces: [
+    { id: "s1", name: "Personal" },
+    { id: "s2", name: "Work" },
+  ],
+  collections: [
+    {
+      id: "c1",
+      name: "AI Research",
+      spaceId: "s1",
+      position: 1000,
+      tabs: [
+        { id: "t1", title: "OpenAI Docs", url: "https://platform.openai.com/docs" },
+        { id: "t2", title: "Chrome Extensions", url: "https://developer.chrome.com/docs/extensions" },
+      ],
+    },
+  ],
+});
 
 export type PreviewThemeInput = {
   themePresetId?: string;
@@ -76,43 +63,33 @@ export type PreviewThemeInput = {
 
 export const usePreviewThemeTokens = (input?: PreviewThemeInput) => {
   return useMemo(() => {
-    const preset = resolveThemePreset(input?.themePresetId || DEFAULT_THEME_PRESET_ID, input?.customTheme || null);
+    const preset = resolveThemePreset(input?.themePresetId || DEFAULT_THEME_PRESET_ID);
+    const base = preset.tokens.dark;
+    const customTheme = input?.customTheme ?? null;
     return {
-      background: preset.tokens.background,
-      panel: preset.tokens.panel,
-      panelMuted: preset.tokens.panelMuted,
-      border: preset.tokens.border,
-      shadow: preset.tokens.shadow,
-      text: preset.tokens.text,
-      textMuted: preset.tokens.textMuted,
-      accent: preset.tokens.accent,
-      leftPanelBackground: preset.tokens.leftPanelBackground,
-      mainPanelBackground: preset.tokens.mainPanelBackground,
-      rightPanelBackground: preset.tokens.rightPanelBackground,
+      background: customTheme?.background ?? base.background,
+      panel: customTheme?.panel ?? base.panel,
+      panelMuted: customTheme?.panelMuted ?? base.panelMuted,
+      border: customTheme?.border ?? base.border,
+      shadow: "0 24px 80px rgba(15, 23, 42, 0.22)",
+      text: customTheme?.text ?? base.text,
+      textMuted: customTheme?.textMuted ?? base.textMuted,
+      accent: customTheme?.accent ?? base.accent,
+      leftPanelBackground: customTheme?.leftPanelBackground ?? base.leftPanelBackground,
+      mainPanelBackground: customTheme?.mainPanelBackground ?? base.mainPanelBackground,
+      rightPanelBackground: customTheme?.rightPanelBackground ?? base.rightPanelBackground,
     } as PreviewTokenSet;
-  }, [input?.themePresetId, input?.customTheme]);
+  }, [input?.customTheme, input?.themePresetId]);
 };
 
-export const hydrateMockStore = () => {
-  const snapshot = buildMockSnapshot();
-  appStore.setState((state) => {
-    return {
-      ...state,
-      workspace: snapshot.workspace,
-      spaces: snapshot.spaces,
-      collections: snapshot.collections.map((collection) => ({
-        ...collection,
-        tabs: collection.tabs,
-      })),
-    };
-  });
-};
+export const hydrateMockStore = () => buildMockSnapshot();
 
 export const PreviewRoot: React.FC = () => {
-  const themePreset = resolveThemePreset(DEFAULT_THEME_PRESET_ID, null);
+  const themePreset = resolveThemePreset(DEFAULT_THEME_PRESET_ID);
+  const modeTokens = themePreset.tokens.dark;
   return (
-    <div style={{ padding: 24, color: themePreset.tokens.text }}>
-      <div className="text-sm">這裡會嵌入前台 React UI</div>
+    <div style={{ minHeight: "100vh", padding: 24, background: modeTokens.background, color: modeTokens.text }}>
+      <div className="text-sm">Preview helper ready.</div>
     </div>
   );
 };

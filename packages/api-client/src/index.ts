@@ -30,6 +30,7 @@ export function createSupabaseClient(config: SupabaseConfig) {
   return client;
 }
 
+export type { SupabaseClient } from "@supabase/supabase-js";
 export { createMockSyncClient, createHttpSyncClient } from "./syncClient";
 export * from "./authClient";
 export * from "./shareClient";

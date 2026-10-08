@@ -1,124 +1,139 @@
-# CREATOR_ROADMAP
+﻿# CREATOR_ROADMAP
 
-最後更新：2026-03-29
+最後更新：2026-05-07
 
-## 1. 文件目的
-這份文件是 `creator / theme store / marketplace / 分潤` 的唯一路線來源。
+## 1. 定位
+Creator 後台是 Taboard 的第二階段商業化基礎，不屬於 MVP 主線，但它必須維持可獨立交付、可持續擴充。
 
-它的優先級低於 MVP 主線，但一旦要做 creator 相關任務，後續 AI agent 必須先讀這份文件，再決定要做哪一個 phase。
+這條線的責任很單純：
+- 讓創作者能建立、編輯、儲存、預覽、上架主題
+- 讓平台端能逐步補齊收益統計、購買安裝、人工撥款 SOP
+- 不在這一階段硬上模板商店、自動撥款、多租戶營運後台
 
-## 2. 核心判斷
-- `newtab` 是主產品。
-- `creator` 是商業化與供給側基礎建設。
-- `theme store` 是第二階段變現引擎。
-- `template store` 目前明確 deferred。
+## 2. 現在的真實狀態
+### 已完成
+- Creator OAuth 登入與 hash callback 基礎流程
+- `/creator/#/` Hash Router 與 `/preview/` iframe 預覽流程
+- 主題草稿 / 公開上架資料落庫（`theme_assets`）
+- 主題設計頁與前台 preview tokens 串接
+- Creator 基本後台頁：總覽 / 作品列表 / 收益中心 / 設計 / 預覽
+- `creator_dashboard` Edge Function 規劃與前端 fallback analytics 機制
+- Theme Store 前台已接上公開主題、已購買 / 已安裝狀態
+- 免費主題可直接安裝並套用
+- 付費主題可建立 PAYUNi checkout，並由 webhook 回寫購買狀態
+- `creator_payout_ledger` schema 已落地，先提供人工月結資料底板
+- Creator 收益中心已可顯示 payout ledger 台帳資料
+- `payuni_return` 已提供可用回流頁，可導回 Creator 或指定入口
 
-## 3. 商業模型判斷
-### 收費來源
-- 使用者端：主題、進階外觀、團隊功能、未來模板或企業功能。
-- 創作者端：主題上架、版本更新、收益查詢。
-- 平台端：抽成、付費方案、精選上架、未來企業方案。
-
-### 分潤原則
-- 平台預設先收款，再結算創作者。
-- 第一版先用 `creator_payout_ledger` 記錄應付金額與結算狀態。
-- 不把分潤邏輯塞進前台 UI。
-- 不把商業結算和使用者資料混在同一個 snapshot。
-
-### PAYUNi 的定位
-根據官方手冊與 API 文件，目前可確認的是：
-- 代收流程
-- `NotifyURL` / `ReturnURL`
-- 交易請款 / 退款 / 結餘 / 手續費資訊
-
-目前沒有看到官方公開文件提供「平台收到款後，直接幫你對多位創作者拆帳並自動撥款」的能力。
-所以第一版應視為：
-- PAYUNi 負責收款
-- 平台自己做分潤帳務
-- 創作者撥款由平台另行匯款或另接 payout provider
-
-## 4. 分潤與金流
-### 建議流程
-1. 使用者購買主題。
-2. PAYUNi 完成收款，webhook 回寫訂單。
-3. 平台建立 purchase ledger。
-4. 平台依 `revenue_share_percent` 計算應付創作者金額。
-5. 寫入 `creator_payout_ledger`。
-6. 每月或每週批次匯款到創作者銀行帳戶。
-7. 匯款完成後標記已結算。
-
-### 需要的系統元件
-- 訂單表
-- 分潤 ledger
-- 結算批次表
-- 創作者收款帳號資料
-- 匯款結果與失敗重試紀錄
-
-### 是否需要 API
-- 如果是「先收款、後人工或批次匯款」，可以先不接自動 payout API。
-- 如果要「自動匯款到創作者帳戶」，就需要另外串接銀行轉帳或 payout 服務的 API。
-- PAYUNi 本身不應被假設為 creator payout 自動分帳平台，除非官方與商務條款明確支援。
-
-### 手續費
-- PAYUNi 的收款手續費與交易費率：以官方商務合約為準，公開文件未看到固定統一數字。
-- 創作者撥款的手續費：取決於平台採用的匯款方式或 payout provider。
-- 這兩種費用都應在分潤計算時獨立記帳，不要混成一筆。
-
-## 5. 前中後期路線
-### Phase 1
-目標：把 creator 做成可信的上架後台。
-- 登入
-- 路由穩定
-- 預覽與前台一致
-- 作品建立 / 編輯 / 儲存 / 發佈
-- 暫不做模板商店
-- 暫不做自動撥款
-
-驗收：
-- creator 不再白畫面
-- 可登入、可儲存、可預覽、可發佈
-- 內容資料與 preview 資料一致
-
-### Phase 2
-目標：把 theme store 做成受控商店。
-- 主題上架
-- 商店列表
-- 購買 / 套用 / 安裝
-- 管理審核
-- 分潤 ledger
-- 月結人工匯款
-
-驗收：
-- 使用者能買到主題
-- 創作者能看到應結算金額
-- 平台能追蹤已結算與未結算
-
-### Phase 3
-目標：把 creator 經濟做成可規模化市場。
-- 自動化結算
-- 多創作者管理
-- 進階曝光與推薦
-- 模板商店評估
-- 企業 / 團隊素材市場
-
-驗收：
-- 結算流程可批次運作
-- 銷售、分潤、退款、失敗重試都可追蹤
-- 不靠人工記帳維持核心商業循環
-
-## 6. 明確延後
+### 尚未完成
+- Theme Store 詳情頁與付款後前台刷新 UX
+- 真實收益 ledger 與人工撥款名單整理
+- 自動撥款 / payout API
 - 模板商店
-- 自動拆帳到多創作者
-- 即時 payout
-- 複雜協作與共編
-- 非必要 creator 視覺擴張
+- 創作者審核、評分、推薦、活動機制
 
-## 7. AI 執行規則
-任何 creator / theme / billing task 必須先檢查：
-- 是否屬於 Phase 1
-- 是否會影響預覽與前台一致性
-- 是否引入 payout 自動化
-- 是否需要新的外部 API
+## 3. 資料邊界
+### 前台可直接查
+- `theme_assets`
+  - 創作者本人可讀自己的主題
+  - 使用者可讀 `is_public` 或 `is_official` 的主題
+- `theme_asset_purchases`
+  - 使用者只能讀自己的購買紀錄
+- `theme_asset_installs`
+  - 使用者只能讀自己的安裝紀錄
 
-若答案不明確，先停在文件層，不要直接改程式。
+### 前台不可直接查
+- 真實創作者收益聚合結果
+- payout ledger
+- 撥款狀態與人工對帳資料
 
+原因：
+- 目前 RLS 設計是 buyer / installer self access
+- Creator 想看真實收益時，必須走 server-side aggregation
+- 收益中心不能只靠前端直查資料表硬湊數字
+
+### 目前解法
+- 前端優先呼叫 `creator_dashboard` Edge Function
+- 若 function 尚未部署或不可用，退回 fallback analytics
+- fallback 僅顯示作品數、草稿數、公開數，不假裝有真實營收
+
+## 4. 商業化拆階段
+### Phase 1：Creator 可上架
+目標：讓創作者可以真的做出一個主題並公開上架
+
+必須完成：
+- 登入
+- 作品列表
+- 新增設計 / 編輯設計
+- 草稿落庫
+- 公開上架 / 下架回草稿
+- 預覽圖上傳或自動截圖
+- 預覽頁可用
+- 收益中心至少能區分 live / fallback
+
+不做：
+- 自動撥款
+- 模板商店
+- 平台活動機制
+
+### Phase 2：Theme Store 可交易
+目標：讓使用者能在前台看到、購買、安裝主題
+
+必須完成：
+- Theme Store 前台列表
+- 主題詳情頁
+- 付款流程串接
+- 安裝記錄
+- 購買紀錄
+- creator_dashboard 真實收益聚合穩定可用
+- 人工月結撥款流程文件化
+
+目前進度：
+- 前台列表：已完成
+- 付款流程串接：已完成 checkout / webhook / return 基礎
+- 安裝記錄：已完成
+- 購買紀錄：已完成基本回寫
+- 尚缺：詳情頁、付款後前台刷新 UX、收益驗證
+
+### Phase 3：平台化營運
+目標：把創作者與平台分潤做成可管理、可規模化
+
+候選項：
+- payout ledger
+- 匯款後台
+- 創作者申請 / 審核
+- 推薦與活動曝光
+- 模板商店評估
+
+## 5. 撥款策略
+目前建議：
+- 先走人工月結
+- 平台主帳號依 ledger 匯款到創作者提供的金融帳戶
+- 匯款完成後，再把 payout 狀態寫回 ledger
+
+原因：
+- 付款成功不代表可以立刻撥款
+- 退款、爭議款、稅務、手續費都需要後處理
+- 一開始硬串 payout API，風險比收益高很多
+
+## 6. PAYUNi 的角色
+PAYUNi 目前定位：
+- 處理買家付款
+- 回傳付款結果給平台
+- 不直接處理創作者分潤撥款
+
+這代表：
+- PAYUNi 並不能取代 creator payout ledger
+- 真正撥款給創作者，仍需平台端的會計流程或未來接 payout provider
+
+## 7. 工程原則
+1. Creator 任務不能破壞 newtab 主線穩定性
+2. 收益數字若不是 server-side 聚合，不得假裝是真實營收
+3. 任何 payout / ledger / 稅務邏輯，都必須與 UI 分層
+4. 若缺少金流或 service role 環境變數，先挖洞、先 fallback，不要硬寫死
+5. Creator 所有頁面都要可 build、可 typecheck、可 preview
+
+## 8. 當前下一步
+1. Theme Store 詳情頁與付款完成後前台刷新 UX
+2. creator_dashboard / payout ledger 真實收益驗證
+3. 月結 SOP 與 payout 後台操作流程

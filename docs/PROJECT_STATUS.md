@@ -1,6 +1,6 @@
 ﻿# PROJECT_STATUS
 
-最後更新：2026-03-29
+最後更新：2026-05-07
 
 ## 1. 專案目標
 Taboard 目前的主線仍是 Chrome 新分頁 tab 管理工具。現階段不是擴功能，而是把 MVP 收斂、邊界定清楚、拆掉巨石、補成可信的測試基線，讓專案可以持續開發而不是一直補洞。
@@ -15,10 +15,10 @@ Taboard 目前的主線仍是 Chrome 新分頁 tab 管理工具。現階段不�
 - Creator 後台與 preview 流程原型
 
 ### 目前正在重整
-- `apps/newtab/src/ui/App.tsx` 仍偏大，尚未完成 shell / sidebar / content / overlays 分層
-- `packages/core/src/store/appStore.ts` 仍偏重，hydrate / sync / actions 邊界待拆
+- `apps/newtab/src/ui/App.tsx` 仍偏大，尚未完成 shell / sidebar / overlays 的進一步拆分
+- `packages/core/src/store/appStore.ts` 雖已抽出 hydrate / sync rollback 邊界，但 CRUD / reorder actions 仍偏重
 - sync / membership / payment 的責任與 vocabulary 仍未完全收斂
-- 測試仍混有 placeholder 或低信任度案例，需要換成真流程
+- newtab / creator 已可 build 與驗證，但仍有 chunk 體積偏大告警
 
 ### 明確延後
 - Creator 商城完整上架流程
@@ -33,7 +33,9 @@ Creator 已從「附屬原型」改為「第二階段商業化基礎建設」，
 ### Phase 1
 - 讓 creator 後台穩定登入
 - preview 與前台結構對齊
-- 能建立 / 編輯 / 儲存 / 發佈主題
+- 能建立 / 編輯 / 儲存草稿 / 公開上架主題
+- 有作品列表與收益中心
+- 收益中心可區分 live / fallback analytics
 - 不做模板商店
 - 不做自動撥款
 
@@ -78,15 +80,15 @@ repo 目前已有一套雙層 AI 執行框架：
 
 ## 5. 已知主要問題
 - `App.tsx` 與 `appStore.ts` 仍是主技術債與耦合中心
-- sync boundary 與 business metadata boundary 還停留在文件收斂階段
-- placeholder 測試尚未全面替換
-- Creator 與前台共享 UI 的整合仍是過渡中，不屬於 MVP 主線
+- sync boundary 與 business metadata boundary 還沒完全落成純函式 / facade
+- Creator 雖已補齊草稿/上架/收益中心後台，且已補 payout ledger 顯示與付款回流頁，但 Theme Store 詳情頁與付款後前台刷新 UX 仍未完全收尾
+- preview / creator 雖已補 smoke gate，但還缺更完整的互動回歸測試
 
 ## 6. Blockers
 - [x] T01 已完成 smoke 驗證，AI orchestration 基本可用
 - [x] T02 已將 MVP / deferred / 測試 gate / 邊界文件收斂成可執行版本
-- [ ] App.tsx 重構前，仍缺真正的回歸保護
-- [ ] appStore.ts 拆分前，仍需先守住 hydrate / sync / actions 責任界線
+- [x] 已補上真實回歸保護：sync integration + preview smoke e2e
+- [x] 已先守住 appStore 的 hydrate / sync rollback 責任界線
 - [ ] sync / membership / payment 邏輯尚未被真實測試完整覆蓋
 
 ## 7. 本輪進度紀錄
@@ -99,20 +101,82 @@ repo 目前已有一套雙層 AI 執行框架：
 - [x] `.ai-run/` 改為執行產物，不納入版控
 - [x] T01 smoke 路徑已跑通，planning -> local_exec -> review 可產出正式 evidence
 - [x] T02 文件收斂：MVP 範圍、邊界、測試 gate、phase 順序已同步
+- [x] `packages/core/src/store/hydrateState.ts` 已抽出 hydrate / legacy migration 邏輯
+- [x] `packages/core/src/store/syncActions.ts` 已抽出 rollback / flushPendingOps 邏輯
+- [x] `tests/integration/syncFlow.test.ts` 已改為真實 sync 成功 / 失敗 / retry 流程
+- [x] `tests/e2e/basic.test.ts` 已改為 preview smoke，並補 static server 驗證 build 輸出
+- [x] 修正 preview runtime 在一般瀏覽器環境下的 `chrome is not defined` 問題
+- [x] newtab / creator / tests / workspace lint + test + typecheck + build 全部通過
+- [x] creator 後台已補齊草稿落庫 / 公開上架 / 下架回草稿 / 刪除作品
+- [x] creator 作品列表、總覽、收益中心與設計頁已整理成可交付後台
+- [x] 新增 `supabase/functions/creator_dashboard`，提供 creator 收益聚合的 server-side 邊界
+- [x] `docs/CREATOR_ROADMAP.md` 已重寫為可執行版本，避免亂碼文件誤導後續 agent
+- [x] `tests/e2e/creator.test.ts` 已補上 creator 匿名登入 gate smoke
+- [x] Theme Store 前台已接上創作者公開主題、已購買 / 已安裝狀態與免費主題安裝套用
+- [x] `payuni_checkout` 已支援 `membership` / `theme_asset` 兩種訂單型別
+- [x] `payuni_webhook` 已支援把主題付款結果寫回 `theme_asset_purchases`
+- [x] `creator_payout_ledger` migration 已補上，先建立人工月結的資料底板
+- [x] `docs/THEME_STORE.md` 已重寫為可執行版本，補齊 Theme Store 與 Creator / Payment 邊界
+- [x] `apps/newtab/src/services/themeStore.test.ts` 已補上 Theme Store helper 單元測試
+- [x] Creator 收益中心已補上 `creator_payout_ledger` 台帳視圖
+- [x] `payuni_return` 已補成可用回流頁，支援導回 Creator 或指定入口
+- [x] Supabase production 已完成 `creator_dashboard` / `payuni_checkout` / `payuni_webhook` 部署
+- [x] Supabase production 已完成 `creator_payout_ledger` 與 theme purchase index migrations
 
 ### 進行中
-- [ ] T03 前置準備：用文件收斂結果約束 `App.tsx` 拆分
-- [ ] 將測試 gate 從文字標準變成真實測試保護
+- [ ] T03 / T04 後續：把 `App.tsx` 再拆成 sidebar / overlays / shell state
+- [ ] 將 `appStore.ts` 的 workspace / collection / tab / dock actions 進一步模組化
 - [ ] 驗證 local_exec 在一般多檔案任務下的穩定性
-- [ ] Creator Phase 1 文件落地與後台修復需依 `docs/CREATOR_ROADMAP.md` 執行
+- [ ] Theme Store 付款完成後的前台自動刷新、詳情頁與購買後 UX 補強
+- [ ] creator 真實收益與 payout 台帳的實資料驗證
 
 ### 下一步
-- [ ] 進入 T03，先抽離 `App.tsx` 的本地 UI state 與型別
-- [ ] 然後再拆 sidebar / main content / overlays
-- [ ] 之後才拆 `appStore.ts`
+- [ ] 先拆 `App.tsx` 的 sidebar / overlays / shell state
+- [ ] 再拆 `appStore.ts` 的 workspace / collection / tab / dock actions
+- [ ] 補 Theme Store 詳情頁與付款成功後的回流體驗
+- [ ] 補 payout ledger 人工月結流程與後台操作 SOP
+- [ ] 補 Theme Store 詳情頁與付款後前台刷新 UX
+- [ ] 最後補 membership / payment / creator smoke
 
 ## 8. 目前結論
-現在的 repo 還不能視為可發布產品，但已經從「邊做邊漂」進入「主線明確、phase 清楚、可開始穩定重構」的狀態。
+現在的 repo 已經從「文件有了但保護不夠」進入「有真實測試 gate、可持續重構」的狀態；主線穩定性顯著提升，但 `App.tsx` / `appStore.ts` 還沒拆到理想邊界，尚不算完全完成。
+
+## 10. 2026-05-04 本輪交付
+- [x] `appStore` 抽出 hydrate / sync rollback / retry 邏輯
+- [x] preview build 入口補 smoke e2e 與靜態驗證 server
+- [x] 修正 preview / creator 共用 runtime 對 `chrome` 全域的脆弱依賴
+- [x] 重整 `MainContentPanel` 型別，讓 newtab typecheck 恢復綠燈
+- [x] 驗證：
+  - `pnpm lint`
+  - `pnpm test`
+  - `pnpm typecheck`
+  - `pnpm --filter @toby/newtab build`
+  - `pnpm --filter @toby/newtab build:preview`
+  - `pnpm --filter @toby/creator build`
+  - `pnpm --filter @toby/tests test:e2e`
+
+## 11. 2026-05-07 Creator 可販售基線
+- [x] Creator 後台改成可用的總覽 / 作品列表 / 收益中心結構
+- [x] 草稿儲存會真實寫回 `theme_assets`
+- [x] 公開上架與下架回草稿有完整狀態線
+- [x] 作品刪除、價格、分潤比例、標籤、預覽封面管理可用
+- [x] 收益中心先走 `creator_dashboard` live analytics，失敗時退回 fallback 模式
+- [x] Theme Store 前台可讀取公開主題、辨識已購買 / 已安裝狀態
+- [x] 免費主題可直接安裝並套用
+- [x] 付費主題可透過 PAYUNi 建立 theme asset checkout
+- [x] PAYUNi webhook 成功後可回寫 `theme_asset_purchases`
+- [x] Creator 收益中心可顯示 payout ledger 台帳資料
+- [x] PAYUNi return 頁面已有實際可用的回流頁與導向設定
+- [x] `pnpm --filter @toby/creator lint`
+- [x] `pnpm --filter @toby/creator typecheck`
+- [x] `pnpm --filter @toby/creator test`
+- [x] `pnpm --filter @toby/creator build`
+- [x] `pnpm lint`
+- [x] `pnpm typecheck`
+- [x] `pnpm test`
+- [x] `pnpm --filter @toby/newtab test`
+- [x] `pnpm --filter @toby/newtab build:preview`
+- [x] `pnpm --filter @toby/tests test:e2e`
 
 ## 9. Creator 最新修正（2026-03-29）
 - [x] 修正 creator 設計頁與預覽頁 iframe 載入時序，避免 token 初始化丟失
