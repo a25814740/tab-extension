@@ -10,3 +10,5 @@ extension/newtab/
 extension/sidepanel/
 .vercel
 .env*.local
+.ai-run
+docs/.vercel
