@@ -100,12 +100,13 @@ export const setPreviewBridge = (frame: Window | null, origin: string | null) =>
 };
 
 export const capturePreviewFromBridge = async () => {
-  if (!previewBridge.frame || !previewBridge.origin) return "";
+  const { frame, origin } = previewBridge;
+  if (!frame || !origin) return "";
   const requestId = `preview_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   return await new Promise<string>((resolve) => {
     let settled = false;
     const handler = (event: MessageEvent) => {
-      if (event.origin !== previewBridge.origin) return;
+      if (event.origin !== origin) return;
       const payload = event.data as { type?: string; requestId?: string; dataUrl?: string };
       if (payload?.type !== "TABOARD_PREVIEW_CAPTURE_RESULT" || payload.requestId !== requestId) return;
       settled = true;
@@ -113,7 +114,7 @@ export const capturePreviewFromBridge = async () => {
       resolve(payload.dataUrl ?? "");
     };
     window.addEventListener("message", handler);
-    previewBridge.frame?.postMessage({ type: "TABOARD_PREVIEW_CAPTURE", requestId }, previewBridge.origin);
+    frame.postMessage({ type: "TABOARD_PREVIEW_CAPTURE", requestId }, origin);
     window.setTimeout(() => {
       if (settled) return;
       window.removeEventListener("message", handler);
