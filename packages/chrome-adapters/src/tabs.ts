@@ -5,6 +5,8 @@ export type TabSnapshot = {
   favIconUrl?: string;
   screenshotUrl?: string | null;
   pinned: boolean;
+  active?: boolean;
+  lastAccessed?: number;
 };
 
 export type WindowSnapshot = {
@@ -22,9 +24,15 @@ function toTabSnapshot(tab: chrome.tabs.Tab): TabSnapshot | null {
     title: tab.title ?? "Untitled",
     url: tab.url,
     pinned: tab.pinned ?? false,
+    active: tab.active ?? false,
   };
   if (typeof tab.favIconUrl === "string") {
     snapshot.favIconUrl = tab.favIconUrl;
+  }
+  // lastAccessed is Chrome 121+ and missing from older @types/chrome.
+  const lastAccessed = (tab as chrome.tabs.Tab & { lastAccessed?: number }).lastAccessed;
+  if (typeof lastAccessed === "number") {
+    snapshot.lastAccessed = lastAccessed;
   }
   return snapshot;
 }

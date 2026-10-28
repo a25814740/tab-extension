@@ -11,3 +11,4 @@ export * from "./sync/conflict";
 export * from "./utils/sampleData";
 export * from "./utils/position";
 export * from "./utils/membership";
+export * from "./utils/duplicateTabs";

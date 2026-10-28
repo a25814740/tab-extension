@@ -1,4 +1,4 @@
-# Toby-like Extension
+# Taboard｜分頁與書籤儀錶板
 
 A Chrome extension (Manifest V3) that provides a workspace-first tab management workflow with a new tab dashboard and side panel.
 
