@@ -5,6 +5,8 @@ export type TabSnapshot = {
   favIconUrl?: string;
   screenshotUrl?: string | null;
   pinned: boolean;
+  active?: boolean;
+  lastAccessed?: number;
 };
 
 export type WindowSnapshot = {
@@ -26,6 +28,8 @@ const previewWindows: WindowSnapshot[] = [
         title: "Design System",
         url: "https://example.com/design",
         pinned: false,
+        active: true,
+        lastAccessed: 3000,
       },
       {
         id: 12,
@@ -44,6 +48,14 @@ const previewWindows: WindowSnapshot[] = [
         title: "Release Notes",
         url: "https://example.com/release",
         pinned: false,
+        lastAccessed: 2000,
+      },
+      {
+        id: 22,
+        title: "Design System",
+        url: "https://example.com/design/",
+        pinned: false,
+        lastAccessed: 1000,
       },
     ],
   },
@@ -76,9 +88,11 @@ export async function focusTab(_tabId: number, _windowId?: number) {
   return;
 }
 
-export async function closeTabs(_tabIds: number[]) {
-  void _tabIds;
-  return;
+export async function closeTabs(tabIds: number[]) {
+  const ids = new Set(tabIds);
+  previewWindows.forEach((win) => {
+    win.tabs = win.tabs.filter((tab) => !ids.has(tab.id));
+  });
 }
 
 export async function getLocal<T>(key: string, fallback: T): Promise<T> {

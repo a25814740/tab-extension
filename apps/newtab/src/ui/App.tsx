@@ -19,7 +19,7 @@ import {
 } from "@toby/api-client";
 import { appStore } from "../store/appStore";
 import { useLocale } from "../i18n";
-import { localSnapshotSchema, toSnapshot, type LocalStoreSnapshot, type MembershipStatus } from "@toby/core";
+import { findDuplicateTabGroups, localSnapshotSchema, toSnapshot, type LocalStoreSnapshot, type MembershipStatus } from "@toby/core";
 import { DEFAULT_SUPABASE_ANON_KEY, DEFAULT_SUPABASE_URL, useAuthLogic, useAuthUser } from "../auth/useAuth";
 import { toSafeFaviconUrl } from "../utils/favicon";
 import { canFetchOgMetadata, fetchOgMetadata } from "../utils/og";
@@ -47,6 +47,7 @@ import {
   ChevronUp,
   ChevronsUpDown,
   CircleDot,
+  CopyX,
   Clock3,
   Columns3,
   FolderPlus,
@@ -127,6 +128,16 @@ function extractCssBackgroundUrl(value: string | null | undefined) {
   return match[2].trim() || null;
 }
 
+type WindowTabItem = {
+  id: number;
+  title: string;
+  url: string;
+  favIconUrl?: string;
+  active: boolean;
+  pinned: boolean;
+  lastAccessed?: number;
+};
+
 export function App() {
   const previewEnabledFlag =
     typeof window !== "undefined" &&
@@ -139,13 +150,19 @@ export function App() {
     url: string;
     favIconUrl?: string;
     active?: boolean;
+    pinned?: boolean;
+    lastAccessed?: number;
   }) => {
-    const item: { id: number; title: string; url: string; favIconUrl?: string; active: boolean } = {
+    const item: WindowTabItem = {
       id: tab.id,
       title: tab.title,
       url: tab.url,
       active: tab.active ?? false,
+      pinned: tab.pinned ?? false,
     };
+    if (typeof tab.lastAccessed === "number") {
+      item.lastAccessed = tab.lastAccessed;
+    }
     const safeFaviconUrl = toSafeFaviconUrl(tab.url, typeof tab.favIconUrl === "string" ? tab.favIconUrl : null);
     if (safeFaviconUrl) {
       item.favIconUrl = safeFaviconUrl;
@@ -275,9 +292,10 @@ export function App() {
     Array<{
       id: number;
       title: string;
-      tabs: Array<{ id: number; title: string; url: string; favIconUrl?: string; active: boolean }>;
+      tabs: WindowTabItem[];
     }>
   >([]);
+  const [showDuplicateTabsOnly, setShowDuplicateTabsOnly] = useState(false);
   const [collapsedWindowIds, setCollapsedWindowIds] = useState<Set<number>>(new Set());
   const [orgSettingsOpen, setOrgSettingsOpen] = useState(false);
   const [orgSettingsTab, setOrgSettingsTab] = useState<"preferences" | "members">("preferences");
@@ -1657,28 +1675,68 @@ export function App() {
     searchInputRef.current?.focus();
   }, [searchOpen]);
 
+  const windowsLoadIdRef = useRef(0);
+  const refreshWindowGroups = useCallback(async () => {
+    const loadId = ++windowsLoadIdRef.current;
+    const windows = await getAllWindowsWithTabs();
+    if (loadId !== windowsLoadIdRef.current) {
+      return;
+    }
+    setWindowGroups(
+      windows.map((win, index) => ({
+        id: win.id,
+        title: `${t("right.window")} ${index + 1}`,
+        tabs: win.tabs.map(toWindowTab),
+      }))
+    );
+  }, [t]);
+
   useEffect(() => {
-    let isMounted = true;
-    const loadWindows = async () => {
-      const windows = await getAllWindowsWithTabs();
-      if (!isMounted) {
-        return;
-      }
-      setWindowGroups(
-        windows.map((win, index) => ({
-          id: win.id,
-          title: `${t("right.window")} ${index + 1}`,
-          tabs: win.tabs.map(toWindowTab),
-        }))
-      );
-    };
-    void loadWindows();
-    const interval = window.setInterval(loadWindows, 8000);
+    void refreshWindowGroups();
+    const interval = window.setInterval(() => void refreshWindowGroups(), 8000);
     return () => {
-      isMounted = false;
+      windowsLoadIdRef.current += 1;
       window.clearInterval(interval);
     };
-  }, [t]);
+  }, [refreshWindowGroups]);
+
+  const duplicateTabGroups = useMemo(
+    () => findDuplicateTabGroups(windowGroups.flatMap((windowItem) => windowItem.tabs)),
+    [windowGroups]
+  );
+  const duplicateTabIds = useMemo(
+    () => new Set(duplicateTabGroups.flatMap((group) => group.tabs.map((tab) => tab.id))),
+    [duplicateTabGroups]
+  );
+  const closableDuplicateTabIds = useMemo(
+    () => duplicateTabGroups.flatMap((group) => group.close.map((tab) => tab.id)),
+    [duplicateTabGroups]
+  );
+
+  useEffect(() => {
+    if (showDuplicateTabsOnly && duplicateTabGroups.length === 0) {
+      setShowDuplicateTabsOnly(false);
+    }
+  }, [showDuplicateTabsOnly, duplicateTabGroups.length]);
+
+  const handleCloseDuplicateTabs = async () => {
+    const ids = closableDuplicateTabIds;
+    if (ids.length === 0) {
+      return;
+    }
+    await closeTabs(ids);
+    setSelectedWindowTabIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
+    await refreshWindowGroups();
+    showUiNotice(
+      locale === "en"
+        ? `Closed ${ids.length} duplicate ${ids.length === 1 ? "tab" : "tabs"}. Kept the most recently used one.`
+        : `已關閉 ${ids.length} 個重複分頁，保留最近使用的那一個。`
+    );
+  };
 
   const canWrite = membershipStatus === "trial_active" || membershipStatus === "paid_active";
   const guardWrite = () => {
@@ -3872,6 +3930,40 @@ export function App() {
                           : "全選全部視窗"}
                     </button>
                   </div>
+                  {duplicateTabGroups.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2">
+                      <button
+                        type="button"
+                        className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition ${showDuplicateTabsOnly
+                          ? "bg-amber-500 text-white"
+                          : "text-amber-800 hover:bg-amber-100"
+                          }`}
+                        onClick={() => setShowDuplicateTabsOnly((prev) => !prev)}
+                        aria-pressed={showDuplicateTabsOnly}
+                        title={locale === "en" ? "Show only duplicate tabs" : "只顯示重複分頁"}
+                      >
+                        <CopyX className="h-3.5 w-3.5" />
+                        {locale === "en"
+                          ? `${duplicateTabGroups.length} duplicated ${duplicateTabGroups.length === 1 ? "page" : "pages"}`
+                          : `${duplicateTabGroups.length} 組重複分頁`}
+                      </button>
+                      <button
+                        type="button"
+                        className="ml-auto rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-40"
+                        onClick={() => void handleCloseDuplicateTabs()}
+                        disabled={closableDuplicateTabIds.length === 0}
+                        title={
+                          locale === "en"
+                            ? "Close older copies and keep the most recently used tab (pinned tabs are kept)"
+                            : "關閉較舊的重複分頁，保留最近使用的那一個（釘選分頁不會被關閉）"
+                        }
+                      >
+                        {locale === "en"
+                          ? `Close ${closableDuplicateTabIds.length} older`
+                          : `關閉較舊的 ${closableDuplicateTabIds.length} 個`}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -3882,6 +3974,12 @@ export function App() {
                       </div>
                     ) : (
                       windowGroups.map((windowItem, windowIndex) => {
+                        const visibleTabs = showDuplicateTabsOnly
+                          ? windowItem.tabs.filter((tab) => duplicateTabIds.has(tab.id))
+                          : windowItem.tabs;
+                        if (showDuplicateTabsOnly && visibleTabs.length === 0) {
+                          return null;
+                        }
                         const selectedCount = windowItem.tabs.filter((tab) => selectedWindowTabIds.has(tab.id)).length;
                         const allSelected = windowItem.tabs.length > 0 && selectedCount === windowItem.tabs.length;
                         const isWindowCollapsed = collapsedWindowIds.has(windowItem.id);
@@ -3929,8 +4027,9 @@ export function App() {
                             </div>
                             {!isWindowCollapsed ? (
                               <div className="space-y-2">
-                                {windowItem.tabs.map((tab) => {
+                                {visibleTabs.map((tab) => {
                                   const selected = selectedWindowTabIds.has(tab.id);
+                                  const isDuplicate = duplicateTabIds.has(tab.id);
                                   const safeWindowTabFavicon = toSafeFaviconUrl(tab.url, tab.favIconUrl ?? null);
                                   return (
                                     <div
@@ -3987,6 +4086,14 @@ export function App() {
                                         <div className="flex items-center gap-2">
                                           {tab.active ? <CircleDot className="h-3.5 w-3.5 shrink-0 text-emerald-400" /> : null}
                                           <div className="truncate text-sm font-medium">{tab.title}</div>
+                                          {isDuplicate ? (
+                                            <span
+                                              className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${tab.active ? "bg-amber-400/20 text-amber-200" : "bg-amber-100 text-amber-700"
+                                                }`}
+                                            >
+                                              {locale === "en" ? "Duplicate" : "重複"}
+                                            </span>
+                                          ) : null}
                                         </div>
                                         <div className={`mt-1 truncate text-xs ${tab.active ? "text-zinc-300" : "text-zinc-500"}`}>
                                           {tab.url}
