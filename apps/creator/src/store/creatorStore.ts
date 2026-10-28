@@ -302,8 +302,10 @@ export const handleAuthCallback = async () => {
   const client = getSupabase();
   if (!client) return false;
   try {
-    if (hasToken && "getSessionFromUrl" in client.auth) {
-      await client.auth.getSessionFromUrl({ storeSession: true });
+    if (hasToken) {
+      // supabase-js v2 parses the token from the URL during client init;
+      // getSession() waits for that before the hash is cleared below.
+      await client.auth.getSession();
     } else if (hasCode && "exchangeCodeForSession" in client.auth) {
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
