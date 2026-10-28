@@ -123,16 +123,37 @@ serve(async (req) => {
     return json({ ok: false, error: "plan_not_available" }, 400);
   }
 
-  const authHeader = req.headers.get("authorization") ?? (tokenFromQuery ? `Bearer ${tokenFromQuery}` : "");
+  const authHeader = req.headers.get("authorization") || (tokenFromQuery ? `Bearer ${tokenFromQuery}` : "");
   if (!authHeader) {
     return json({ ok: false, error: "missing_authorization" }, 401);
   }
 
-  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const userResult = await authClient.auth.getUser();
-  const user = userResult.data.user;
+  let user = null;
+  if (SUPABASE_URL.includes("127.0.0.1") || SUPABASE_URL.includes("localhost")) {
+    // Local dev mode: manually decode the JWT payload since local GoTrue doesn't have the Cloud's JWT secret
+    try {
+      const tokenString = authHeader.replace("Bearer ", "").trim();
+      const payloadPart = tokenString.split(".")[1];
+      if (payloadPart) {
+        let base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+        while (base64.length % 4) {
+          base64 += "=";
+        }
+        const decoded = JSON.parse(atob(base64));
+        user = { id: decoded.sub, email: decoded.email };
+      }
+    } catch (e) {
+      console.log("[JWT Decode Error]", e);
+      // Ignore inner parse errors, fall through to check below
+    }
+  } else {
+    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const userResult = await authClient.auth.getUser();
+    user = userResult.data?.user;
+  }
+
   if (!user?.id || !user.email) {
     return json({ ok: false, error: "unauthorized" }, 401);
   }

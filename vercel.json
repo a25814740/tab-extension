@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @toby/creator build",
+  "buildCommand": "pnpm --filter @toby/newtab build:preview && pnpm --filter @toby/creator build",
   "outputDirectory": "docs",
   "redirects": [
     { "source": "/creator", "destination": "/creator/", "permanent": true }

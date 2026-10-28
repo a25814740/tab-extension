@@ -2709,7 +2709,10 @@ export function App() {
       if (!effectiveSupabaseUrl) {
         return null;
       }
-      const baseUrl = effectiveSupabaseUrl.replace(/\/$/, "");
+      const overrideUrl = import.meta.env.VITE_PAYMENTS_TEST_URL;
+      const baseUrl = overrideUrl 
+        ? overrideUrl
+        : effectiveSupabaseUrl.replace(/\/$/, "");
       const params = new URLSearchParams({
         plan: planId,
         token: accessToken,
@@ -3001,6 +3004,21 @@ export function App() {
   );
 
   const dockSections = useMemo<DockSection[]>(() => {
+    const coreItems: DockEntry[] = [
+      {
+        id: "dock-search",
+        label: locale === "en" ? "Search" : "搜尋",
+        icon: <Search className="h-5 w-5" />,
+        onClick: () => setSearchOpen(true),
+      },
+      {
+        id: "dock-new-collection",
+        label: locale === "en" ? "New Collection" : "新建集合",
+        icon: <FolderPlus className="h-5 w-5" />,
+        onClick: () => handleCreateCollection(),
+      },
+    ];
+
     const pinnedItems: DockEntry[] = dockPinnedItems.map((item) => ({
       id: item.id,
       label: item.title,
@@ -3029,25 +3047,70 @@ export function App() {
       },
     }));
 
+    const recentItems: DockEntry[] = dockRecentItems.map((item) => ({
+      id: item.id,
+      label: item.title,
+      text: item.title.slice(0, 2).toUpperCase(),
+      url: item.url ?? undefined,
+      faviconUrl: item.faviconUrl ?? null,
+      onClick: () => {
+        if (item.type === "tab" && item.url) {
+          pushDockRecentItem({
+            type: "tab",
+            title: item.title,
+            url: item.url,
+            faviconUrl: item.faviconUrl ?? null,
+            collectionId: null,
+          });
+          void openTabs([item.url]);
+        }
+      },
+    }));
+
     const settingsItems: DockEntry[] = [
       {
+        id: "dock-hold",
+        label: locale === "en" ? "Hold" : "暫放",
+        icon: <Layers2 className="h-5 w-5" />,
+        onClick: () => showUiNotice(locale === "en" ? "Hold feature coming soon" : "暫放功能即將推出"),
+      },
+      {
+        id: "dock-clear",
+        label: locale === "en" ? "Clear Pinned" : "清空固定",
+        icon: <Trash2 className="h-5 w-5" />,
+        onClick: () => {
+          if (window.confirm(locale === "en" ? "Clear all pinned shortcuts?" : "確定要清空所有固定捷徑嗎？")) {
+            clearDockItems();
+            showUiNotice(locale === "en" ? "Cleared" : "已清空");
+          }
+        },
+      },
+      {
         id: "dock-settings",
-        label: locale === "en" ? "Dock settings" : "Dock 設定",
+        label: locale === "en" ? "Dock Settings" : "Dock 設定",
         icon: <Settings className="h-5 w-5" />,
         onClick: () => setDockSettingsOpen(true),
       },
     ];
+
     return [
+      { id: "core", label: locale === "en" ? "Core" : "核心功能", items: coreItems },
       { id: "fixed", label: locale === "en" ? "Pinned" : "固定捷徑", items: pinnedItems },
-      { id: "settings", label: locale === "en" ? "Settings" : "設定", items: settingsItems },
+      { id: "recent", label: locale === "en" ? "Recent" : "最近使用", items: recentItems },
+      { id: "settings", label: locale === "en" ? "Settings" : "暫放 / 設定", items: settingsItems },
     ];
   }, [
     dockPinnedItems,
+    dockRecentItems,
     locale,
     openCollectionTabs,
     pushDockRecentItem,
     removeDockItem,
+    clearDockItems,
     showUiNotice,
+    handleCreateCollection,
+    setSearchOpen,
+    setDockSettingsOpen,
   ]);
 
   const openTabList = useMemo(
@@ -3188,7 +3251,7 @@ export function App() {
   };
 
   // Layout mirrors the Taboard information hierarchy while keeping data wiring intact.
-  if (!authUser) {
+  if (!authUser && !previewEnabledFlag) {
     return (
       <div
         className={`flex h-[100vh] w-full min-w-[1280px] items-center justify-center overflow-x-auto text-zinc-900 ${shellPaddingClass} ${effectiveTheme === "dark" ? "theme-dark" : "theme-light"}`}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createSupabaseClient, ensureTrialMembership, getGoogleOAuthUrl, signOut } from "@toby/api-client";
-import { getRedirectUrl, getSync, launchWebAuthFlow, setSync, getLocal, setLocal } from "@toby/chrome-adapters";
+import { getRedirectUrl, launchWebAuthFlow, setSync, getLocal, setLocal } from "@toby/chrome-adapters";
 import { useLocale } from "../i18n";
 import { computeTrialEndsAt, TRIAL_DAYS, type MembershipStatus } from "@toby/core";
 
@@ -33,8 +33,8 @@ type MembershipSnapshot = {
   updatedAt: string | null;
 };
 
-export const DEFAULT_SUPABASE_URL = "https://zhfibzpgabqgqgixgisk.supabase.co";
-export const DEFAULT_SUPABASE_ANON_KEY =
+export const DEFAULT_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://zhfibzpgabqgqgixgisk.supabase.co";
+export const DEFAULT_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpoZmlienBnYWJxZ3FnaXhnaXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MzAyNTksImV4cCI6MjA4OTUwNjI1OX0.R6nnqf9FgpNgWjY3Ya_aLXugYHruK8r1WVNG26jtM4s";
 
 export function useAuthUser() {
@@ -80,13 +80,14 @@ export function useAuthLogic() {
   const [status, setStatus] = useState<string>(t("auth.status.notSignedIn"));
   const [redirectUrl, setRedirectUrl] = useState<string>("");
 
+  // config overriding from storage is temporarily disabled to prevent testing environments from poisoning the storage
   useEffect(() => {
-    void (async () => {
-      const stored = await getSync<AuthConfig | null>(CONFIG_KEY, null);
-      if (stored?.supabaseUrl && stored?.supabaseAnonKey) {
-        setConfig(stored);
-      }
-    })();
+    // void (async () => {
+    //   const stored = await getSync<AuthConfig | null>(CONFIG_KEY, null);
+    //   if (stored?.supabaseUrl && stored?.supabaseAnonKey) {
+    //     setConfig(stored);
+    //   }
+    // })();
   }, []);
 
   const client = useMemo(() => {
@@ -123,6 +124,16 @@ export function useAuthLogic() {
     }
 
     let responseUrl: string | null = null;
+    if (!chrome?.identity?.launchWebAuthFlow) {
+      await client.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      return;
+    }
+
     try {
       responseUrl = (await launchWebAuthFlow(authUrl, true)) ?? null;
     } catch (error) {

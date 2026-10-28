@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Taboard 把 Chrome 新分頁變成清楚的工作台。整理分頁、切換工作空間，隨時回到原本的工作脈絡。" />
+    <meta name="theme-color" content="#7057f5" />
+    <title>Taboard｜讓每個分頁都有自己的位置</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800;900&family=Nunito+Sans:opsz,wght@6..12,600;6..12,700;6..12,800;6..12,900&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --violet: #7057f5;
+        --violet-dark: #563ed4;
+        --mint: #a8f0c6;
+        --coral: #ff8066;
+        --ink: #11182c;
+        --muted: #586079;
+        --canvas: #fafafc;
+        --white: #ffffff;
+        --navy: #07111f;
+        --line: #e5e5ed;
+        --content: 1220px;
+        --ease: cubic-bezier(.16, 1, .3, 1);
+      }
+
+      * { box-sizing: border-box; }
+      html { color-scheme: light; scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: "Noto Sans TC", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: inherit; text-decoration: none; }
+      img { display: block; max-width: 100%; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      a:focus-visible { outline: 3px solid var(--mint); outline-offset: 4px; }
+      h1, h2, h3, p { margin: 0; }
+      h1, h2, h3 { text-wrap: balance; }
+      p { text-wrap: pretty; }
+      .container { width: min(var(--content), calc(100% - 48px)); margin: 0 auto; }
+
+      .site-header {
+        position: absolute;
+        inset: 0 0 auto;
+        z-index: 10;
+        color: var(--white);
+      }
+      .nav {
+        min-height: 84px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 32px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 11px;
+        font-family: "Nunito Sans", "Noto Sans TC", sans-serif;
+        font-size: 23px;
+        font-weight: 900;
+        letter-spacing: -.025em;
+      }
+      .brand-mark {
+        width: 30px;
+        height: 30px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3px;
+        padding: 5px;
+        border-radius: 8px;
+        background: var(--mint);
+        transform: rotate(-4deg);
+      }
+      .brand-mark span { border-radius: 2px; background: var(--violet-dark); }
+      .nav-links { display: flex; align-items: center; gap: 30px; font-size: 14px; font-weight: 600; }
+      .nav-links > a:not(.nav-button) { opacity: .82; transition: opacity .2s ease; }
+      .nav-links > a:not(.nav-button):hover { opacity: 1; }
+      .nav-button {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 20px;
+        border-radius: 999px;
+        background: var(--white);
+        color: var(--violet-dark);
+        font-weight: 800;
+        transition: transform .25s var(--ease), color .25s ease;
+      }
+      .nav-button:hover { color: var(--ink); transform: translateY(-2px); }
+
+      .hero {
+        position: relative;
+        min-height: 900px;
+        overflow: hidden;
+        padding: 158px 0 0;
+        background: var(--violet);
+        color: var(--white);
+      }
+      .hero-content { position: relative; z-index: 2; text-align: center; }
+      .hero-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        min-height: 34px;
+        padding: 0 14px;
+        border-radius: 999px;
+        background: var(--mint);
+        color: #213630;
+        font-size: 13px;
+        font-weight: 800;
+        animation: hero-rise .7s var(--ease) both;
+      }
+      .hero-label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--violet-dark); }
+      .hero h1 {
+        max-width: 930px;
+        margin: 22px auto 24px;
+        font-family: "Nunito Sans", "Noto Sans TC", sans-serif;
+        font-size: clamp(50px, 6.5vw, 88px);
+        line-height: 1.04;
+        font-weight: 900;
+        letter-spacing: -.035em;
+        animation: hero-rise .78s .06s var(--ease) both;
+      }
+      .hero h1 span { color: var(--mint); }
+      .hero-intro {
+        max-width: 660px;
+        margin: 0 auto;
+        color: rgba(255, 255, 255, .86);
+        font-size: clamp(17px, 1.7vw, 20px);
+        line-height: 1.78;
+        animation: hero-rise .82s .12s var(--ease) both;
+      }
+      .hero-actions {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 30px;
+        animation: hero-rise .86s .18s var(--ease) both;
+      }
+      .button {
+        min-height: 50px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 0 23px;
+        border-radius: 999px;
+        font-size: 15px;
+        font-weight: 800;
+        transition: transform .25s var(--ease), background-color .25s ease;
+      }
+      .button:hover { transform: translateY(-3px); }
+      .button-light { background: var(--white); color: var(--violet-dark); }
+      .button-dark { background: var(--ink); color: var(--white); }
+      .button-ghost { background: rgba(255,255,255,.13); color: var(--white); }
+      .button-arrow { font-size: 18px; line-height: 1; }
+
+      .hero-shape { position: absolute; pointer-events: none; }
+      .shape-mint { width: 360px; height: 360px; left: -130px; top: 250px; border-radius: 50%; background: var(--mint); }
+      .shape-coral { width: 122px; height: 122px; right: 5%; top: 190px; border-radius: 50%; background: var(--coral); }
+      .shape-deep {
+        width: 420px;
+        height: 270px;
+        right: -180px;
+        bottom: 110px;
+        border-radius: 48% 52% 0 0;
+        background: var(--violet-dark);
+        transform: rotate(-22deg);
+      }
+      .spark {
+        left: calc(50% + 500px);
+        top: 410px;
+        width: 58px;
+        height: 58px;
+        color: var(--mint);
+        font-size: 56px;
+        font-weight: 300;
+        line-height: 1;
+        transform: rotate(14deg);
+      }
+
+      .product-stage {
+        position: relative;
+        z-index: 3;
+        width: min(1220px, calc(100% - 48px));
+        margin: 72px auto 0;
+        border-radius: 14px 14px 0 0;
+        overflow: hidden;
+        background: var(--navy);
+        box-shadow: 0 24px 52px rgba(25, 12, 88, .32);
+        animation: stage-in 1s .2s var(--ease) both;
+      }
+      .browser-bar {
+        height: 46px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 16px;
+        background: #171c2a;
+        color: #aeb5c8;
+        font-size: 12px;
+      }
+      .browser-dot { width: 9px; height: 9px; border-radius: 50%; }
+      .browser-dot:nth-child(1) { background: var(--coral); }
+      .browser-dot:nth-child(2) { background: #ffd469; }
+      .browser-dot:nth-child(3) { background: var(--mint); }
+      .browser-title { margin-left: 8px; }
+      .product-stage img { width: 100%; height: auto; }
+
+      .proof {
+        padding: 92px 0 104px;
+        background: var(--white);
+      }
+      .proof-lead {
+        max-width: 850px;
+        margin: 0 auto 58px;
+        text-align: center;
+        font-family: "Nunito Sans", "Noto Sans TC", sans-serif;
+        font-size: clamp(28px, 3.2vw, 45px);
+        line-height: 1.22;
+        font-weight: 800;
+        letter-spacing: -.025em;
+      }
+      .proof-lead strong { color: var(--violet-dark); }
+      .structure {
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+        flex-wrap: wrap;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+      .structure-item { flex: 1 1 220px; padding: 26px 24px; text-align: center; }
+      .structure-item + .structure-item { border-left: 1px solid var(--line); }
+      .structure-item b { display: block; margin-bottom: 6px; color: var(--ink); font-size: 16px; }
+      .structure-item span { color: var(--muted); font-size: 13px; }
+
+      .story { padding: clamp(88px, 10vw, 150px) 0; overflow: hidden; }
+      .story-grid { display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr); gap: clamp(48px, 8vw, 112px); align-items: center; }
+      .story-copy h2 {
+        margin-bottom: 24px;
+        font-family: "Nunito Sans", "Noto Sans TC", sans-serif;
+        font-size: clamp(39px, 4.5vw, 64px);
+        line-height: 1.08;
+        font-weight: 900;
+        letter-spacing: -.03em;
+      }
+      .story-copy p { max-width: 530px; color: inherit; opacity: .74; font-size: 18px; line-height: 1.82; }
+      .story-note { display: inline-block; margin-top: 32px; padding-bottom: 5px; border-bottom: 2px solid currentColor; font-size: 14px; font-weight: 800; }
+      .story-mint { background: var(--mint); color: #17352e; }
+      .story-navy { background: var(--navy); color: var(--white); }
+      .story-navy .story-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); }
+      .story-violet { background: var(--canvas); }
+      .story-violet .story-grid { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
+      .story-shot {
+        position: relative;
+        height: 500px;
+        overflow: hidden;
+        border-radius: 14px;
+        background: #0a1423;
+        box-shadow: 0 8px 0 rgba(17, 24, 44, .18);
+      }
+      .story-shot img { position: absolute; height: 100%; width: auto; max-width: none; }
+      .shot-left img { inset: 0 auto auto 0; }
+      .shot-right img { inset: 0 0 auto auto; }
+      .shot-center img { left: 50%; top: 0; transform: translateX(-50%); }
+      .story-navy .story-shot { box-shadow: 0 8px 0 rgba(168, 240, 198, .85); }
+      .story-violet .story-shot { box-shadow: 0 8px 0 rgba(112, 87, 245, .32); }
+
+      .manifesto {
+        position: relative;
+        padding: clamp(100px, 12vw, 170px) 0;
+        overflow: hidden;
+        background: var(--coral);
+        color: var(--ink);
+        text-align: center;
+      }
+      .manifesto::before {
+        content: "";
+        position: absolute;
+        width: 350px;
+        height: 350px;
+        top: -185px;
+        left: -90px;
+        border-radius: 50%;
+        background: var(--mint);
+      }
+      .manifesto h2 {
+        position: relative;
+        max-width: 980px;
+        margin: 0 auto;
+        font-family: "Nunito Sans", "Noto Sans TC", sans-serif;
+        font-size: clamp(42px, 6vw, 82px);
+        line-height: 1.06;
+        font-weight: 900;
+        letter-spacing: -.035em;
+      }
+      .manifesto p { position: relative; max-width: 650px; margin: 28px auto 34px; font-size: 18px; line-height: 1.8; }
+      .manifesto .button { position: relative; }
+
+      .site-footer { padding: 58px 0; background: var(--ink); color: var(--white); }
+      .footer-grid { display: flex; align-items: flex-end; justify-content: space-between; gap: 48px; }
+      .footer-brand p { max-width: 390px; margin-top: 18px; color: #aeb5c8; font-size: 14px; line-height: 1.7; }
+      .footer-meta { display: flex; gap: 28px; color: #aeb5c8; font-size: 13px; }
+
+      /* 白色主題：以極淺色塊拉開層次，深色產品畫面自然成為焦點。 */
+      body { background: #fff; color: var(--ink); }
+      .site-header { color: var(--ink); }
+      .nav-button { background: var(--ink); color: #fff; }
+      .hero { background: #fff; color: var(--ink); }
+      .hero-label { background: #ece8ff; color: #4734b5; }
+      .hero-label::before { background: var(--violet); }
+      .hero h1 span { color: var(--violet-dark); }
+      .hero-intro { color: var(--muted); }
+      .button-light { background: var(--ink); color: #fff; }
+      .button-ghost { background: #efedff; color: #4c39bd; }
+      .shape-mint { background: #c9f7dc; }
+      .shape-coral { background: #ff9a86; }
+      .shape-deep { background: #efecff; }
+      .spark { color: var(--violet); }
+      .product-stage { box-shadow: 12px 14px 0 #d7d0ff; }
+      .proof { background: #fff; }
+      .story-mint { background: #f0fbf5; color: #17352e; }
+      .story-navy { background: #f1efff; color: var(--ink); }
+      .story-violet { background: #f8f8fb; color: var(--ink); }
+      .story-shot { box-shadow: 0 8px 0 #c6f0d8; }
+      .story-navy .story-shot { box-shadow: 0 8px 0 #cfc7ff; }
+      .story-violet .story-shot { box-shadow: 0 8px 0 #d8d3ff; }
+      .manifesto { background: #eeebff; color: var(--ink); }
+      .manifesto::before { background: #c8f4d9; }
+      .site-footer { border-top: 1px solid var(--line); background: #fff; color: var(--ink); }
+      .footer-brand p,
+      .footer-meta { color: var(--muted); }
+
+      @keyframes hero-rise {
+        from { opacity: 0; transform: translateY(18px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes stage-in {
+        from { opacity: .45; transform: translateY(42px) scale(.975); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      @media (max-width: 980px) {
+        .hero { min-height: 820px; }
+        .story-grid, .story-navy .story-grid, .story-violet .story-grid { grid-template-columns: 1fr; }
+        .story-navy .story-copy { order: -1; }
+        .story-shot { height: 430px; }
+        .structure-item:nth-child(3) { border-left: 0; }
+      }
+
+      @media (max-width: 720px) {
+        .container { width: min(100% - 32px, var(--content)); }
+        .nav { min-height: 70px; }
+        .nav-links > a:not(.nav-button) { display: none; }
+        .nav-links { gap: 9px; }
+        .nav-button { min-height: 40px; padding: 0 15px; font-size: 13px; }
+        .hero { min-height: auto; padding-top: 126px; }
+        .hero h1 { font-size: 42px; letter-spacing: -.028em; }
+        .hero h1 span { display: inline-block; font-size: .9em; }
+        .hero-actions { flex-direction: column; align-items: stretch; width: min(100%, 360px); margin-left: auto; margin-right: auto; }
+        .shape-mint { width: 190px; height: 190px; left: -110px; top: 280px; }
+        .shape-coral { width: 74px; height: 74px; right: -20px; top: 130px; }
+        .shape-deep, .spark { display: none; }
+        .product-stage { width: calc(100% - 20px); margin-top: 54px; border-radius: 10px 10px 0 0; }
+        .browser-bar { height: 36px; padding: 0 11px; }
+        .browser-title { display: none; }
+        .proof { padding: 70px 0 76px; }
+        .structure-item { flex-basis: 50%; padding: 20px 10px; }
+        .structure-item:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+        .structure-item:nth-child(4) { border-top: 1px solid var(--line); }
+        .story-copy p, .manifesto p { font-size: 16px; }
+        .manifesto h2 { font-size: 38px; }
+        .story-shot { height: 320px; border-radius: 10px; }
+        .footer-grid { align-items: flex-start; flex-direction: column; }
+        .footer-meta { flex-wrap: wrap; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav container" aria-label="主要導覽">
+        <a class="brand" href="#top" aria-label="Taboard 首頁">
+          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+          Taboard
+        </a>
+        <div class="nav-links">
+          <a href="#product">產品畫面</a>
+          <a href="#features">功能</a>
+          <a class="nav-button" href="./preview/preview/index.html">開啟體驗</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <span class="hero-shape shape-mint" aria-hidden="true"></span>
+        <span class="hero-shape shape-coral" aria-hidden="true"></span>
+        <span class="hero-shape shape-deep" aria-hidden="true"></span>
+        <span class="hero-shape spark" aria-hidden="true">✦</span>
+
+        <div class="hero-content container">
+          <span class="hero-label">Taboard for Chrome</span>
+          <h1>分頁很多沒關係。<br /><span>找得到，才是重點。</span></h1>
+          <p class="hero-intro">把零散的分頁整理成工作空間、集合與快速入口。每次打開新分頁，都能立刻回到你正在做的事。</p>
+          <div class="hero-actions">
+            <a class="button button-light" href="./preview/preview/index.html">開啟實際體驗 <span class="button-arrow" aria-hidden="true">↗</span></a>
+            <a class="button button-ghost" href="#product">先看看產品畫面 <span class="button-arrow" aria-hidden="true">↓</span></a>
+          </div>
+        </div>
+
+        <figure class="product-stage" id="product">
+          <div class="browser-bar" aria-hidden="true">
+            <span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span>
+            <span class="browser-title">新分頁 — Taboard Workspace</span>
+          </div>
+          <img src="./assets/taboard-workspace.png" alt="Taboard 實際產品畫面，左側管理工作空間，中間整理集合，右側顯示目前開啟的瀏覽器分頁" width="1920" height="896" />
+        </figure>
+      </section>
+
+      <section class="proof">
+        <div class="container">
+          <p class="proof-lead">這不是示意模型。你看到的，就是正在運作的 <strong>Taboard 真實畫面。</strong></p>
+          <div class="structure" aria-label="Taboard 資訊架構">
+            <div class="structure-item"><b>組織</b><span>管理不同團隊與身份</span></div>
+            <div class="structure-item"><b>空間</b><span>切換不同工作場景</span></div>
+            <div class="structure-item"><b>集合</b><span>保存完整任務脈絡</span></div>
+            <div class="structure-item"><b>開啟分頁</b><span>整理正在進行的工作</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="story story-mint" id="features">
+        <div class="story-grid container">
+          <div class="story-copy">
+            <h2>用空間，切換你的工作腦袋。</h2>
+            <p>專案、個人研究、日常工具，各自待在自己的空間。你不必記住分頁放在哪，只要回到當時的工作場景。</p>
+            <span class="story-note">組織與空間導覽</span>
+          </div>
+          <div class="story-shot shot-left" role="img" aria-label="Taboard 左側工作空間與中間集合實際畫面">
+            <img src="./assets/taboard-workspace.png" alt="" width="1920" height="896" loading="lazy" />
+          </div>
+        </div>
+      </section>
+
+      <section class="story story-navy">
+        <div class="story-grid container">
+          <div class="story-shot shot-right" role="img" aria-label="Taboard 開啟分頁側欄實際畫面">
+            <img src="./assets/taboard-workspace.png" alt="" width="1920" height="896" loading="lazy" />
+          </div>
+          <div class="story-copy">
+            <h2>正在開的分頁，也能隨手收好。</h2>
+            <p>右側直接看見目前瀏覽器視窗。多選分頁後加入集合、移動到其他空間，或放進 Dock，混亂不用等到下班才整理。</p>
+            <span class="story-note">即時分頁整理</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="story story-violet">
+        <div class="story-grid container">
+          <div class="story-copy">
+            <h2>常用工具，永遠都在手邊。</h2>
+            <p>底部 Dock 放進每天會打開的工具、最近使用與快速操作。下一次要開始工作，不用再重走一次搜尋與切換的路。</p>
+            <span class="story-note">Dock 快速啟動列</span>
+          </div>
+          <div class="story-shot shot-center" role="img" aria-label="Taboard 集合與底部 Dock 實際畫面">
+            <img src="./assets/taboard-workspace.png" alt="" width="1920" height="896" loading="lazy" />
+          </div>
+        </div>
+      </section>
+
+      <section class="manifesto" id="try">
+        <div class="container">
+          <h2>讓瀏覽器重新成為工作的起點，不是壓力的來源。</h2>
+          <p>下一次打開新分頁，從清楚的工作脈絡開始。你可以先進入完整預覽，親自看看 Taboard 怎麼整理你的瀏覽器。</p>
+          <a class="button button-dark" href="./preview/preview/index.html">立即體驗 Taboard <span class="button-arrow" aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-grid container">
+        <div class="footer-brand">
+          <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>Taboard</a>
+          <p>讓分頁回到它該在的位置，讓注意力回到你正在做的事情。</p>
+        </div>
+        <div class="footer-meta"><span>Chrome 新分頁工作台</span><span>© 2026 Taboard</span></div>
+      </div>
+    </footer>
+  </body>
+</html>
