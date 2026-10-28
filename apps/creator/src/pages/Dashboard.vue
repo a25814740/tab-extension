@@ -1,35 +1,145 @@
 <template>
   <div class="grid gap-6">
-    <div class="grid gap-4 md:grid-cols-3">
-      <div class="creator-card p-4">
-        <div class="text-xs text-slate-500 dark:text-slate-400">ä½œå“æ•¸é‡</div>
-        <div class="mt-2 text-2xl font-semibold">{{ creatorState.assets.length }}</div>
+    <section class="grid gap-4 xl:grid-cols-4">
+      <div class="creator-card p-5" v-for="card in summaryCards" :key="card.label">
+        <div class="text-xs text-slate-500 dark:text-slate-400">{{ card.label }}</div>
+        <div class="mt-3 text-2xl font-semibold">{{ card.value }}</div>
+        <div class="mt-2 text-xs text-slate-400">{{ card.helper }}</div>
       </div>
-      <div class="creator-card p-4">
-        <div class="text-xs text-slate-500 dark:text-slate-400">æœ€å¾Œæ›´æ–°</div>
-        <div class="mt-2 text-lg font-semibold">{{ lastUpdatedLabel }}</div>
-      </div>
-      <div class="creator-card p-4">
-        <div class="text-xs text-slate-500 dark:text-slate-400">ç‹€æ…‹</div>
-        <div class="mt-2 text-lg font-semibold">æ­£å¸¸</div>
-      </div>
-    </div>
+    </section>
 
-    <div class="creator-card p-6">
-      <div class="text-sm font-semibold">å¿«é€Ÿæ“ä½œ</div>
-      <div class="mt-4 flex flex-wrap gap-2">
-        <RouterLink class="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" to="/assets">
-          å‰å¾€ä½œå“åˆ—è¡¨
-        </RouterLink>
-        <RouterLink class="rounded-full border border-slate-200 px-4 py-2 text-xs dark:border-slate-700" to="/design">
-          æ–°å¢è¨­è¨ˆ
-        </RouterLink>
+    <section class="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_420px]">
+      <div class="creator-card p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-lg font-semibold">³Ìªñ§@«~</div>
+            <div class="mt-1 text-sm text-slate-500 dark:text-slate-400">¥ı§â¤W¬[«~½èÅU¦n¡A¦A¥h½Í©ñ¶q¡A³o¼Ë¤ñ¸û¤£·|³Q¦Û¤v°lµÛ¶]¡C</div>
+          </div>
+          <RouterLink class="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" to="/assets">
+            ºŞ²z§@«~
+          </RouterLink>
+        </div>
+
+        <div v-if="recentAssets.length === 0" class="mt-6 rounded-2xl border border-dashed border-slate-300 px-6 py-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+          ÁÙ¨S¦³¥ô¦ó§@«~¡C¥ı·s¼W²Ä¤@­Ó¥DÃD¡A«á¥x¸ê®Æ½u¤~·|§¹¾ã¶]°_¨Ó¡C
+        </div>
+
+        <div v-else class="mt-6 grid gap-3">
+          <RouterLink
+            v-for="asset in recentAssets"
+            :key="asset.id"
+            :to="`/design/${asset.id}`"
+            class="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 transition hover:border-slate-300 hover:bg-white dark:border-slate-800 dark:bg-slate-900/80 dark:hover:bg-slate-900"
+          >
+            <div class="preview-thumb w-28 shrink-0" :style="previewStyle(asset.preview || creatorState.fallbackPreview)"></div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <div class="truncate text-sm font-semibold">{{ asset.name }}</div>
+                <span class="rounded-full px-2 py-1 text-[11px]" :class="asset.is_public ? publishedBadgeClass : draftBadgeClass">
+                  {{ getAssetStatusLabel(asset) }}
+                </span>
+              </div>
+              <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ asset.description || '©|¥¼¶ñ¼g§@«~´y­z¡C' }}</div>
+              <div class="mt-3 flex flex-wrap gap-3 text-[11px] text-slate-400">
+                <span>»ù®æ {{ formatCurrencyTwd(asset.price_twd) }}</span>
+                <span>¤À¼í {{ asset.revenue_share_percent }}%</span>
+                <span>§ó·s©ó {{ formatDate(asset.updated_at) }}</span>
+              </div>
+            </div>
+          </RouterLink>
+        </div>
       </div>
-    </div>
+
+      <div class="grid gap-6">
+        <div class="creator-card p-6">
+          <div class="text-lg font-semibold">¤W¬[ÀË¬d</div>
+          <div class="mt-4 grid gap-3 text-sm">
+            <div v-for="item in checklist" :key="item.label" class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+              <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold" :class="item.done ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'">
+                {{ item.done ? 'OK' : '«İ' }}
+              </div>
+              <div>
+                <div class="font-medium">{{ item.label }}</div>
+                <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ item.helper }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="creator-card p-6">
+          <div class="text-lg font-semibold">§Ö³t¾Ş§@</div>
+          <div class="mt-4 grid gap-3">
+            <RouterLink class="rounded-2xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white" to="/design">
+              ·s¼W¥DÃD³]­p
+            </RouterLink>
+            <RouterLink class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium dark:border-slate-700" to="/revenue">
+              ¬d¬İ¦¬¯q¤¤¤ß
+            </RouterLink>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { RouterLink } from "vue-router";
-import { creatorState, lastUpdatedLabel } from "../store/creatorStore";
+import {
+  creatorState,
+  formatCurrencyTwd,
+  formatDate,
+  getAssetStatusLabel,
+  previewStyle,
+  recentAssets,
+} from "../store/creatorStore";
+
+const summaryCards = computed(() => [
+  {
+    label: "§@«~Á`¼Æ",
+    value: String(creatorState.assets.length),
+    helper: creatorState.assets.length > 0 ? `³Ìªñ§ó·s¡G${formatDate(creatorState.assets[0]?.updated_at)}` : "¥ı«Ø¥ß²Ä¤@­Ó¥DÃD¡C",
+  },
+  {
+    label: "¤w¤½¶}¤W¬[",
+    value: String(creatorState.analytics.publishedCount || creatorState.assets.filter((asset) => asset.is_public).length),
+    helper: "¯ó½Z¤£·|¥X²{¦b°Ó©±«e¥x¡C",
+  },
+  {
+    label: "¯ó½Z¼Æ¶q",
+    value: String(creatorState.analytics.draftCount || creatorState.assets.filter((asset) => !asset.is_public).length),
+    helper: "«ØÄ³¯ó½Z¥ı§â´y­z»P¹wÄı¸É»ô¡C",
+  },
+  {
+    label: creatorState.analytics.mode === 'live' ? "²Ö¿n¥i¤À¼í" : "¦¬¯q¼Ò¦¡",
+    value: creatorState.analytics.mode === 'live' ? formatCurrencyTwd(creatorState.analytics.creatorRevenueTwd) : '¦ôºâ¤¤',
+    helper: creatorState.analytics.note,
+  },
+]);
+
+const checklist = computed(() => [
+  {
+    label: "¦Ü¤Ö¤@­Ó¤½¶}§@«~",
+    done: creatorState.assets.some((asset) => asset.is_public),
+    helper: "¨S¦³¤½¶}§@«~¡A´NÁÙ½Í¤£¤W¥¿¦¡³c°â¡C",
+  },
+  {
+    label: "¹wÄı¹Ï¤w·Ç³Æ",
+    done: creatorState.assets.every((asset) => Boolean(asset.preview)),
+    helper: "¹wÄı¹Ï¬OÂà´«²v³Ì®e©öº|±¼ªº¤@¶ô¡C",
+  },
+  {
+    label: "§@«~´y­z¤w¶ñ¼g",
+    done: creatorState.assets.every((asset) => Boolean(asset.description?.trim())),
+    helper: "´y­z­n²M·¡§i¶D¨Ï¥ÎªÌ¥¦§ï¤F­ş¨Ç°Ï¶ô¡C",
+  },
+  {
+    label: "¦¬¯q»E¦X¥i¥Î",
+    done: creatorState.analytics.mode === 'live',
+    helper: creatorState.analytics.mode === 'live' ? '¥Ø«e¤w±µ¨ì server-side analytics¡C' : '³¡¸p creator_dashboard «á´N¯à¬İ¨ì¯u¹ê¦¬¯q¡C',
+  },
+]);
+
+const publishedBadgeClass = "bg-emerald-500/15 text-emerald-400";
+const draftBadgeClass = "bg-amber-500/15 text-amber-400";
 </script>

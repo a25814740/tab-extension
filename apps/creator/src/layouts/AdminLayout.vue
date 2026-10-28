@@ -1,56 +1,120 @@
 <template>
   <div class="min-h-screen min-w-[1280px] bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-    <div class="flex">
-      <aside class="h-screen w-64 border-r border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <div class="text-lg font-semibold">Taboard</div>
-        <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">ä¸»é¡Œä¸Šæ¶å¾Œå°</div>
-        <nav class="mt-6 grid gap-2 text-sm">
-          <RouterLink class="nav-link" to="/">ç¸½è¦½</RouterLink>
-          <RouterLink class="nav-link" to="/assets">ä½œå“åˆ—è¡¨</RouterLink>
-          <RouterLink class="nav-link" to="/revenue">æ”¶ç›Š</RouterLink>
-          <div class="mt-4 text-[11px] uppercase tracking-[0.2em] text-slate-400">å…¶ä»–</div>
-          <div class="nav-link">å¯©æ ¸ä¸­</div>
-          <div class="nav-link">è¨­å®š</div>
+    <div class="flex min-h-screen">
+      <aside class="flex w-72 flex-col border-r border-slate-200 bg-white/95 px-5 py-6 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+        <div>
+          <div class="text-[11px] uppercase tracking-[0.32em] text-slate-400">Creator Console</div>
+          <div class="mt-2 text-2xl font-semibold">Taboard</div>
+          <div class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            ºŞ²z§Aªº¥DÃD¡BÀË¬d¤W¬[ª¬ºA¡A¤§«á¦¬¯q»P¤À¼í¤]·|±q³o¸Ì¶i¨Ó¡C
+          </div>
+        </div>
+
+        <nav class="mt-8 grid gap-2 text-sm">
+          <RouterLink class="nav-link" to="/">
+            <span>Á`Äı</span>
+            <span class="text-[11px] text-slate-400">Dashboard</span>
+          </RouterLink>
+          <RouterLink class="nav-link" to="/assets">
+            <span>§@«~¦Cªí</span>
+            <span class="text-[11px] text-slate-400">Themes</span>
+          </RouterLink>
+          <RouterLink class="nav-link" to="/revenue">
+            <span>¦¬¯q¤¤¤ß</span>
+            <span class="text-[11px] text-slate-400">Revenue</span>
+          </RouterLink>
         </nav>
+
+        <div class="mt-8 rounded-3xl border border-slate-200/70 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-950/50">
+          <div class="text-[11px] uppercase tracking-[0.24em] text-slate-400">²£«~ª¬ºA</div>
+          <div class="mt-3 grid gap-3 text-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500 dark:text-slate-400">¤w¤W¬[</span>
+              <span class="font-semibold">{{ creatorHealthSummary.publishedCount }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500 dark:text-slate-400">¯ó½Z</span>
+              <span class="font-semibold">{{ creatorHealthSummary.draftCount }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500 dark:text-slate-400">¦¬¯q¼Ò¦¡</span>
+              <span class="font-semibold">{{ creatorHealthSummary.analyticsMode === 'live' ? '§Y®É' : '¦ôºâ' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-auto rounded-3xl border border-slate-200/70 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-950/50">
+          <div class="text-sm font-semibold">±µ¤U¨Ó­n¸Éªº</div>
+          <ul class="mt-3 grid gap-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+            <li>1. ¥DÃD°Ó«°«e¥xÁÊ¶R¬yµ{</li>
+            <li>2. ¯u¹ê¦¬¯q»E¦X»P¤H¤u¼·´Ú²M³æ</li>
+            <li>3. ¦w¸Ë¶q¡BÂà´«²v»P«ÈªA°lÂÜ</li>
+          </ul>
+        </div>
       </aside>
 
-      <div class="flex min-h-screen flex-1 flex-col">
-        <header class="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
-          <div class="text-lg font-semibold">å¾Œå°ç¸½è¦½</div>
+      <div class="flex min-h-screen min-w-0 flex-1 flex-col">
+        <header class="flex items-center justify-between border-b border-slate-200 bg-white/95 px-8 py-5 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+          <div>
+            <div class="text-[11px] uppercase tracking-[0.28em] text-slate-400">{{ pageEyebrow }}</div>
+            <div class="mt-1 text-2xl font-semibold">{{ pageTitle }}</div>
+          </div>
+
           <div class="flex items-center gap-3">
-            <button class="rounded-full border border-slate-200 px-3 py-1 text-xs dark:border-slate-700" @click="toggleTheme">
+            <button
+              class="rounded-full border border-slate-200 px-4 py-2 text-xs font-medium transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+              @click="toggleTheme"
+            >
               {{ themeLabel }}
             </button>
+
             <div class="relative">
               <button
-                class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
+                class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
                 @click="menuOpen = !menuOpen"
               >
                 <img v-if="avatarUrl" :src="avatarUrl" class="h-full w-full object-cover" />
-                <span v-else class="text-xs">å¸³</span>
+                <span v-else class="text-xs font-semibold">{{ profileInitials }}</span>
               </button>
+
               <div
                 v-if="menuOpen"
-                class="absolute right-0 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-3 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-900"
+                class="absolute right-0 mt-3 w-72 rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
               >
-                <div class="flex items-center gap-2">
-                  <img v-if="avatarUrl" :src="avatarUrl" class="h-9 w-9 rounded-full object-cover" />
-                  <div>
-                    <div class="font-semibold">{{ profileName }}</div>
-                    <div class="text-[11px] text-slate-500 dark:text-slate-400">{{ profileEmail }}</div>
+                <div class="flex items-center gap-3">
+                  <div class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <img v-if="avatarUrl" :src="avatarUrl" class="h-full w-full object-cover" />
+                    <span v-else class="text-sm font-semibold">{{ profileInitials }}</span>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="truncate text-sm font-semibold">{{ profileName }}</div>
+                    <div class="truncate text-xs text-slate-500 dark:text-slate-400">{{ profileEmail || '©|¥¼µn¤J' }}</div>
                   </div>
                 </div>
-                <div class="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
-                  <button class="w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-[11px] dark:border-slate-700" @click="logout">
-                    ç™»å‡º
-                  </button>
+
+                <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300">
+                  Creator «á¥x¥Ø«e¥H¥DÃD¤W¬[¬°¥D¡C¤À¼í»P¼·´Ú·|«Ø¥ß¦b²{¦³¦¬¯q¤¤¤ß¤§¤W¡C
                 </div>
+
+                <button
+                  class="mt-4 w-full rounded-2xl border border-slate-200 px-3 py-2 text-left text-xs font-medium transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                  @click="logout"
+                >
+                  µn¥X
+                </button>
               </div>
             </div>
           </div>
         </header>
 
-        <main class="flex-1 p-6">
+        <main class="flex-1 p-8">
+          <div
+            v-if="creatorState.statusMessage"
+            class="mb-6 rounded-2xl border px-4 py-3 text-sm"
+            :class="statusBannerClass"
+          >
+            {{ creatorState.statusMessage }}
+          </div>
           <RouterView />
         </main>
       </div>
@@ -58,47 +122,86 @@
 
     <div v-if="gateVisible" class="auth-gate">
       <div class="auth-card">
-        <div class="text-sm font-semibold text-white">ç™»å…¥å¾Œæ‰å¯ä½¿ç”¨ä¸»é¡Œä¸Šæ¶å¾Œå°</div>
-        <div class="mt-2 text-xs text-slate-400">è«‹å…ˆç™»å…¥ä»¥å­˜å–ä½ çš„ä½œå“èˆ‡è¨­å®šã€‚</div>
-        <div v-if="showConfigHint" class="text-xs text-rose-300">è«‹å…ˆè¨­å®š VITE_SUPABASE_URL èˆ‡ VITE_SUPABASE_ANON_KEY</div>
+        <div class="text-sm font-semibold text-white">µn¤J«á¤~¥i¨Ï¥Î Creator «á¥x</div>
+        <div class="text-xs text-slate-400">½Ğ¥ıµn¤J¡A¤~¯àºŞ²z§@«~¡BÀx¦s¥DÃD»P¬d¬İ¦¬¯q¸ê®Æ¡C</div>
+        <div v-if="showConfigHint" class="text-xs text-rose-300">
+          ¶}µoÀô¹Ò©|¥¼´£¨Ñ VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY¡C
+        </div>
         <div v-else-if="gateMessage" class="text-xs text-rose-300">{{ gateMessage }}</div>
-        <button class="btn btn-primary" @click="loginWithGoogle">ä½¿ç”¨ Google ç™»å…¥</button>
+        <button class="btn btn-primary" @click="loginWithGoogle">¨Ï¥Î Google µn¤J</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { RouterLink, RouterView } from "vue-router";
-import { creatorState, avatarUrl, profileEmail, profileName, loginWithGoogle, logout, toggleTheme } from "../store/creatorStore";
+import { computed, ref, watch } from "vue";
+import { RouterLink, RouterView, useRoute } from "vue-router";
+import {
+  avatarUrl,
+  creatorHealthSummary,
+  creatorState,
+  loginWithGoogle,
+  logout,
+  profileEmail,
+  profileName,
+  toggleTheme,
+} from "../store/creatorStore";
 
-const isDev = import.meta.env.DEV;
+const route = useRoute();
 const menuOpen = ref(false);
+const isDev = import.meta.env.DEV;
+
+watch(
+  () => route.fullPath,
+  () => {
+    menuOpen.value = false;
+  }
+);
+
 const gateVisible = computed(() => creatorState.ready && !creatorState.session);
 const showConfigHint = computed(() => isDev && creatorState.configMissing);
 const gateMessage = computed(() => {
-  if (creatorState.statusMessage) {
-    return creatorState.statusMessage;
-  }
+  if (creatorState.statusMessage) return creatorState.statusMessage;
   if (!isDev && creatorState.configMissing) {
-    return "ç™»å…¥æœå‹™å°šæœªè¨­å®šï¼Œè«‹è¯çµ¡ç®¡ç†è€…";
+    return "µn¤JªA°È¥Ø«e©|¥¼§¹¦¨³]©w¡A½ĞÁpµ¸ºŞ²zªÌ³B²z¡C";
   }
   return "";
 });
-const themeLabel = computed(() => (creatorState.theme === "dark" ? "åˆ‡æ›äº®è‰²" : "åˆ‡æ›æš—è‰²"));
+const themeLabel = computed(() => (creatorState.theme === "dark" ? "¤Á¨ì²L¦â" : "¤Á¨ì²`¦â"));
+const profileInitials = computed(() => {
+  const source = profileName.value || profileEmail.value || "TB";
+  return source.slice(0, 2).toUpperCase();
+});
+const pageTitle = computed(() => String(route.meta.title || "Creator Console"));
+const pageEyebrow = computed(() => (route.name === "dashboard" ? "Overview" : route.name === "assets" ? "Themes" : route.name === "revenue" ? "Revenue" : "Editor"));
+const statusBannerClass = computed(() => {
+  if (creatorState.statusTone === "success") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300";
+  }
+  if (creatorState.statusTone === "error") {
+    return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300";
+  }
+  return "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200";
+});
 </script>
 
 <style scoped>
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 8px;
-  border-radius: 12px;
-  padding: 10px 12px;
+  justify-content: space-between;
+  border-radius: 20px;
+  padding: 14px 16px;
   background: rgba(148, 163, 184, 0.08);
   color: inherit;
+  transition: transform 0.18s ease, background-color 0.18s ease;
 }
+
+.nav-link:hover {
+  transform: translateX(2px);
+}
+
 .nav-link.router-link-active {
   background: rgba(244, 63, 94, 0.12);
   color: #f43f5e;

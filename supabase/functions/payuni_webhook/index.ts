@@ -8,6 +8,8 @@ const PAYUNI_MERCHANT_ID = Deno.env.get("PAYUNI_MERCHANT_ID") ?? "";
 const PAYUNI_HASH_KEY = Deno.env.get("PAYUNI_HASH_KEY") ?? "";
 const PAYUNI_HASH_IV = Deno.env.get("PAYUNI_HASH_IV") ?? "";
 
+type CheckoutKind = "membership" | "theme_asset";
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -41,7 +43,7 @@ async function parsePayload(req: Request) {
 
 function isSuccess(payload: Record<string, unknown>) {
   const status = String(payload.Status ?? payload.status ?? "").toLowerCase();
-  return status === "success" || status === "paid";
+  return status === "success" || status === "paid" || status === "completed" || status === "succeeded";
 }
 
 function resolvePlanId(rawPayload: Record<string, unknown> | null) {
@@ -52,6 +54,10 @@ function resolvePlanId(rawPayload: Record<string, unknown> | null) {
   return "personal_yearly";
 }
 
+function resolveCheckoutKind(rawPayload: Record<string, unknown> | null): CheckoutKind {
+  return rawPayload?.kind === "theme_asset" ? "theme_asset" : "membership";
+}
+
 function resolvePaidEndsAt(planId: string, now: Date) {
   if (planId === "pro_monthly") {
     return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -60,6 +66,65 @@ function resolvePaidEndsAt(planId: string, now: Date) {
     return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
   }
   return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+}
+
+async function updateThemeAssetPurchase(
+  client: ReturnType<typeof createClient>,
+  params: {
+    orderId: string | null;
+    assetId: string | null;
+    userId: string | null;
+    amount: number;
+    status: string;
+  }
+) {
+  if (!params.assetId || !params.userId) {
+    return;
+  }
+
+  const existingPurchase = params.orderId
+    ? await client
+        .from("theme_asset_purchases")
+        .select("id")
+        .eq("provider_order_id", params.orderId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null, error: null };
+
+  if (existingPurchase.error) {
+    throw existingPurchase.error;
+  }
+
+  if (existingPurchase.data?.id) {
+    const { error } = await client
+      .from("theme_asset_purchases")
+      .update({
+        amount_twd: params.amount || 0,
+        status: params.status,
+        payment_provider: "payuni",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existingPurchase.data.id);
+
+    if (error) {
+      throw error;
+    }
+    return;
+  }
+
+  const { error } = await client.from("theme_asset_purchases").insert({
+    asset_id: params.assetId,
+    buyer_user_id: params.userId,
+    amount_twd: params.amount || 0,
+    status: params.status,
+    payment_provider: "payuni",
+    provider_order_id: params.orderId,
+  });
+
+  if (error) {
+    throw error;
+  }
 }
 
 serve(async (req) => {
@@ -105,7 +170,10 @@ serve(async (req) => {
         .maybeSingle()
     : { data: null, error: null };
 
+  const rawPayload = (existingPayment.data?.raw_payload as Record<string, unknown> | null) ?? null;
+  const checkoutKind = resolveCheckoutKind(rawPayload);
   const userId = (payload.user_id ?? payload.UserId ?? existingPayment.data?.user_id ?? null) as string | null;
+  const assetId = (payload.asset_id ?? rawPayload?.assetId ?? null) as string | null;
 
   const paymentMutation = existingPayment.data?.id
     ? await client
@@ -133,12 +201,22 @@ serve(async (req) => {
 
   await client.from("payment_events").insert({
     user_id: userId,
-    event_type: "payuni_webhook",
+    event_type: checkoutKind === "theme_asset" ? "payuni_webhook_theme_asset" : "payuni_webhook_membership",
     payload,
   });
 
-  if (!paymentMutation.error && userId && isSuccess(payload)) {
-    const planId = resolvePlanId((existingPayment.data?.raw_payload as Record<string, unknown>) ?? null);
+  if (!paymentMutation.error && checkoutKind === "theme_asset") {
+    await updateThemeAssetPurchase(client, {
+      orderId,
+      assetId,
+      userId,
+      amount,
+      status: isSuccess(payload) ? "paid" : status,
+    });
+  }
+
+  if (!paymentMutation.error && userId && isSuccess(payload) && checkoutKind === "membership") {
+    const planId = resolvePlanId(rawPayload);
     const now = new Date();
     const paidStartsAt = now.toISOString();
     const paidEndsAt = resolvePaidEndsAt(planId, now).toISOString();

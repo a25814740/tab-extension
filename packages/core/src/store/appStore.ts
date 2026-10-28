@@ -4,10 +4,11 @@ import type { AppState } from "./appState";
 import { defaultAppState } from "./appState";
 import type { LocalStoreSnapshot } from "../schemas/appSchemas";
 import type { DockItem, TabItem } from "../domain/models";
-import { enqueueOp, markSynced } from "../sync/pendingOps";
+import { enqueueOp } from "../sync/pendingOps";
 import { toSnapshot } from "./snapshot";
 import type { SyncClient } from "../sync/syncEngine";
-import { syncPendingOps } from "../sync/syncEngine";
+import { hydrateState } from "./hydrateState";
+import { flushPendingSyncOps, rollbackLastSnapshot } from "./syncActions";
 
 export type TabInput = {
   title: string;
@@ -102,238 +103,10 @@ function pushRollback(state: AppState) {
 
 // Central store used by New Tab and Side Panel apps.
 export function createAppStore() {
-  return createStore<AppStore>((set, get) => ({
+  return createStore<AppStore>((set, get, store) => ({
     ...buildInitialState(),
     hydrate: (snapshot) => {
-      const nextWorkspaces = snapshot.workspaces ?? (snapshot.workspace ? [snapshot.workspace] : []);
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      const needsMigration = nextWorkspaces.some((workspace) => !uuidRegex.test(workspace.id));
-      if (needsMigration) {
-        const workspaceMap = new Map<string, string>();
-        const spaceMap = new Map<string, string>();
-        const folderMap = new Map<string, string>();
-        const collectionMap = new Map<string, string>();
-
-        nextWorkspaces.forEach((workspace) => {
-          workspaceMap.set(workspace.id, crypto.randomUUID());
-        });
-        snapshot.spaces.forEach((space) => {
-          spaceMap.set(space.id, crypto.randomUUID());
-        });
-        snapshot.folders.forEach((folder) => {
-          folderMap.set(folder.id, crypto.randomUUID());
-        });
-        snapshot.collections.forEach((collection) => {
-          collectionMap.set(collection.id, crypto.randomUUID());
-        });
-
-        snapshot = {
-          ...snapshot,
-          workspaces: nextWorkspaces.map((workspace) => ({
-            ...workspace,
-            id: workspaceMap.get(workspace.id) ?? workspace.id,
-            ownerId: workspace.ownerId && uuidRegex.test(workspace.ownerId) ? workspace.ownerId : crypto.randomUUID(),
-          })),
-          workspace: snapshot.workspace
-            ? {
-                ...snapshot.workspace,
-                id: workspaceMap.get(snapshot.workspace.id) ?? snapshot.workspace.id,
-                ownerId:
-                  snapshot.workspace.ownerId && uuidRegex.test(snapshot.workspace.ownerId)
-                    ? snapshot.workspace.ownerId
-                    : crypto.randomUUID(),
-              }
-            : null,
-          spaces: snapshot.spaces.map((space) => ({
-            ...space,
-            id: spaceMap.get(space.id) ?? space.id,
-            workspaceId: workspaceMap.get(space.workspaceId) ?? space.workspaceId,
-          })),
-          folders: snapshot.folders.map((folder) => ({
-            ...folder,
-            id: folderMap.get(folder.id) ?? folder.id,
-            workspaceId: workspaceMap.get(folder.workspaceId) ?? folder.workspaceId,
-            spaceId: spaceMap.get(folder.spaceId) ?? folder.spaceId,
-            parentFolderId: folder.parentFolderId ? folderMap.get(folder.parentFolderId) ?? folder.parentFolderId : null,
-          })),
-          collections: snapshot.collections.map((collection) => ({
-            ...collection,
-            id: collectionMap.get(collection.id) ?? collection.id,
-            workspaceId: workspaceMap.get(collection.workspaceId) ?? collection.workspaceId,
-            spaceId: spaceMap.get(collection.spaceId) ?? collection.spaceId,
-            folderId: collection.folderId ? folderMap.get(collection.folderId) ?? collection.folderId : null,
-          })),
-          tabs: snapshot.tabs.map((tab) => ({
-            ...tab,
-            id: crypto.randomUUID(),
-            collectionId: collectionMap.get(tab.collectionId) ?? tab.collectionId,
-          })),
-          cache: {
-            ...snapshot.cache,
-            selectedWorkspaceId: snapshot.cache.selectedWorkspaceId
-              ? workspaceMap.get(snapshot.cache.selectedWorkspaceId) ?? snapshot.cache.selectedWorkspaceId
-              : null,
-            selectedSpaceId: snapshot.cache.selectedSpaceId
-              ? spaceMap.get(snapshot.cache.selectedSpaceId) ?? snapshot.cache.selectedSpaceId
-              : null,
-            selectedCollectionId: snapshot.cache.selectedCollectionId
-              ? collectionMap.get(snapshot.cache.selectedCollectionId) ?? snapshot.cache.selectedCollectionId
-              : null,
-          },
-        };
-      }
-      const baseWorkspaces = snapshot.workspaces ?? (snapshot.workspace ? [snapshot.workspace] : []);
-      const workspaceIdsFromData = new Set<string>();
-      snapshot.spaces.forEach((space) => workspaceIdsFromData.add(space.workspaceId));
-      snapshot.collections.forEach((collection) => workspaceIdsFromData.add(collection.workspaceId));
-      // Rebuild missing workspaces using the best available owner id hints.
-      const resolveOwnerId = (workspaceId: string) => {
-        const directOwnerId = baseWorkspaces.find((workspace) => workspace.id === workspaceId)?.ownerId ?? null;
-        const snapshotOwnerId = snapshot.workspace?.id === workspaceId ? snapshot.workspace.ownerId : null;
-        const collectionOwnerId =
-          snapshot.collections.find((collection) => collection.workspaceId === workspaceId)?.createdBy ?? null;
-        const cacheOwnerId = snapshot.cache.currentUserId ?? null;
-        const candidates = [directOwnerId, snapshotOwnerId, collectionOwnerId, cacheOwnerId].filter(
-          (value): value is string => Boolean(value)
-        );
-        const match = candidates.find((value) => uuidRegex.test(value));
-        return match ?? crypto.randomUUID();
-      };
-      const finalWorkspaces = [...baseWorkspaces];
-      workspaceIdsFromData.forEach((workspaceId) => {
-        if (!finalWorkspaces.some((workspace) => workspace.id === workspaceId)) {
-          const now = new Date().toISOString();
-          finalWorkspaces.push({
-            id: workspaceId,
-            ownerId: resolveOwnerId(workspaceId),
-            name: `Workspace ${workspaceId.slice(0, 6)}`,
-            createdAt: now,
-            updatedAt: now,
-          });
-        }
-      });
-      const workspaceHasData = (workspaceId: string) => {
-        return (
-          snapshot.spaces.some((space) => space.workspaceId === workspaceId) ||
-          snapshot.collections.some((collection) => collection.workspaceId === workspaceId)
-        );
-      };
-      const isPlaceholderWorkspace = (workspace: { name: string; logoUrl?: string | null | undefined }) =>
-        workspace.name.startsWith("Workspace ") && !workspace.logoUrl;
-      const workspaceSortKey = (workspaceId: string) => {
-        const spaceDates = snapshot.spaces
-          .filter((space) => space.workspaceId === workspaceId)
-          .map((space) => space.createdAt);
-        const collectionDates = snapshot.collections
-          .filter((collection) => collection.workspaceId === workspaceId)
-          .map((collection) => collection.createdAt);
-        const allDates = [...spaceDates, ...collectionDates].filter(Boolean);
-        return allDates.sort()[0] ?? "9999-12-31T23:59:59.999Z";
-      };
-      const dataWorkspaceIds = new Set(workspaceIdsFromData);
-      const dataWorkspaces = finalWorkspaces.filter((workspace) => dataWorkspaceIds.has(workspace.id));
-      const staleWorkspaces = finalWorkspaces.filter((workspace) => !dataWorkspaceIds.has(workspace.id));
-      const placeholderDataWorkspaces = dataWorkspaces.filter(isPlaceholderWorkspace);
-      const namedStaleWorkspaces = staleWorkspaces.filter((workspace) => !isPlaceholderWorkspace(workspace));
-      const selectedWorkspaceIsData =
-        snapshot.cache.selectedWorkspaceId && dataWorkspaceIds.has(snapshot.cache.selectedWorkspaceId);
-      if (
-        placeholderDataWorkspaces.length > 0 &&
-        namedStaleWorkspaces.length > 0 &&
-        namedStaleWorkspaces.every((workspace) => !workspaceHasData(workspace.id)) &&
-        placeholderDataWorkspaces.length >= namedStaleWorkspaces.length &&
-        selectedWorkspaceIsData
-      ) {
-        const sortedPlaceholders = [...placeholderDataWorkspaces].sort(
-          (a, b) => workspaceSortKey(a.id).localeCompare(workspaceSortKey(b.id))
-        );
-        const sortedNamedStale = [...namedStaleWorkspaces].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-        sortedNamedStale.forEach((stale, index) => {
-          const target = sortedPlaceholders[index];
-          if (!target) {
-            return;
-          }
-          target.name = stale.name;
-          target.logoUrl = stale.logoUrl ?? null;
-          if (stale.ownerId && uuidRegex.test(stale.ownerId)) {
-            target.ownerId = stale.ownerId;
-          }
-        });
-      }
-      const filteredWorkspaces =
-        placeholderDataWorkspaces.length > 0 &&
-        namedStaleWorkspaces.length > 0 &&
-        namedStaleWorkspaces.every((workspace) => !workspaceHasData(workspace.id)) &&
-        placeholderDataWorkspaces.length >= namedStaleWorkspaces.length &&
-        selectedWorkspaceIsData
-          ? finalWorkspaces.filter(
-              (workspace) => dataWorkspaceIds.has(workspace.id) || workspaceHasData(workspace.id)
-            )
-          : finalWorkspaces;
-      const preferredWorkspaceId =
-        snapshot.cache.selectedWorkspaceId && filteredWorkspaces.some((w) => w.id === snapshot.cache.selectedWorkspaceId)
-          ? snapshot.cache.selectedWorkspaceId
-          : snapshot.workspace?.id ?? null;
-      let activeWorkspaceId = preferredWorkspaceId;
-      if (activeWorkspaceId && !workspaceHasData(activeWorkspaceId)) {
-        activeWorkspaceId = null;
-      }
-      if (!activeWorkspaceId && filteredWorkspaces.length > 0) {
-        const sorted = [...filteredWorkspaces].sort((a, b) => {
-          const scoreA = snapshot.collections.filter((c) => c.workspaceId === a.id).length * 1000 +
-            snapshot.spaces.filter((s) => s.workspaceId === a.id).length;
-          const scoreB = snapshot.collections.filter((c) => c.workspaceId === b.id).length * 1000 +
-            snapshot.spaces.filter((s) => s.workspaceId === b.id).length;
-          return scoreB - scoreA;
-        });
-        activeWorkspaceId = sorted[0]?.id ?? null;
-      }
-      const activeWorkspace = filteredWorkspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? null;
-      const activeSpaceId =
-        activeWorkspaceId && snapshot.cache.selectedSpaceId
-          ? snapshot.spaces.some(
-              (space) =>
-                space.id === snapshot.cache.selectedSpaceId && space.workspaceId === activeWorkspaceId
-            )
-            ? snapshot.cache.selectedSpaceId
-            : snapshot.spaces.find((space) => space.workspaceId === activeWorkspaceId)?.id ?? null
-          : activeWorkspaceId
-          ? snapshot.spaces.find((space) => space.workspaceId === activeWorkspaceId)?.id ?? null
-          : null;
-      const activeCollectionId =
-        activeWorkspaceId && activeSpaceId && snapshot.cache.selectedCollectionId
-          ? snapshot.collections.some(
-              (collection) =>
-                collection.id === snapshot.cache.selectedCollectionId &&
-                collection.workspaceId === activeWorkspaceId &&
-                collection.spaceId === activeSpaceId
-            )
-            ? snapshot.cache.selectedCollectionId
-            : snapshot.collections.find(
-                (collection) =>
-                  collection.workspaceId === activeWorkspaceId && collection.spaceId === activeSpaceId
-              )?.id ?? null
-          : activeWorkspaceId && activeSpaceId
-          ? snapshot.collections.find(
-              (collection) => collection.workspaceId === activeWorkspaceId && collection.spaceId === activeSpaceId
-            )?.id ?? null
-          : null;
-      set({
-        workspaces: filteredWorkspaces,
-        workspace: activeWorkspace,
-        spaces: snapshot.spaces,
-        folders: snapshot.folders,
-        collections: snapshot.collections,
-        tabs: snapshot.tabs,
-        cache: {
-          ...snapshot.cache,
-          selectedWorkspaceId: activeWorkspaceId,
-          selectedSpaceId: activeSpaceId,
-          selectedCollectionId: activeCollectionId,
-        },
-        rollbackStack: [],
-      });
+      set(hydrateState(snapshot));
     },
     setTheme: (theme) => {
       set((state) => ({
@@ -1155,20 +928,7 @@ export function createAppStore() {
       });
     },
     rollbackLastOp: () => {
-      const state = get();
-      const [latest, ...rest] = state.rollbackStack;
-      if (!latest) {
-        return;
-      }
-      set({
-        workspace: latest.workspace,
-        spaces: latest.spaces,
-        folders: latest.folders,
-        collections: latest.collections,
-        tabs: latest.tabs,
-        cache: latest.cache,
-        rollbackStack: rest,
-      });
+      rollbackLastSnapshot(store);
     },
     setSyncRetryAt: (isoTime) => {
       set((state) => ({
@@ -1179,46 +939,7 @@ export function createAppStore() {
       }));
     },
     flushPendingOps: async (client) => {
-      const state = get();
-      const ops = state.cache.pendingOps;
-      if (ops.length === 0) {
-        return;
-      }
-
-      let result;
-      try {
-        result = await syncPendingOps(ops, client);
-      } catch {
-        const retryAt = new Date(Date.now() + 30_000).toISOString();
-        set({
-          cache: {
-            ...state.cache,
-            lastSyncError: "network_error",
-            nextSyncRetryAt: retryAt,
-          },
-        });
-        return;
-      }
-      let remaining = ops;
-      if (result.syncedIds.length > 0) {
-        result.syncedIds.forEach((id) => {
-          remaining = markSynced(remaining, id);
-        });
-      }
-      if (result.failedIds.length > 0) {
-        get().rollbackLastOp();
-      }
-
-      const now = new Date().toISOString();
-      set({
-        cache: {
-          ...state.cache,
-          pendingOps: remaining,
-          lastSyncAt: result.syncedIds.length > 0 ? now : state.cache.lastSyncAt,
-          lastSyncError: result.failedIds.length > 0 ? "sync_failed" : null,
-          nextSyncRetryAt: result.failedIds.length > 0 ? new Date(Date.now() + 30_000).toISOString() : null,
-        },
-      });
+      await flushPendingSyncOps(store, client);
     },
     addTabToCollection: (collectionId, tab) => {
       const state = get();

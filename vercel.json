@@ -5,6 +5,9 @@
     { "source": "/creator", "destination": "/creator/", "permanent": true }
   ],
   "rewrites": [
-    { "source": "/creator/(.*)", "destination": "/creator/index.html" }
+    { "source": "/creator/:path*", "destination": "/creator/index.html" },
+    { "source": "/preview", "destination": "/preview/preview/index.html" },
+    { "source": "/preview/", "destination": "/preview/preview/index.html" },
+    { "source": "/preview/:path*", "destination": "/preview/preview/index.html" }
   ]
 }

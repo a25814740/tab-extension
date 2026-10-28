@@ -4,22 +4,22 @@
     class="preview-layer rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm"
     :style="rootStyle"
   >
-    <button class="gear-btn" title="ç·¨è¼¯æ•´é«”" @click.stop="emit('open-editor', 'root')">âš™</button>
+    <button class="gear-btn" title="½s¿è¾ãÅé­I´º" @click.stop="emit('open-editor', 'root')">?</button>
     <div
       class="flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-xs font-semibold"
       :style="topbarStyle"
     >
       <div>{{ store.workspace.name }} / {{ activeSpace.name }}</div>
       <div class="flex items-center gap-2 text-[11px]">
-        <span class="rounded-full border px-2 py-1" :style="chipStyle">æœå°‹</span>
-        <span class="rounded-full border px-2 py-1" :style="chipStyle">åŒæ­¥</span>
+        <span class="rounded-full border px-2 py-1" :style="chipStyle">¹wÄı</span>
+        <span class="rounded-full border px-2 py-1" :style="chipStyle">¥DÃD°Ó©±</span>
       </div>
     </div>
 
     <div class="mt-3 grid gap-3" :class="compact ? 'grid-cols-[140px_minmax(0,1fr)_180px]' : 'grid-cols-[180px_minmax(0,1fr)_220px]'">
       <aside :id="`${prefix}Left`" class="preview-layer rounded-[18px] border border-zinc-200 bg-white p-3" :style="leftStyle">
-        <button class="gear-btn" title="ç·¨è¼¯å·¦å´" @click.stop="emit('open-editor', 'left')">âš™</button>
-        <div class="text-[11px]" :style="mutedStyle">ç©ºé–“</div>
+        <button class="gear-btn" title="½s¿è¥ª°¼Äæ" @click.stop="emit('open-editor', 'left')">?</button>
+        <div class="text-[11px]" :style="mutedStyle">ªÅ¶¡</div>
         <div class="mt-2 grid gap-2">
           <div
             v-for="space in store.spaces.slice(0, 4)"
@@ -33,8 +33,8 @@
       </aside>
 
       <main :id="`${prefix}Main`" class="preview-layer rounded-[18px] border border-zinc-200 bg-white p-3" :style="mainStyle">
-        <button class="gear-btn" title="ç·¨è¼¯ä¸»å…§å®¹" @click.stop="emit('open-editor', 'main')">âš™</button>
-        <div class="text-[11px]" :style="mutedStyle">é›†åˆ</div>
+        <button class="gear-btn" title="½s¿è¥D¤º®e°Ï" @click.stop="emit('open-editor', 'main')">?</button>
+        <div class="text-[11px]" :style="mutedStyle">¶°¦X</div>
         <div class="mt-2 grid gap-2">
           <div
             v-for="collection in collections"
@@ -53,8 +53,8 @@
       </main>
 
       <section :id="`${prefix}Right`" class="preview-layer rounded-[18px] border border-zinc-200 bg-white p-3" :style="rightStyle">
-        <button class="gear-btn" title="ç·¨è¼¯å³å´" @click.stop="emit('open-editor', 'right')">âš™</button>
-        <div class="text-[11px]" :style="mutedStyle">é–‹å•Ÿåˆ†é </div>
+        <button class="gear-btn" title="½s¿è¥k°¼Äæ" @click.stop="emit('open-editor', 'right')">?</button>
+        <div class="text-[11px]" :style="mutedStyle">¶}±Ò¤À­¶</div>
         <div class="mt-2 grid gap-2">
           <div
             v-for="tab in store.openTabs.slice(0, 4)"
@@ -69,7 +69,7 @@
     </div>
 
     <div :id="`${prefix}Dock`" class="preview-layer mt-3 rounded-[20px] border border-zinc-200 bg-white px-4 py-3" :style="dockStyle">
-      <button class="gear-btn" title="ç·¨è¼¯ Dock" @click.stop="emit('open-editor', 'dock')">âš™</button>
+      <button class="gear-btn" title="½s¿è Dock" @click.stop="emit('open-editor', 'dock')">?</button>
       <div class="flex items-center gap-2">
         <div class="h-8 w-8 rounded-2xl" :style="{ background: tokens.accent || '#f43f5e' }"></div>
         <div class="h-8 w-8 rounded-2xl border" :style="chipStyle"></div>
@@ -141,12 +141,8 @@ const layerStyle = (value: string | undefined, fallback: string, opacity?: numbe
   } as Record<string, string>;
 };
 
-const activeSpace = computed(() => {
-  return props.store.spaces.find((space) => space.id === props.store.activeSpaceId) || props.store.spaces[0];
-});
-const collections = computed(() => {
-  return props.store.collections.filter((col) => col.id).slice(0, 3);
-});
+const activeSpace = computed(() => props.store.spaces.find((space) => space.id === props.store.activeSpaceId) || props.store.spaces[0]);
+const collections = computed(() => props.store.collections.filter((col) => col.id).slice(0, 3));
 
 const rootStyle = computed(() => ({
   color: props.tokens.text || "#0f172a",

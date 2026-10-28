@@ -67,6 +67,7 @@ export function AuthMiniPanel({
   onSetThemeMode,
   onOpenThemeStore,
 }: AuthMiniPanelProps) {
+  const chromeApi = typeof globalThis !== "undefined" ? globalThis.chrome : undefined;
   const { t, locale, setLocale } = useLocale();
   const user = useAuthUser();
   const { handleGoogle, handleSignOut } = useAuthLogic();
@@ -96,16 +97,16 @@ export function AuthMiniPanel({
       }
       setMembership((changes[MEMBERSHIP_KEY].newValue as Membership | null) ?? null);
     };
-    if (chrome?.storage?.onChanged) {
-      chrome.storage.onChanged.addListener(onChanged);
+    if (chromeApi?.storage?.onChanged) {
+      chromeApi.storage.onChanged.addListener(onChanged);
     }
     return () => {
       isMounted = false;
-      if (chrome?.storage?.onChanged) {
-        chrome.storage.onChanged.removeListener(onChanged);
+      if (chromeApi?.storage?.onChanged) {
+        chromeApi.storage.onChanged.removeListener(onChanged);
       }
     };
-  }, []);
+  }, [chromeApi]);
 
   const planLabel = useMemo(() => {
     if (!membership?.planType) {

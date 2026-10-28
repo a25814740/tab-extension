@@ -1,42 +1,132 @@
 <template>
-  <div class="grid gap-4">
-    <div class="flex items-center justify-between">
-      <div class="text-lg font-semibold">ä½œå“åˆ—è¡¨</div>
-      <RouterLink class="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" to="/design">
-        æ–°å¢è¨­è¨ˆ
-      </RouterLink>
+  <div class="grid gap-6">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <div class="text-lg font-semibold">§@«~¦Cªí</div>
+        <div class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          ³o¸ÌºŞ²z§Aªº¥DÃD¯ó½Z¡B¤W¬[ª¬ºA¡B»ù®æ»P¤À¼í¤ñ¨Ò¡C
+        </div>
+      </div>
+      <button class="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" @click="createTheme">
+        ·s¼W³]­p
+      </button>
     </div>
 
-    <div v-if="creatorState.assets.length === 0" class="creator-card p-8 text-center text-sm text-slate-500 dark:text-slate-400">
-      å°šç„¡ä½œå“ï¼Œé»æ“Šã€Œæ–°å¢è¨­è¨ˆã€é–‹å§‹ã€‚
+    <div class="grid gap-4 md:grid-cols-3">
+      <div class="creator-card p-4">
+        <div class="text-xs text-slate-500 dark:text-slate-400">§@«~Á`¼Æ</div>
+        <div class="mt-2 text-2xl font-semibold">{{ creatorState.assets.length }}</div>
+      </div>
+      <div class="creator-card p-4">
+        <div class="text-xs text-slate-500 dark:text-slate-400">¤½¶}§@«~</div>
+        <div class="mt-2 text-2xl font-semibold">{{ publishedAssets.length }}</div>
+      </div>
+      <div class="creator-card p-4">
+        <div class="text-xs text-slate-500 dark:text-slate-400">¯ó½Z</div>
+        <div class="mt-2 text-2xl font-semibold">{{ draftAssets.length }}</div>
+      </div>
     </div>
 
-    <div v-else class="grid gap-3">
-      <button
+    <div v-if="creatorState.assets.length === 0" class="creator-card p-10 text-center text-sm text-slate-500 dark:text-slate-400">
+      ¥Ø«eÁÙ¨S¦³§@«~¡C¥ı·s¼W¤@­Ó¥DÃD¡A§â¡u¯ó½Z -> ¹wÄı -> ¤W¬[¡v¬yµ{¶]³q¡C
+    </div>
+
+    <div v-else class="grid gap-4">
+      <article
         v-for="asset in creatorState.assets"
         :key="asset.id"
-        class="creator-card flex items-center gap-3 p-4 text-left"
-        @click="edit(asset)"
+        class="creator-card grid gap-4 p-5 xl:grid-cols-[220px_minmax(0,1fr)_230px]"
       >
-        <div class="preview-thumb w-32" :style="previewStyle(asset.preview || creatorState.fallbackPreview)"></div>
-        <div class="flex-1">
-          <div class="text-sm font-semibold">{{ asset.name }}</div>
-          <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">æ›´æ–°ï¼š{{ formatDate(asset.updated_at) }}</div>
+        <div class="preview-thumb h-[140px] w-full" :style="previewStyle(asset.preview || creatorState.fallbackPreview)"></div>
+
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="truncate text-lg font-semibold">{{ asset.name }}</h2>
+            <span class="rounded-full px-2 py-1 text-[11px]" :class="badgeClass(asset)">{{ getAssetStatusLabel(asset) }}</span>
+          </div>
+          <div class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ asset.description || '©|¥¼¶ñ¼g§@«~´y­z¡C' }}</div>
+
+          <div class="mt-4 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
+            <span>»ù®æ {{ formatCurrencyTwd(asset.price_twd) }}</span>
+            <span>¤À¼í {{ asset.revenue_share_percent }}%</span>
+            <span>§ó·s©ó {{ formatDate(asset.updated_at) }}</span>
+            <span>Slug: {{ asset.slug }}</span>
+          </div>
+
+          <div v-if="asset.tags?.length" class="mt-4 flex flex-wrap gap-2">
+            <span v-for="tag in asset.tags" :key="tag" class="rounded-full border border-slate-200 px-2 py-1 text-[11px] text-slate-500 dark:border-slate-700 dark:text-slate-400">
+              #{{ tag }}
+            </span>
+          </div>
         </div>
-        <div class="rounded-full border border-slate-200 px-3 py-1 text-xs dark:border-slate-700">ç·¨è¼¯</div>
-      </button>
+
+        <div class="grid content-start gap-3">
+          <button class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white dark:bg-white dark:text-slate-900" @click="edit(asset)">
+            ½s¿è¥DÃD
+          </button>
+          <button class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium dark:border-slate-700" @click="preview(asset)">
+            ¹wÄıµe­±
+          </button>
+          <button
+            class="rounded-2xl border px-4 py-3 text-sm font-medium"
+            :class="asset.is_public ? 'border-amber-300 text-amber-600 dark:border-amber-700 dark:text-amber-300' : 'border-emerald-300 text-emerald-600 dark:border-emerald-700 dark:text-emerald-300'"
+            @click="toggleVisibility(asset)"
+          >
+            {{ asset.is_public ? '¤U¬[§ï¦^¯ó½Z' : '¤½¶}¤W¬[' }}
+          </button>
+          <button class="rounded-2xl border border-rose-200 px-4 py-3 text-sm font-medium text-rose-600 dark:border-rose-900/60 dark:text-rose-300" @click="remove(asset)">
+            §R°£§@«~
+          </button>
+        </div>
+      </article>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import { creatorState, formatDate, previewStyle, selectAsset } from "../store/creatorStore";
+import {
+  type AssetRecord,
+  createNewAsset,
+  creatorState,
+  deleteAsset,
+  draftAssets,
+  formatCurrencyTwd,
+  formatDate,
+  getAssetStatusLabel,
+  previewStyle,
+  publishedAssets,
+  selectAsset,
+  setAssetVisibility,
+} from "../store/creatorStore";
 
 const router = useRouter();
 
-const edit = (asset: any) => {
+const badgeClass = (asset: AssetRecord) =>
+  asset.is_public ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400";
+
+const createTheme = () => {
+  createNewAsset();
+  void router.push("/design");
+};
+
+const edit = (asset: AssetRecord) => {
   selectAsset(asset);
-  router.push(`/design/${asset.id}`);
+  void router.push(`/design/${asset.id}`);
+};
+
+const preview = (asset: AssetRecord) => {
+  selectAsset(asset);
+  void router.push(`/preview/${asset.id}`);
+};
+
+const toggleVisibility = async (asset: AssetRecord) => {
+  await setAssetVisibility(asset, !asset.is_public);
+};
+
+const remove = async (asset: AssetRecord) => {
+  const confirmed = window.confirm(`½T©w­n§R°£¡u${asset.name}¡v¶Ü¡H³o­Ó°Ê§@¤£¯àÁÙ­ì¡C`);
+  if (!confirmed) return;
+  await deleteAsset(asset.id);
 };
 </script>

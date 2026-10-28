@@ -18,3 +18,8 @@ docs/preview/
 supabase/.branches/
 supabase/.temp/
 .impeccable/
+CONVENTIONS.md
+啟動AI助手.bat
+啟動自動AI團隊.bat
+.aider*
+.ai-run/
