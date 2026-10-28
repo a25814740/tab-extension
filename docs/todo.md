@@ -63,3 +63,23 @@ This file tracks incomplete work. Keep entries short and actionable.
 - [x] 建立 marketplace 基礎 migration（assets / purchases / installs + RLS）
 - [ ] 建立商店 API（列表、購買、安裝、上架）
 - [ ] 串接主題資產購買流程與分潤對帳
+
+## Phase 7: UI Optimization & Creator Portal Re-architecture
+This phase addresses UI/UX optimizations, layout rules, and creator portal structural enhancements.
+
+### 通用 (Global UI)
+- [ ] 修正全域 Tooltips 語系（確保中文語系下不再出現英文 Tooltip）
+- [ ] 全站佈局規範：設定最小高度（min-height）為 700px
+
+### New Tab
+- [ ] 移除 Dock 區塊上的「暫放」功能
+
+### Creator Portal (主題設計者 / 創作者中心)
+- [ ] 重新設計佈局：
+  - 左側面板：將主題資訊與預覽圖獨立為「主題資訊」浮動 Side Panel（必須可收起）。
+  - 主編輯區：保留大版面給預覽畫面，但要獨立滾動，避免左右面板跟著整頁捲動。
+  - 右側面板：保留為功能/屬性列，且具備獨立滑動（scroll）功能。
+  - 參考 WordPress/Wix 的版面配置。
+- [ ] 元件模組化（為後續擴充做準備）：
+  - 將畫面元素切割為獨立組件（以便未來支援懂代碼用戶可拖曳重排及自訂/覆寫代碼）。
+- [ ] 上架功能：實作並串接主題的上架流程機制。

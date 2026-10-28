@@ -12,3 +12,9 @@ extension/sidepanel/
 .env*.local
 .ai-run
 docs/.vercel
+.geminiignore
+public/
+docs/preview/
+supabase/.branches/
+supabase/.temp/
+.impeccable/

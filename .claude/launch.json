@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "newtab-preview",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@toby/newtab", "exec", "vite", "--config", "vite.preview.config.ts", "--port", "5179", "--strictPort"],
+      "port": 5179
+    }
+  ]
+}
