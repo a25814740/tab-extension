@@ -1,15 +1,11 @@
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-type PendingOp = {
-  id: string;
-  type: "create" | "update" | "delete";
-  entity: "space" | "folder" | "collection" | "tab";
-  payload: Record<string, unknown>;
-};
+import { authorizeOp, type AuthorizationStore, type PendingOp, type SyncEntity } from "./authorize.ts";
 
 const SUPABASE_URL = Deno.env.get("FUNCTION_SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("FUNCTION_SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+type Client = ReturnType<typeof createClient>;
 
 serve(async (req) => {
   if (req.method !== "POST") {
@@ -25,34 +21,36 @@ serve(async (req) => {
     return new Response("Unauthorized", { status: 401 });
   }
   const token = authHeader.replace("Bearer ", "");
-  const authedClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  });
-  const user = await authedClient.auth.getUser();
+  const client = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const user = await client.auth.getUser(token);
   if (!user.data.user) {
     return new Response("Unauthorized", { status: 401 });
   }
+  const userId = user.data.user.id;
 
-  const { ops } = await req.json();
+  let body: { ops?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return new Response("Invalid payload", { status: 400 });
+  }
+  const { ops } = body;
   if (!Array.isArray(ops)) {
     return new Response("Invalid payload", { status: 400 });
   }
 
-  const client = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
+  const store = createAuthorizationStore(client);
   const syncedIds: string[] = [];
   const failedIds: string[] = [];
 
   for (const op of ops as PendingOp[]) {
     try {
-      await applyOp(client, op, user.data.user.id);
+      // Service role bypasses RLS, so every op must be authorized against the caller's workspace first.
+      const workspaceId = await authorizeOp(store, op, userId);
+      await applyOp(client, op, userId, workspaceId);
       syncedIds.push(op.id);
     } catch {
-      failedIds.push(op.id);
+      failedIds.push(op?.id);
     }
   }
 
@@ -61,16 +59,48 @@ serve(async (req) => {
   });
 });
 
-async function applyOp(client: ReturnType<typeof createClient>, op: PendingOp, userId: string) {
+function createAuthorizationStore(client: Client): AuthorizationStore {
+  return {
+    async getWorkspaceOwnerId(workspaceId) {
+      const { data, error } = await client.from("workspaces").select("owner_id").eq("id", workspaceId).maybeSingle();
+      if (error) throw error;
+      return (data?.owner_id as string | undefined) ?? null;
+    },
+    async getMemberRole(workspaceId, userId) {
+      const { data, error } = await client
+        .from("workspace_members")
+        .select("role")
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.role as string | undefined) ?? null;
+    },
+    async getRowWorkspaceId(entity, id) {
+      if (entity === "tab") {
+        const { data, error } = await client
+          .from("tab_items")
+          .select("collection_id")
+          .eq("id", id)
+          .maybeSingle();
+        if (error) throw error;
+        if (!data?.collection_id) return null;
+        return this.getRowWorkspaceId("collection", data.collection_id as string);
+      }
+      const { data, error } = await client.from(entityToTable(entity)).select("workspace_id").eq("id", id).maybeSingle();
+      if (error) throw error;
+      return (data?.workspace_id as string | undefined) ?? null;
+    },
+  };
+}
+
+async function applyOp(client: Client, op: PendingOp, userId: string, workspaceId: string) {
   const table = entityToTable(op.entity);
-  if (!table) {
-    throw new Error("Unknown entity");
-  }
 
   if (op.type === "create") {
-    await client.from(table).insert(op.payload);
+    await check(client.from(table).insert(op.payload));
     if (op.entity === "collection" || op.entity === "tab") {
-      await audit(client, userId, op.type, op.entity, op.payload);
+      await audit(client, userId, workspaceId, op.type, op.entity, op.payload);
     }
     return;
   }
@@ -78,47 +108,45 @@ async function applyOp(client: ReturnType<typeof createClient>, op: PendingOp, u
   if (op.type === "update") {
     if (Array.isArray(op.payload.order)) {
       for (const item of op.payload.order as Array<{ id: string; position: number }>) {
-        await client.from(table).update({ position: item.position }).eq("id", item.id);
+        await check(client.from(table).update({ position: item.position }).eq("id", item.id));
       }
       return;
     }
 
-    const id = op.payload.id as string | undefined;
-    if (!id) {
-      throw new Error("Missing id for update");
-    }
+    const id = op.payload.id as string;
     const payload = { ...op.payload };
     delete (payload as Record<string, unknown>).id;
-    await client.from(table).update(payload).eq("id", id);
+    await check(client.from(table).update(payload).eq("id", id));
     if (op.entity === "collection" || op.entity === "tab") {
-      await audit(client, userId, op.type, op.entity, { id, ...payload });
+      await audit(client, userId, workspaceId, op.type, op.entity, { id, ...payload });
     }
     return;
   }
 
   if (op.type === "delete") {
-    const id = op.payload.id as string | undefined;
-    if (!id) {
-      throw new Error("Missing id for delete");
-    }
-    await client.from(table).delete().eq("id", id);
+    const id = op.payload.id as string;
+    await check(client.from(table).delete().eq("id", id));
     if (op.entity === "collection" || op.entity === "tab") {
-      await audit(client, userId, op.type, op.entity, { id });
+      await audit(client, userId, workspaceId, op.type, op.entity, { id });
     }
   }
 }
 
+async function check(query: PromiseLike<{ error: unknown }>) {
+  const { error } = await query;
+  if (error) {
+    throw error;
+  }
+}
+
 async function audit(
-  client: ReturnType<typeof createClient>,
+  client: Client,
   userId: string,
+  workspaceId: string,
   action: string,
   entityType: string,
   payload: Record<string, unknown>
 ) {
-  const workspaceId = (payload.workspace_id ?? payload.workspaceId ?? null) as string | null;
-  if (!workspaceId) {
-    return;
-  }
   await client.from("activity_logs").insert({
     id: crypto.randomUUID(),
     workspace_id: workspaceId,
@@ -130,7 +158,7 @@ async function audit(
   });
 }
 
-function entityToTable(entity: PendingOp["entity"]) {
+function entityToTable(entity: SyncEntity) {
   switch (entity) {
     case "space":
       return "spaces";
@@ -140,7 +168,5 @@ function entityToTable(entity: PendingOp["entity"]) {
       return "collections";
     case "tab":
       return "tab_items";
-    default:
-      return null;
   }
 }

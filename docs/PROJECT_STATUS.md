@@ -227,16 +227,8 @@ repo 目前已有一套雙層 AI 執行框架：
 - 更新時間：2026-03-28 10:45:00 +08:00
 <!-- T04_MAIN_CONTENT_END -->
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+## 2026-10-29：sync_ops workspace 授權
+- [x] `sync_ops` 在套用每個 op 前檢查 workspace 寫入權限（owner / admin / editor），修正任何登入使用者可改他人資料的漏洞
+- [x] 資料庫錯誤不再被誤報為 `syncedIds`
+- [x] 新增 `tests/integration/syncOpsAuthorize.test.ts`（10 個案例）
+- 阻塞：正式環境部署需使用者確認
