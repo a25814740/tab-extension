@@ -108,7 +108,7 @@ serve(async (req) => {
   const recentOrders = successfulPurchases.slice(0, 8).map((purchase) => ({
     id: purchase.id,
     assetId: purchase.asset_id,
-    assetName: assetById.get(purchase.asset_id)?.name ?? "¥¼©R¦W¥DÃD",
+    assetName: assetById.get(purchase.asset_id)?.name ?? "æœªå‘½åä¸»é¡Œ",
     amountTwd: purchase.amount_twd ?? 0,
     status: purchase.status,
     createdAt: purchase.created_at,
