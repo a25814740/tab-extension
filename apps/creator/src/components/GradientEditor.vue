@@ -1,7 +1,7 @@
 <template>
   <div class="grid gap-3">
     <div class="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-200">
-      <span class="w-12 text-slate-400">¨¤«×</span>
+      <span class="w-12 text-slate-400">è§’åº¦</span>
       <input
         v-model.number="state.angle"
         type="range"
@@ -10,7 +10,7 @@
         class="h-2 w-full accent-rose-400"
         @input="emitUpdate"
       />
-      <span class="w-12 text-right text-slate-400">{{ state.angle }}¢X</span>
+      <span class="w-12 text-right text-slate-400">{{ state.angle }}Â°</span>
     </div>
 
     <div
@@ -47,7 +47,7 @@
           class="rounded-full border border-slate-300 px-2 py-1 text-[10px] text-slate-500 dark:border-slate-700 dark:text-slate-300"
           @click="removeStop(stop.id)"
         >
-          §R°£
+          åˆªé™¤
         </button>
       </div>
     </div>

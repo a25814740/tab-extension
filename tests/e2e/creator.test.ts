@@ -4,6 +4,6 @@ test("creator dashboard shows login gate for anonymous users", async ({ page }) 
   await page.goto("/creator/index.html#/", { waitUntil: "networkidle" });
 
   await expect(page).toHaveTitle(/Taboard Creator Portal/);
-  await expect(page.getByText("µn¤J«á¤~¥i¨Ï¥Î Creator «á¥x")).toBeVisible();
-  await expect(page.getByRole("button", { name: "¨Ï¥Î Google µn¤J" })).toBeVisible();
+  await expect(page.getByText("ç™»å…¥å¾Œæ‰å¯ä½¿ç”¨ Creator å¾Œå°")).toBeVisible();
+  await expect(page.getByRole("button", { name: "ä½¿ç”¨ Google ç™»å…¥" })).toBeVisible();
 });

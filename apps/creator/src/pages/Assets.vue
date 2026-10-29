@@ -2,33 +2,33 @@
   <div class="grid gap-6">
     <div class="flex items-center justify-between gap-4">
       <div>
-        <div class="text-lg font-semibold">§@«~¦Cªí</div>
+        <div class="text-lg font-semibold">ä½œå“åˆ—è¡¨</div>
         <div class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          ³o¸ÌºŞ²z§Aªº¥DÃD¯ó½Z¡B¤W¬[ª¬ºA¡B»ù®æ»P¤À¼í¤ñ¨Ò¡C
+          é€™è£¡ç®¡ç†ä½ çš„ä¸»é¡Œè‰ç¨¿ã€ä¸Šæ¶ç‹€æ…‹ã€åƒ¹æ ¼èˆ‡åˆ†æ½¤æ¯”ä¾‹ã€‚
         </div>
       </div>
       <button class="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" @click="createTheme">
-        ·s¼W³]­p
+        æ–°å¢è¨­è¨ˆ
       </button>
     </div>
 
     <div class="grid gap-4 md:grid-cols-3">
       <div class="creator-card p-4">
-        <div class="text-xs text-slate-500 dark:text-slate-400">§@«~Á`¼Æ</div>
+        <div class="text-xs text-slate-500 dark:text-slate-400">ä½œå“ç¸½æ•¸</div>
         <div class="mt-2 text-2xl font-semibold">{{ creatorState.assets.length }}</div>
       </div>
       <div class="creator-card p-4">
-        <div class="text-xs text-slate-500 dark:text-slate-400">¤½¶}§@«~</div>
+        <div class="text-xs text-slate-500 dark:text-slate-400">å…¬é–‹ä½œå“</div>
         <div class="mt-2 text-2xl font-semibold">{{ publishedAssets.length }}</div>
       </div>
       <div class="creator-card p-4">
-        <div class="text-xs text-slate-500 dark:text-slate-400">¯ó½Z</div>
+        <div class="text-xs text-slate-500 dark:text-slate-400">è‰ç¨¿</div>
         <div class="mt-2 text-2xl font-semibold">{{ draftAssets.length }}</div>
       </div>
     </div>
 
     <div v-if="creatorState.assets.length === 0" class="creator-card p-10 text-center text-sm text-slate-500 dark:text-slate-400">
-      ¥Ø«eÁÙ¨S¦³§@«~¡C¥ı·s¼W¤@­Ó¥DÃD¡A§â¡u¯ó½Z -> ¹wÄı -> ¤W¬[¡v¬yµ{¶]³q¡C
+      ç›®å‰é‚„æ²’æœ‰ä½œå“ã€‚å…ˆæ–°å¢ä¸€å€‹ä¸»é¡Œï¼ŒæŠŠã€Œè‰ç¨¿ -> é è¦½ -> ä¸Šæ¶ã€æµç¨‹è·‘é€šã€‚
     </div>
 
     <div v-else class="grid gap-4">
@@ -44,12 +44,12 @@
             <h2 class="truncate text-lg font-semibold">{{ asset.name }}</h2>
             <span class="rounded-full px-2 py-1 text-[11px]" :class="badgeClass(asset)">{{ getAssetStatusLabel(asset) }}</span>
           </div>
-          <div class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ asset.description || '©|¥¼¶ñ¼g§@«~´y­z¡C' }}</div>
+          <div class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ asset.description || 'å°šæœªå¡«å¯«ä½œå“æè¿°ã€‚' }}</div>
 
           <div class="mt-4 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
-            <span>»ù®æ {{ formatCurrencyTwd(asset.price_twd) }}</span>
-            <span>¤À¼í {{ asset.revenue_share_percent }}%</span>
-            <span>§ó·s©ó {{ formatDate(asset.updated_at) }}</span>
+            <span>åƒ¹æ ¼ {{ formatCurrencyTwd(asset.price_twd) }}</span>
+            <span>åˆ†æ½¤ {{ asset.revenue_share_percent }}%</span>
+            <span>æ›´æ–°æ–¼ {{ formatDate(asset.updated_at) }}</span>
             <span>Slug: {{ asset.slug }}</span>
           </div>
 
@@ -62,20 +62,20 @@
 
         <div class="grid content-start gap-3">
           <button class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white dark:bg-white dark:text-slate-900" @click="edit(asset)">
-            ½s¿è¥DÃD
+            ç·¨è¼¯ä¸»é¡Œ
           </button>
           <button class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium dark:border-slate-700" @click="preview(asset)">
-            ¹wÄıµe­±
+            é è¦½ç•«é¢
           </button>
           <button
             class="rounded-2xl border px-4 py-3 text-sm font-medium"
             :class="asset.is_public ? 'border-amber-300 text-amber-600 dark:border-amber-700 dark:text-amber-300' : 'border-emerald-300 text-emerald-600 dark:border-emerald-700 dark:text-emerald-300'"
             @click="toggleVisibility(asset)"
           >
-            {{ asset.is_public ? '¤U¬[§ï¦^¯ó½Z' : '¤½¶}¤W¬[' }}
+            {{ asset.is_public ? 'ä¸‹æ¶æ”¹å›è‰ç¨¿' : 'å…¬é–‹ä¸Šæ¶' }}
           </button>
           <button class="rounded-2xl border border-rose-200 px-4 py-3 text-sm font-medium text-rose-600 dark:border-rose-900/60 dark:text-rose-300" @click="remove(asset)">
-            §R°£§@«~
+            åˆªé™¤ä½œå“
           </button>
         </div>
       </article>
@@ -125,7 +125,7 @@ const toggleVisibility = async (asset: AssetRecord) => {
 };
 
 const remove = async (asset: AssetRecord) => {
-  const confirmed = window.confirm(`½T©w­n§R°£¡u${asset.name}¡v¶Ü¡H³o­Ó°Ê§@¤£¯àÁÙ­ì¡C`);
+  const confirmed = window.confirm(`ç¢ºå®šè¦åˆªé™¤ã€Œ${asset.name}ã€å—ï¼Ÿé€™å€‹å‹•ä½œä¸èƒ½é‚„åŸã€‚`);
   if (!confirmed) return;
   await deleteAsset(asset.id);
 };

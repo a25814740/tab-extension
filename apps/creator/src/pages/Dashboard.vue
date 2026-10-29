@@ -12,16 +12,16 @@
       <div class="creator-card p-6">
         <div class="flex items-center justify-between">
           <div>
-            <div class="text-lg font-semibold">³Ìªñ§@«~</div>
-            <div class="mt-1 text-sm text-slate-500 dark:text-slate-400">¥ı§â¤W¬[«~½èÅU¦n¡A¦A¥h½Í©ñ¶q¡A³o¼Ë¤ñ¸û¤£·|³Q¦Û¤v°lµÛ¶]¡C</div>
+            <div class="text-lg font-semibold">æœ€è¿‘ä½œå“</div>
+            <div class="mt-1 text-sm text-slate-500 dark:text-slate-400">å…ˆæŠŠä¸Šæ¶å“è³ªé¡§å¥½ï¼Œå†å»è«‡æ”¾é‡ï¼Œé€™æ¨£æ¯”è¼ƒä¸æœƒè¢«è‡ªå·±è¿½è‘—è·‘ã€‚</div>
           </div>
           <RouterLink class="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" to="/assets">
-            ºŞ²z§@«~
+            ç®¡ç†ä½œå“
           </RouterLink>
         </div>
 
         <div v-if="recentAssets.length === 0" class="mt-6 rounded-2xl border border-dashed border-slate-300 px-6 py-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-          ÁÙ¨S¦³¥ô¦ó§@«~¡C¥ı·s¼W²Ä¤@­Ó¥DÃD¡A«á¥x¸ê®Æ½u¤~·|§¹¾ã¶]°_¨Ó¡C
+          é‚„æ²’æœ‰ä»»ä½•ä½œå“ã€‚å…ˆæ–°å¢ç¬¬ä¸€å€‹ä¸»é¡Œï¼Œå¾Œå°è³‡æ–™ç·šæ‰æœƒå®Œæ•´è·‘èµ·ä¾†ã€‚
         </div>
 
         <div v-else class="mt-6 grid gap-3">
@@ -39,11 +39,11 @@
                   {{ getAssetStatusLabel(asset) }}
                 </span>
               </div>
-              <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ asset.description || '©|¥¼¶ñ¼g§@«~´y­z¡C' }}</div>
+              <div class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ asset.description || 'å°šæœªå¡«å¯«ä½œå“æè¿°ã€‚' }}</div>
               <div class="mt-3 flex flex-wrap gap-3 text-[11px] text-slate-400">
-                <span>»ù®æ {{ formatCurrencyTwd(asset.price_twd) }}</span>
-                <span>¤À¼í {{ asset.revenue_share_percent }}%</span>
-                <span>§ó·s©ó {{ formatDate(asset.updated_at) }}</span>
+                <span>åƒ¹æ ¼ {{ formatCurrencyTwd(asset.price_twd) }}</span>
+                <span>åˆ†æ½¤ {{ asset.revenue_share_percent }}%</span>
+                <span>æ›´æ–°æ–¼ {{ formatDate(asset.updated_at) }}</span>
               </div>
             </div>
           </RouterLink>
@@ -52,11 +52,11 @@
 
       <div class="grid gap-6">
         <div class="creator-card p-6">
-          <div class="text-lg font-semibold">¤W¬[ÀË¬d</div>
+          <div class="text-lg font-semibold">ä¸Šæ¶æª¢æŸ¥</div>
           <div class="mt-4 grid gap-3 text-sm">
             <div v-for="item in checklist" :key="item.label" class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70">
               <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold" :class="item.done ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'">
-                {{ item.done ? 'OK' : '«İ' }}
+                {{ item.done ? 'OK' : 'å¾…' }}
               </div>
               <div>
                 <div class="font-medium">{{ item.label }}</div>
@@ -67,13 +67,13 @@
         </div>
 
         <div class="creator-card p-6">
-          <div class="text-lg font-semibold">§Ö³t¾Ş§@</div>
+          <div class="text-lg font-semibold">å¿«é€Ÿæ“ä½œ</div>
           <div class="mt-4 grid gap-3">
             <RouterLink class="rounded-2xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white" to="/design">
-              ·s¼W¥DÃD³]­p
+              æ–°å¢ä¸»é¡Œè¨­è¨ˆ
             </RouterLink>
             <RouterLink class="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium dark:border-slate-700" to="/revenue">
-              ¬d¬İ¦¬¯q¤¤¤ß
+              æŸ¥çœ‹æ”¶ç›Šä¸­å¿ƒ
             </RouterLink>
           </div>
         </div>
@@ -96,47 +96,47 @@ import {
 
 const summaryCards = computed(() => [
   {
-    label: "§@«~Á`¼Æ",
+    label: "ä½œå“ç¸½æ•¸",
     value: String(creatorState.assets.length),
-    helper: creatorState.assets.length > 0 ? `³Ìªñ§ó·s¡G${formatDate(creatorState.assets[0]?.updated_at)}` : "¥ı«Ø¥ß²Ä¤@­Ó¥DÃD¡C",
+    helper: creatorState.assets.length > 0 ? `æœ€è¿‘æ›´æ–°ï¼š${formatDate(creatorState.assets[0]?.updated_at)}` : "å…ˆå»ºç«‹ç¬¬ä¸€å€‹ä¸»é¡Œã€‚",
   },
   {
-    label: "¤w¤½¶}¤W¬[",
+    label: "å·²å…¬é–‹ä¸Šæ¶",
     value: String(creatorState.analytics.publishedCount || creatorState.assets.filter((asset) => asset.is_public).length),
-    helper: "¯ó½Z¤£·|¥X²{¦b°Ó©±«e¥x¡C",
+    helper: "è‰ç¨¿ä¸æœƒå‡ºç¾åœ¨å•†åº—å‰å°ã€‚",
   },
   {
-    label: "¯ó½Z¼Æ¶q",
+    label: "è‰ç¨¿æ•¸é‡",
     value: String(creatorState.analytics.draftCount || creatorState.assets.filter((asset) => !asset.is_public).length),
-    helper: "«ØÄ³¯ó½Z¥ı§â´y­z»P¹wÄı¸É»ô¡C",
+    helper: "å»ºè­°è‰ç¨¿å…ˆæŠŠæè¿°èˆ‡é è¦½è£œé½Šã€‚",
   },
   {
-    label: creatorState.analytics.mode === 'live' ? "²Ö¿n¥i¤À¼í" : "¦¬¯q¼Ò¦¡",
-    value: creatorState.analytics.mode === 'live' ? formatCurrencyTwd(creatorState.analytics.creatorRevenueTwd) : '¦ôºâ¤¤',
+    label: creatorState.analytics.mode === 'live' ? "ç´¯ç©å¯åˆ†æ½¤" : "æ”¶ç›Šæ¨¡å¼",
+    value: creatorState.analytics.mode === 'live' ? formatCurrencyTwd(creatorState.analytics.creatorRevenueTwd) : 'ä¼°ç®—ä¸­',
     helper: creatorState.analytics.note,
   },
 ]);
 
 const checklist = computed(() => [
   {
-    label: "¦Ü¤Ö¤@­Ó¤½¶}§@«~",
+    label: "è‡³å°‘ä¸€å€‹å…¬é–‹ä½œå“",
     done: creatorState.assets.some((asset) => asset.is_public),
-    helper: "¨S¦³¤½¶}§@«~¡A´NÁÙ½Í¤£¤W¥¿¦¡³c°â¡C",
+    helper: "æ²’æœ‰å…¬é–‹ä½œå“ï¼Œå°±é‚„è«‡ä¸ä¸Šæ­£å¼è²©å”®ã€‚",
   },
   {
-    label: "¹wÄı¹Ï¤w·Ç³Æ",
+    label: "é è¦½åœ–å·²æº–å‚™",
     done: creatorState.assets.every((asset) => Boolean(asset.preview)),
-    helper: "¹wÄı¹Ï¬OÂà´«²v³Ì®e©öº|±¼ªº¤@¶ô¡C",
+    helper: "é è¦½åœ–æ˜¯è½‰æ›ç‡æœ€å®¹æ˜“æ¼æ‰çš„ä¸€å¡Šã€‚",
   },
   {
-    label: "§@«~´y­z¤w¶ñ¼g",
+    label: "ä½œå“æè¿°å·²å¡«å¯«",
     done: creatorState.assets.every((asset) => Boolean(asset.description?.trim())),
-    helper: "´y­z­n²M·¡§i¶D¨Ï¥ÎªÌ¥¦§ï¤F­ş¨Ç°Ï¶ô¡C",
+    helper: "æè¿°è¦æ¸…æ¥šå‘Šè¨´ä½¿ç”¨è€…å®ƒæ”¹äº†å“ªäº›å€å¡Šã€‚",
   },
   {
-    label: "¦¬¯q»E¦X¥i¥Î",
+    label: "æ”¶ç›Šèšåˆå¯ç”¨",
     done: creatorState.analytics.mode === 'live',
-    helper: creatorState.analytics.mode === 'live' ? '¥Ø«e¤w±µ¨ì server-side analytics¡C' : '³¡¸p creator_dashboard «á´N¯à¬İ¨ì¯u¹ê¦¬¯q¡C',
+    helper: creatorState.analytics.mode === 'live' ? 'ç›®å‰å·²æ¥åˆ° server-side analyticsã€‚' : 'éƒ¨ç½² creator_dashboard å¾Œå°±èƒ½çœ‹åˆ°çœŸå¯¦æ”¶ç›Šã€‚',
   },
 ]);
 

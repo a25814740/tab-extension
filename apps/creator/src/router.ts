@@ -24,13 +24,13 @@ export const router = createRouter({
       path: "/",
       component: AdminLayout,
       children: [
-        { path: "", name: "dashboard", component: Dashboard, meta: { title: "Á`Äı" } },
-        { path: "assets", name: "assets", component: Assets, meta: { title: "§@«~¦Cªí" } },
-        { path: "revenue", name: "revenue", component: Revenue, meta: { title: "¦¬¯q¤¤¤ß" } },
+        { path: "", name: "dashboard", component: Dashboard, meta: { title: "ç¸½è¦½" } },
+        { path: "assets", name: "assets", component: Assets, meta: { title: "ä½œå“åˆ—è¡¨" } },
+        { path: "revenue", name: "revenue", component: Revenue, meta: { title: "æ”¶ç›Šä¸­å¿ƒ" } },
       ],
     },
-    { path: "/design/:id?", name: "design", component: Design, meta: { title: "¥DÃD³]­p" } },
-    { path: "/preview/:id?", name: "preview", component: Preview, meta: { title: "¥DÃD¹wÄı" } },
+    { path: "/design/:id?", name: "design", component: Design, meta: { title: "ä¸»é¡Œè¨­è¨ˆ" } },
+    { path: "/preview/:id?", name: "preview", component: Preview, meta: { title: "ä¸»é¡Œé è¦½" } },
     { path: "/:pathMatch(.*)*", redirect: "/" },
   ],
 });
