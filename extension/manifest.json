@@ -5,7 +5,11 @@
   "description": "Workspace-focused tab management with collections and sync.",
   "action": {
     "default_title": "Taboard｜分頁與書籤儀錶板",
-    "default_popup": "sidepanel/index.html"
+    "default_popup": "sidepanel/index.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
   },
   "chrome_url_overrides": {
     "newtab": "newtab/index.html"
@@ -29,6 +33,7 @@
   "host_permissions": ["https://*/*", "http://*/*"],
   "icons": {
     "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
