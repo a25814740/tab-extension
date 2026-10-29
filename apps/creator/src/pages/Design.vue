@@ -3,13 +3,13 @@
     <header class="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
       <div>
         <div class="text-lg font-semibold">{{ headerTitle }}</div>
-        <div class="text-xs text-slate-400">ª½±µ¦b¥k°¼§ï³]©w¡A¥ªÃä iframe ·|§Y®É¦Y¨ì¥DÃD tokens¡C</div>
+        <div class="text-xs text-slate-400">ç›´æ¥åœ¨å³å´æ”¹è¨­å®šï¼Œå·¦é‚Š iframe æœƒå³æ™‚åƒåˆ°ä¸»é¡Œ tokensã€‚</div>
       </div>
       <div class="flex items-center gap-2">
-        <RouterLink class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" to="/assets">ªğ¦^§@«~¦Cªí</RouterLink>
-        <RouterLink class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" :to="previewRoute">¹wÄı­¶</RouterLink>
-        <button class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" :disabled="isBusy" @click="persistDraft">Àx¦s¯ó½Z</button>
-        <button class="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60" :disabled="isBusy" @click="persistPublic">¤½¶}¤W¬[</button>
+        <RouterLink class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" to="/assets">è¿”å›ä½œå“åˆ—è¡¨</RouterLink>
+        <RouterLink class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" :to="previewRoute">é è¦½é </RouterLink>
+        <button class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" :disabled="isBusy" @click="persistDraft">å„²å­˜è‰ç¨¿</button>
+        <button class="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60" :disabled="isBusy" @click="persistPublic">å…¬é–‹ä¸Šæ¶</button>
       </div>
     </header>
 
@@ -29,27 +29,27 @@
       <div class="grid gap-4">
         <div class="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900">
           <div class="flex items-center justify-between">
-            <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">§@«~¸ê®Æ</div>
+            <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">ä½œå“è³‡æ–™</div>
             <span class="rounded-full px-2 py-1 text-[11px]" :class="statusBadgeClass">{{ currentStatusLabel }}</span>
           </div>
           <div class="mt-3 grid gap-2">
-            <input v-model="creatorState.form.name" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="¥DÃD¦WºÙ" />
-            <input v-model="creatorState.form.slug" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="slug¡]¥u±µ¨ü­^¼Æ»P -¡^" />
-            <textarea v-model="creatorState.form.description" class="h-20 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="§i¶D¨Ï¥ÎªÌ³o­Ó¥DÃD§ï¤F­ş¨Ç°Ï¶ô¡B¾A¦X¤°»ò³õ´º"></textarea>
+            <input v-model="creatorState.form.name" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="ä¸»é¡Œåç¨±" />
+            <input v-model="creatorState.form.slug" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="slugï¼ˆåªæ¥å—è‹±æ•¸èˆ‡ -ï¼‰" />
+            <textarea v-model="creatorState.form.description" class="h-20 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="å‘Šè¨´ä½¿ç”¨è€…é€™å€‹ä¸»é¡Œæ”¹äº†å“ªäº›å€å¡Šã€é©åˆä»€éº¼å ´æ™¯"></textarea>
             <div class="grid grid-cols-2 gap-2">
-              <input v-model.number="creatorState.form.price" type="number" min="0" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="°â»ù¡]TWD¡^" />
+              <input v-model.number="creatorState.form.price" type="number" min="0" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="å”®åƒ¹ï¼ˆTWDï¼‰" />
               <select v-model.number="creatorState.form.revenueShare" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800">
-                <option v-for="option in revenueOptions" :key="option" :value="option">¤À¼í {{ option }}%</option>
+                <option v-for="option in revenueOptions" :key="option" :value="option">åˆ†æ½¤ {{ option }}%</option>
               </select>
             </div>
-            <input v-model="creatorState.form.tags" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="¼ĞÅÒ¡A¨Ï¥Î¥b§Î³r¸¹¤À¹j" />
+            <input v-model="creatorState.form.tags" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="æ¨™ç±¤ï¼Œä½¿ç”¨åŠå½¢é€—è™Ÿåˆ†éš”" />
           </div>
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900">
           <div class="flex items-center justify-between">
-            <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">¹wÄı«Ê­±</div>
-            <div class="text-[10px] text-slate-400">¥¼¤W¶Ç®É·|§ï§ì iframe ºI¹Ï</div>
+            <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">é è¦½å°é¢</div>
+            <div class="text-[10px] text-slate-400">æœªä¸Šå‚³æ™‚æœƒæ”¹æŠ“ iframe æˆªåœ–</div>
           </div>
           <div class="mt-3 grid gap-3">
             <input type="file" accept="image/*" class="text-[11px]" @change="onPreviewUpload" />
@@ -58,29 +58,29 @@
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900">
-          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">¾ãÅé¦â±m</div>
+          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">æ•´é«”è‰²å½©</div>
           <div class="mt-3 grid gap-3 sm:grid-cols-2">
             <label class="grid gap-1">
-              <span class="text-[11px] text-slate-400">¥D­n¤å¦r</span>
+              <span class="text-[11px] text-slate-400">ä¸»è¦æ–‡å­—</span>
               <input v-model="creatorState.draftEditor.base.text" type="color" class="h-10 w-16 rounded border border-slate-300 bg-transparent dark:border-slate-700" />
             </label>
             <label class="grid gap-1">
-              <span class="text-[11px] text-slate-400">¦¸­n¤å¦r</span>
+              <span class="text-[11px] text-slate-400">æ¬¡è¦æ–‡å­—</span>
               <input v-model="creatorState.draftEditor.base.textMuted" type="color" class="h-10 w-16 rounded border border-slate-300 bg-transparent dark:border-slate-700" />
             </label>
             <label class="grid gap-1">
-              <span class="text-[11px] text-slate-400">®Ø½u¦â</span>
+              <span class="text-[11px] text-slate-400">æ¡†ç·šè‰²</span>
               <input v-model="creatorState.draftEditor.base.border" type="color" class="h-10 w-16 rounded border border-slate-300 bg-transparent dark:border-slate-700" />
             </label>
             <label class="grid gap-1">
-              <span class="text-[11px] text-slate-400">³±¼v¦â</span>
+              <span class="text-[11px] text-slate-400">é™°å½±è‰²</span>
               <input v-model="creatorState.draftEditor.base.shadow" type="color" class="h-10 w-16 rounded border border-slate-300 bg-transparent dark:border-slate-700" />
             </label>
           </div>
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900">
-          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">°Ï¶ô­I´º</div>
+          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">å€å¡ŠèƒŒæ™¯</div>
           <div class="mt-3 grid gap-2">
             <button
               v-for="section in sectionOptions"
@@ -92,14 +92,14 @@
               <span>{{ section.label }}</span>
               <span class="inline-flex items-center gap-2 text-[10px] text-slate-400">
                 <span class="h-3 w-3 rounded-sm" :style="{ background: sectionPreview(section.key) }"></span>
-                ½s¿è
+                ç·¨è¼¯
               </span>
             </button>
           </div>
         </div>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900">
-          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">¶ñ¦â¤è¦¡</div>
+          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">å¡«è‰²æ–¹å¼</div>
           <div class="mt-3 flex flex-wrap gap-2">
             <button
               v-for="mode in paintModes"
@@ -117,7 +117,7 @@
               <div class="flex items-center gap-3">
                 <input v-model="activePaint.color" type="color" class="h-10 w-14 rounded border border-slate-300 bg-transparent dark:border-slate-700" />
                 <div class="flex-1">
-                  <div class="text-[11px] text-slate-400">³z©ú«×</div>
+                  <div class="text-[11px] text-slate-400">é€æ˜åº¦</div>
                   <input v-model.number="activePaint.opacity" type="range" min="0" max="1" step="0.05" class="w-full accent-rose-400" />
                 </div>
                 <span class="w-10 text-right text-[11px] text-slate-400">{{ Math.round(activePaint.opacity * 100) }}%</span>
@@ -130,11 +130,11 @@
               <input type="file" accept="image/*" class="text-[11px]" @change="onImageUpload" />
               <div class="grid grid-cols-2 gap-2">
                 <label class="grid gap-1">
-                  <span class="text-[11px] text-slate-400">X ¶b</span>
+                  <span class="text-[11px] text-slate-400">X è»¸</span>
                   <input v-model.number="activePaint.image.positionX" type="number" min="0" max="100" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" />
                 </label>
                 <label class="grid gap-1">
-                  <span class="text-[11px] text-slate-400">Y ¶b</span>
+                  <span class="text-[11px] text-slate-400">Y è»¸</span>
                   <input v-model.number="activePaint.image.positionY" type="number" min="0" max="100" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" />
                 </label>
               </div>
@@ -142,10 +142,10 @@
                 <label class="grid gap-1">
                   <span class="text-[11px] text-slate-400">Repeat</span>
                   <select v-model="activePaint.image.repeat" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800">
-                    <option value="no-repeat">¤£­«½Æ</option>
-                    <option value="repeat">­«½Æ</option>
-                    <option value="repeat-x">¤ô¥­­«½Æ</option>
-                    <option value="repeat-y">««ª½­«½Æ</option>
+                    <option value="no-repeat">ä¸é‡è¤‡</option>
+                    <option value="repeat">é‡è¤‡</option>
+                    <option value="repeat-x">æ°´å¹³é‡è¤‡</option>
+                    <option value="repeat-y">å‚ç›´é‡è¤‡</option>
                   </select>
                 </label>
                 <label class="grid gap-1">
@@ -158,7 +158,7 @@
                 </label>
               </div>
               <div class="flex items-center gap-3">
-                <div class="text-[11px] text-slate-400">³z©ú«×</div>
+                <div class="text-[11px] text-slate-400">é€æ˜åº¦</div>
                 <input v-model.number="activePaint.image.opacity" type="range" min="0" max="1" step="0.05" class="w-full accent-rose-400" />
                 <span class="w-10 text-right text-[11px] text-slate-400">{{ Math.round(activePaint.image.opacity * 100) }}%</span>
               </div>
@@ -199,15 +199,15 @@ const previewOrigin = ((import.meta as { env?: Record<string, string> }).env?.VI
 const previewSrc = computed(() => `${previewOrigin}/preview/`);
 const previewLoadError = ref("");
 const isBusy = computed(() => creatorState.pendingAction !== "idle");
-const headerTitle = computed(() => creatorState.form.name.trim() || (creatorState.editingId ? "½s¿è¥DÃD" : "·s¼W¥DÃD"));
+const headerTitle = computed(() => creatorState.form.name.trim() || (creatorState.editingId ? "ç·¨è¼¯ä¸»é¡Œ" : "æ–°å¢ä¸»é¡Œ"));
 const currentStatusLabel = computed(() => {
-  if (!creatorState.editingId) return "¥¼Àx¦s";
+  if (!creatorState.editingId) return "æœªå„²å­˜";
   const current = creatorState.assets.find((asset) => asset.id === creatorState.editingId);
-  return current?.is_public ? "¤w¤W¬[" : "¯ó½Z";
+  return current?.is_public ? "å·²ä¸Šæ¶" : "è‰ç¨¿";
 });
 const statusBadgeClass = computed(() => {
-  if (currentStatusLabel.value === "¤w¤W¬[") return "bg-emerald-500/15 text-emerald-400";
-  if (currentStatusLabel.value === "¯ó½Z") return "bg-amber-500/15 text-amber-400";
+  if (currentStatusLabel.value === "å·²ä¸Šæ¶") return "bg-emerald-500/15 text-emerald-400";
+  if (currentStatusLabel.value === "è‰ç¨¿") return "bg-amber-500/15 text-amber-400";
   return "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
 });
 const previewRoute = computed(() => (creatorState.editingId ? `/preview/${creatorState.editingId}` : "/preview"));
@@ -285,7 +285,7 @@ onMounted(() => {
   };
   window.addEventListener("message", readyListener);
   previewTimeoutId = window.setTimeout(() => {
-    previewLoadError.value = "¹wÄı iframe ¸ü¤J¶W®É¡A½Ğ­«·s¾ã²z©Î½T»{ preview ³¡¸p¬O§_¥¿±`¡C";
+    previewLoadError.value = "é è¦½ iframe è¼‰å…¥è¶…æ™‚ï¼Œè«‹é‡æ–°æ•´ç†æˆ–ç¢ºèª preview éƒ¨ç½²æ˜¯å¦æ­£å¸¸ã€‚";
   }, 8000);
   window.setTimeout(sendPreviewTokens, 600);
 });

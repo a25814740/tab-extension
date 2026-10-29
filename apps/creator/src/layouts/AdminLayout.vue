@@ -6,49 +6,49 @@
           <div class="text-[11px] uppercase tracking-[0.32em] text-slate-400">Creator Console</div>
           <div class="mt-2 text-2xl font-semibold">Taboard</div>
           <div class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            ºŞ²z§Aªº¥DÃD¡BÀË¬d¤W¬[ª¬ºA¡A¤§«á¦¬¯q»P¤À¼í¤]·|±q³o¸Ì¶i¨Ó¡C
+            ç®¡ç†ä½ çš„ä¸»é¡Œã€æª¢æŸ¥ä¸Šæ¶ç‹€æ…‹ï¼Œä¹‹å¾Œæ”¶ç›Šèˆ‡åˆ†æ½¤ä¹Ÿæœƒå¾é€™è£¡é€²ä¾†ã€‚
           </div>
         </div>
 
         <nav class="mt-8 grid gap-2 text-sm">
           <RouterLink class="nav-link" to="/">
-            <span>Á`Äı</span>
+            <span>ç¸½è¦½</span>
             <span class="text-[11px] text-slate-400">Dashboard</span>
           </RouterLink>
           <RouterLink class="nav-link" to="/assets">
-            <span>§@«~¦Cªí</span>
+            <span>ä½œå“åˆ—è¡¨</span>
             <span class="text-[11px] text-slate-400">Themes</span>
           </RouterLink>
           <RouterLink class="nav-link" to="/revenue">
-            <span>¦¬¯q¤¤¤ß</span>
+            <span>æ”¶ç›Šä¸­å¿ƒ</span>
             <span class="text-[11px] text-slate-400">Revenue</span>
           </RouterLink>
         </nav>
 
         <div class="mt-8 rounded-3xl border border-slate-200/70 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-950/50">
-          <div class="text-[11px] uppercase tracking-[0.24em] text-slate-400">²£«~ª¬ºA</div>
+          <div class="text-[11px] uppercase tracking-[0.24em] text-slate-400">ç”¢å“ç‹€æ…‹</div>
           <div class="mt-3 grid gap-3 text-sm">
             <div class="flex items-center justify-between">
-              <span class="text-slate-500 dark:text-slate-400">¤w¤W¬[</span>
+              <span class="text-slate-500 dark:text-slate-400">å·²ä¸Šæ¶</span>
               <span class="font-semibold">{{ creatorHealthSummary.publishedCount }}</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-slate-500 dark:text-slate-400">¯ó½Z</span>
+              <span class="text-slate-500 dark:text-slate-400">è‰ç¨¿</span>
               <span class="font-semibold">{{ creatorHealthSummary.draftCount }}</span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-slate-500 dark:text-slate-400">¦¬¯q¼Ò¦¡</span>
-              <span class="font-semibold">{{ creatorHealthSummary.analyticsMode === 'live' ? '§Y®É' : '¦ôºâ' }}</span>
+              <span class="text-slate-500 dark:text-slate-400">æ”¶ç›Šæ¨¡å¼</span>
+              <span class="font-semibold">{{ creatorHealthSummary.analyticsMode === 'live' ? 'å³æ™‚' : 'ä¼°ç®—' }}</span>
             </div>
           </div>
         </div>
 
         <div class="mt-auto rounded-3xl border border-slate-200/70 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-950/50">
-          <div class="text-sm font-semibold">±µ¤U¨Ó­n¸Éªº</div>
+          <div class="text-sm font-semibold">æ¥ä¸‹ä¾†è¦è£œçš„</div>
           <ul class="mt-3 grid gap-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-            <li>1. ¥DÃD°Ó«°«e¥xÁÊ¶R¬yµ{</li>
-            <li>2. ¯u¹ê¦¬¯q»E¦X»P¤H¤u¼·´Ú²M³æ</li>
-            <li>3. ¦w¸Ë¶q¡BÂà´«²v»P«ÈªA°lÂÜ</li>
+            <li>1. ä¸»é¡Œå•†åŸå‰å°è³¼è²·æµç¨‹</li>
+            <li>2. çœŸå¯¦æ”¶ç›Šèšåˆèˆ‡äººå·¥æ’¥æ¬¾æ¸…å–®</li>
+            <li>3. å®‰è£é‡ã€è½‰æ›ç‡èˆ‡å®¢æœè¿½è¹¤</li>
           </ul>
         </div>
       </aside>
@@ -88,19 +88,19 @@
                   </div>
                   <div class="min-w-0 flex-1">
                     <div class="truncate text-sm font-semibold">{{ profileName }}</div>
-                    <div class="truncate text-xs text-slate-500 dark:text-slate-400">{{ profileEmail || '©|¥¼µn¤J' }}</div>
+                    <div class="truncate text-xs text-slate-500 dark:text-slate-400">{{ profileEmail || 'å°šæœªç™»å…¥' }}</div>
                   </div>
                 </div>
 
                 <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300">
-                  Creator «á¥x¥Ø«e¥H¥DÃD¤W¬[¬°¥D¡C¤À¼í»P¼·´Ú·|«Ø¥ß¦b²{¦³¦¬¯q¤¤¤ß¤§¤W¡C
+                  Creator å¾Œå°ç›®å‰ä»¥ä¸»é¡Œä¸Šæ¶ç‚ºä¸»ã€‚åˆ†æ½¤èˆ‡æ’¥æ¬¾æœƒå»ºç«‹åœ¨ç¾æœ‰æ”¶ç›Šä¸­å¿ƒä¹‹ä¸Šã€‚
                 </div>
 
                 <button
                   class="mt-4 w-full rounded-2xl border border-slate-200 px-3 py-2 text-left text-xs font-medium transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                   @click="logout"
                 >
-                  µn¥X
+                  ç™»å‡º
                 </button>
               </div>
             </div>
@@ -122,13 +122,13 @@
 
     <div v-if="gateVisible" class="auth-gate">
       <div class="auth-card">
-        <div class="text-sm font-semibold text-white">µn¤J«á¤~¥i¨Ï¥Î Creator «á¥x</div>
-        <div class="text-xs text-slate-400">½Ğ¥ıµn¤J¡A¤~¯àºŞ²z§@«~¡BÀx¦s¥DÃD»P¬d¬İ¦¬¯q¸ê®Æ¡C</div>
+        <div class="text-sm font-semibold text-white">ç™»å…¥å¾Œæ‰å¯ä½¿ç”¨ Creator å¾Œå°</div>
+        <div class="text-xs text-slate-400">è«‹å…ˆç™»å…¥ï¼Œæ‰èƒ½ç®¡ç†ä½œå“ã€å„²å­˜ä¸»é¡Œèˆ‡æŸ¥çœ‹æ”¶ç›Šè³‡æ–™ã€‚</div>
         <div v-if="showConfigHint" class="text-xs text-rose-300">
-          ¶}µoÀô¹Ò©|¥¼´£¨Ñ VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY¡C
+          é–‹ç™¼ç’°å¢ƒå°šæœªæä¾› VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEYã€‚
         </div>
         <div v-else-if="gateMessage" class="text-xs text-rose-300">{{ gateMessage }}</div>
-        <button class="btn btn-primary" @click="loginWithGoogle">¨Ï¥Î Google µn¤J</button>
+        <button class="btn btn-primary" @click="loginWithGoogle">ä½¿ç”¨ Google ç™»å…¥</button>
       </div>
     </div>
   </div>
@@ -164,11 +164,11 @@ const showConfigHint = computed(() => isDev && creatorState.configMissing);
 const gateMessage = computed(() => {
   if (creatorState.statusMessage) return creatorState.statusMessage;
   if (!isDev && creatorState.configMissing) {
-    return "µn¤JªA°È¥Ø«e©|¥¼§¹¦¨³]©w¡A½ĞÁpµ¸ºŞ²zªÌ³B²z¡C";
+    return "ç™»å…¥æœå‹™ç›®å‰å°šæœªå®Œæˆè¨­å®šï¼Œè«‹è¯çµ¡ç®¡ç†è€…è™•ç†ã€‚";
   }
   return "";
 });
-const themeLabel = computed(() => (creatorState.theme === "dark" ? "¤Á¨ì²L¦â" : "¤Á¨ì²`¦â"));
+const themeLabel = computed(() => (creatorState.theme === "dark" ? "åˆ‡åˆ°æ·ºè‰²" : "åˆ‡åˆ°æ·±è‰²"));
 const profileInitials = computed(() => {
   const source = profileName.value || profileEmail.value || "TB";
   return source.slice(0, 2).toUpperCase();
