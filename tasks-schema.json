@@ -1,0 +1,64 @@
+{
+  "type": "object",
+  "properties": {
+    "project_goal": {
+      "type": "string"
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "objective": {
+            "type": "string"
+          },
+          "scope_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "forbidden_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "acceptance_criteria": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tests_to_run": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "objective",
+          "scope_files",
+          "forbidden_files",
+          "acceptance_criteria",
+          "tests_to_run"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "project_goal",
+    "tasks"
+  ],
+  "additionalProperties": false
+}

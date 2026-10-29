@@ -24,6 +24,8 @@ This project uses environment variables for credentials and business metadata. D
 - `PAYUNI_VERSION` (default: `1.5`)
 - `PAYUNI_RETURN_URL`
 - `PAYUNI_NOTIFY_URL`
+- `PAYUNI_RETURN_DESTINATION` (optional; PAYUNi 回流頁真正要導向的前台 / Creator 頁面)
+- `CREATOR_PORTAL_URL` (optional; 回流頁顯示的 Creator 後台連結)
 
 ## App Settings
 

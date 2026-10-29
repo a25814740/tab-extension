@@ -39,6 +39,7 @@ export const DEFAULT_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY 
 
 export function useAuthUser() {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const chromeApi = typeof globalThis !== "undefined" ? globalThis.chrome : undefined;
 
   useEffect(() => {
     let isMounted = true;
@@ -56,17 +57,17 @@ export function useAuthUser() {
       setUser((changes[USER_KEY].newValue as AuthUser) ?? null);
     };
 
-    if (chrome?.storage?.onChanged) {
-      chrome.storage.onChanged.addListener(onChanged);
+    if (chromeApi?.storage?.onChanged) {
+      chromeApi.storage.onChanged.addListener(onChanged);
     }
 
     return () => {
       isMounted = false;
-      if (chrome?.storage?.onChanged) {
-        chrome.storage.onChanged.removeListener(onChanged);
+      if (chromeApi?.storage?.onChanged) {
+        chromeApi.storage.onChanged.removeListener(onChanged);
       }
     };
-  }, []);
+  }, [chromeApi]);
 
   return user;
 }

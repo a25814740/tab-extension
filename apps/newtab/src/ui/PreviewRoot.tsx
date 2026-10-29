@@ -92,7 +92,7 @@ export const usePreviewThemeTokens = (input?: PreviewThemeInput) => {
       ...tokens,
       ...input?.customTheme,
     } as PreviewTokenSet;
-  }, [input?.themePresetId, input?.customTheme]);
+  }, [input?.customTheme, input?.themePresetId]);
 };
 
 export const hydrateMockStore = () => {

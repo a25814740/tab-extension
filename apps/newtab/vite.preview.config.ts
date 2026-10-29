@@ -4,7 +4,7 @@ import path from "node:path";
 
 export default defineConfig({
   plugins: [react()],
-  base: "./",
+  base: "/preview/",
   resolve: {
     alias: {
       "@toby/chrome-adapters": path.resolve(__dirname, "src/preview/mockChromeAdapters.ts"),
@@ -15,7 +15,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        preview: path.resolve(__dirname, "preview/index.html"),
+        index: path.resolve(__dirname, "preview/index.html"),
       },
     },
   },

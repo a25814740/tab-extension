@@ -2,101 +2,110 @@
   <div class="min-h-screen min-w-[1280px] bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
     <header class="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
       <div>
-        <div class="text-lg font-semibold">å…¨ç•«é¢è¨­è¨ˆæ¨¡å¼</div>
-        <div class="text-xs text-slate-400">å¯ç›´æ¥ç·¨è¼¯ä¸»é¡Œæ¨£å¼ä¸¦å³æ™‚é è¦½</div>
+        <div class="text-lg font-semibold">{{ headerTitle }}</div>
+        <div class="text-xs text-slate-400">ª½±µ¦b¥k°¼§ï³]©w¡A¥ªÃä iframe ·|§Y®É¦Y¨ì¥DÃD tokens¡C</div>
       </div>
       <div class="flex items-center gap-2">
-        <RouterLink class="rounded-full border border-slate-700 px-3 py-1 text-xs" to="/assets">è¿”å›å¾Œå°</RouterLink>
-        <RouterLink class="rounded-full border border-slate-700 px-3 py-1 text-xs" :to="previewRoute">é è¦½æ¨¡å¼</RouterLink>
-        <button class="rounded-full border border-slate-700 px-3 py-1 text-xs" @click="saveDraft">å„²å­˜è‰ç¨¿</button>
-        <button class="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white" @click="publishTheme">å„²å­˜ä¸Šæ¶</button>
+        <RouterLink class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" to="/assets">ªğ¦^§@«~¦Cªí</RouterLink>
+        <RouterLink class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" :to="previewRoute">¹wÄı­¶</RouterLink>
+        <button class="rounded-full border border-slate-300 px-3 py-1 text-xs dark:border-slate-700" :disabled="isBusy" @click="persistDraft">Àx¦s¯ó½Z</button>
+        <button class="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60" :disabled="isBusy" @click="persistPublic">¤½¶}¤W¬[</button>
       </div>
     </header>
 
-    <div class="grid gap-4 p-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <iframe
-        ref="previewFrame"
-        class="h-[78vh] w-full rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-        :src="previewSrc"
-        @load="onPreviewLoad"
-      ></iframe>
+    <div class="grid gap-4 p-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <div class="grid gap-2">
+        <div v-if="previewLoadError" class="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-600 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-300">
+          {{ previewLoadError }}
+        </div>
+        <iframe
+          ref="previewFrame"
+          class="h-[78vh] w-full rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          :src="previewSrc"
+          @load="onPreviewLoad"
+        ></iframe>
+      </div>
 
       <div class="grid gap-4">
-        <div class="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-4 text-xs">
-          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">ä¸»é¡Œè³‡è¨Š</div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900">
+          <div class="flex items-center justify-between">
+            <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">§@«~¸ê®Æ</div>
+            <span class="rounded-full px-2 py-1 text-[11px]" :class="statusBadgeClass">{{ currentStatusLabel }}</span>
+          </div>
           <div class="mt-3 grid gap-2">
-            <input v-model="creatorState.form.name" class="w-full rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800 px-3 py-2 text-xs" placeholder="ä¸»é¡Œåç¨±" />
-            <input v-model="creatorState.form.slug" class="w-full rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800 px-3 py-2 text-xs" placeholder="slug (è‡ªå‹•ç”¢ç”Ÿå¯ä¿®æ”¹)" />
-            <textarea v-model="creatorState.form.description" class="h-20 w-full rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800 px-3 py-2 text-xs" placeholder="ä¸»é¡Œæè¿°"></textarea>
+            <input v-model="creatorState.form.name" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="¥DÃD¦WºÙ" />
+            <input v-model="creatorState.form.slug" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="slug¡]¥u±µ¨ü­^¼Æ»P -¡^" />
+            <textarea v-model="creatorState.form.description" class="h-20 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="§i¶D¨Ï¥ÎªÌ³o­Ó¥DÃD§ï¤F­ş¨Ç°Ï¶ô¡B¾A¦X¤°»ò³õ´º"></textarea>
             <div class="grid grid-cols-2 gap-2">
-              <input v-model.number="creatorState.form.price" type="number" min="0" class="w-full rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800 px-3 py-2 text-xs" placeholder="åƒ¹æ ¼ (TWD)" />
-              <select v-model.number="creatorState.form.revenueShare" class="w-full rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800 px-3 py-2 text-xs">
-                <option v-for="option in revenueOptions" :key="option" :value="option">{{ option }}%</option>
+              <input v-model.number="creatorState.form.price" type="number" min="0" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="°â»ù¡]TWD¡^" />
+              <select v-model.number="creatorState.form.revenueShare" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800">
+                <option v-for="option in revenueOptions" :key="option" :value="option">¤À¼í {{ option }}%</option>
               </select>
             </div>
-            <input v-model="creatorState.form.tags" class="w-full rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800 px-3 py-2 text-xs" placeholder="æ¨™ç±¤ (é€—è™Ÿåˆ†éš”)" />
+            <input v-model="creatorState.form.tags" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" placeholder="¼ĞÅÒ¡A¨Ï¥Î¥b§Î³r¸¹¤À¹j" />
           </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-4 text-xs">
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900">
           <div class="flex items-center justify-between">
-            <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">é è¦½åœ–</div>
-            <div class="text-[10px] text-slate-400">æœªä¸Šå‚³æ™‚è‡ªå‹•æˆªåœ–</div>
+            <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">¹wÄı«Ê­±</div>
+            <div class="text-[10px] text-slate-400">¥¼¤W¶Ç®É·|§ï§ì iframe ºI¹Ï</div>
           </div>
-          <div class="mt-3 grid gap-2">
+          <div class="mt-3 grid gap-3">
             <input type="file" accept="image/*" class="text-[11px]" @change="onPreviewUpload" />
-            <div class="preview-thumb w-full" :style="previewStyle(creatorState.previewUpload || creatorState.fallbackPreview)"></div>
+            <div class="preview-thumb h-[120px] w-full" :style="previewStyle(creatorState.previewUpload || creatorState.fallbackPreview)"></div>
           </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-4 text-xs">
-          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">è‰²ç³»è¨­å®š</div>
-          <div class="mt-3 grid gap-2">
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900">
+          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">¾ãÅé¦â±m</div>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
             <label class="grid gap-1">
-              <span class="text-[11px] text-slate-400">ä¸»è¦æ–‡å­—</span>
-              <input v-model="creatorState.draftEditor.base.text" type="color" class="h-9 w-20 rounded border border-slate-700 bg-transparent" />
+              <span class="text-[11px] text-slate-400">¥D­n¤å¦r</span>
+              <input v-model="creatorState.draftEditor.base.text" type="color" class="h-10 w-16 rounded border border-slate-300 bg-transparent dark:border-slate-700" />
             </label>
             <label class="grid gap-1">
-              <span class="text-[11px] text-slate-400">æ¬¡è¦æ–‡å­—</span>
-              <input v-model="creatorState.draftEditor.base.textMuted" type="color" class="h-9 w-20 rounded border border-slate-700 bg-transparent" />
+              <span class="text-[11px] text-slate-400">¦¸­n¤å¦r</span>
+              <input v-model="creatorState.draftEditor.base.textMuted" type="color" class="h-10 w-16 rounded border border-slate-300 bg-transparent dark:border-slate-700" />
             </label>
             <label class="grid gap-1">
-              <span class="text-[11px] text-slate-400">æ¡†ç·šé¡è‰²</span>
-              <input v-model="creatorState.draftEditor.base.border" type="color" class="h-9 w-20 rounded border border-slate-700 bg-transparent" />
+              <span class="text-[11px] text-slate-400">®Ø½u¦â</span>
+              <input v-model="creatorState.draftEditor.base.border" type="color" class="h-10 w-16 rounded border border-slate-300 bg-transparent dark:border-slate-700" />
             </label>
             <label class="grid gap-1">
-              <span class="text-[11px] text-slate-400">é™°å½±é¡è‰²</span>
-              <input v-model="creatorState.draftEditor.base.shadow" type="color" class="h-9 w-20 rounded border border-slate-700 bg-transparent" />
+              <span class="text-[11px] text-slate-400">³±¼v¦â</span>
+              <input v-model="creatorState.draftEditor.base.shadow" type="color" class="h-10 w-16 rounded border border-slate-300 bg-transparent dark:border-slate-700" />
             </label>
           </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-4 text-xs">
-          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">ç·¨è¼¯å€å¡Š</div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900">
+          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">°Ï¶ô­I´º</div>
           <div class="mt-3 grid gap-2">
             <button
               v-for="section in sectionOptions"
               :key="section.key"
-              class="flex items-center justify-between rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800 px-3 py-2 text-left"
+              class="flex items-center justify-between rounded-xl border px-3 py-2 text-left transition"
+              :class="creatorState.activeSection === section.key ? 'border-rose-300 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60'"
               @click="setActiveSection(section.key)"
             >
               <span>{{ section.label }}</span>
               <span class="inline-flex items-center gap-2 text-[10px] text-slate-400">
                 <span class="h-3 w-3 rounded-sm" :style="{ background: sectionPreview(section.key) }"></span>
-                ç·¨è¼¯
+                ½s¿è
               </span>
             </button>
           </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-4 text-xs">
-          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">å¡«è‰²æ–¹å¼</div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900">
+          <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">¶ñ¦â¤è¦¡</div>
           <div class="mt-3 flex flex-wrap gap-2">
             <button
               v-for="mode in paintModes"
               :key="mode.value"
-              class="rounded-full border border-slate-700 px-3 py-1 text-[11px]"
-              :class="activePaint.mode === mode.value ? 'bg-rose-500 text-white border-rose-500' : 'bg-slate-800 text-slate-300'"
+              class="rounded-full border px-3 py-1 text-[11px]"
+              :class="activePaint.mode === mode.value ? 'border-rose-500 bg-rose-500 text-white' : 'border-slate-300 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'"
               @click="setPaintMode(mode.value)"
             >
               {{ mode.label }}
@@ -106,9 +115,9 @@
           <div class="mt-4 grid gap-3">
             <div v-if="activePaint.mode === 'solid'" class="grid gap-3">
               <div class="flex items-center gap-3">
-                <input v-model="activePaint.color" type="color" class="h-10 w-14 rounded border border-slate-700 bg-transparent" />
+                <input v-model="activePaint.color" type="color" class="h-10 w-14 rounded border border-slate-300 bg-transparent dark:border-slate-700" />
                 <div class="flex-1">
-                  <div class="text-[11px] text-slate-400">é€æ˜åº¦</div>
+                  <div class="text-[11px] text-slate-400">³z©ú«×</div>
                   <input v-model.number="activePaint.opacity" type="range" min="0" max="1" step="0.05" class="w-full accent-rose-400" />
                 </div>
                 <span class="w-10 text-right text-[11px] text-slate-400">{{ Math.round(activePaint.opacity * 100) }}%</span>
@@ -121,44 +130,40 @@
               <input type="file" accept="image/*" class="text-[11px]" @change="onImageUpload" />
               <div class="grid grid-cols-2 gap-2">
                 <label class="grid gap-1">
-                  <span class="text-[11px] text-slate-400">X</span>
-                  <input v-model.number="activePaint.image.positionX" type="number" min="0" max="100" class="rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800 px-3 py-2 text-xs" />
+                  <span class="text-[11px] text-slate-400">X ¶b</span>
+                  <input v-model.number="activePaint.image.positionX" type="number" min="0" max="100" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" />
                 </label>
                 <label class="grid gap-1">
-                  <span class="text-[11px] text-slate-400">Y</span>
-                  <input v-model.number="activePaint.image.positionY" type="number" min="0" max="100" class="rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800 px-3 py-2 text-xs" />
+                  <span class="text-[11px] text-slate-400">Y ¶b</span>
+                  <input v-model.number="activePaint.image.positionY" type="number" min="0" max="100" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800" />
                 </label>
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <label class="grid gap-1">
-                  <span class="text-[11px] text-slate-400">é‡è¤‡</span>
-                  <select v-model="activePaint.image.repeat" class="rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800 px-3 py-2 text-xs">
-                    <option value="no-repeat">ä¸é‡è¤‡</option>
-                    <option value="repeat">é‡è¤‡</option>
-                    <option value="repeat-x">æ°´å¹³é‡è¤‡</option>
-                    <option value="repeat-y">å‚ç›´é‡è¤‡</option>
+                  <span class="text-[11px] text-slate-400">Repeat</span>
+                  <select v-model="activePaint.image.repeat" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800">
+                    <option value="no-repeat">¤£­«½Æ</option>
+                    <option value="repeat">­«½Æ</option>
+                    <option value="repeat-x">¤ô¥­­«½Æ</option>
+                    <option value="repeat-y">««ª½­«½Æ</option>
                   </select>
                 </label>
                 <label class="grid gap-1">
-                  <span class="text-[11px] text-slate-400">å›ºå®š</span>
-                  <select v-model="activePaint.image.attachment" class="rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800 px-3 py-2 text-xs">
-                    <option value="scroll">æ»¾å‹•</option>
-                    <option value="fixed">å›ºå®š</option>
-                    <option value="local">å€å¡Šå…§</option>
+                  <span class="text-[11px] text-slate-400">Attachment</span>
+                  <select v-model="activePaint.image.attachment" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800">
+                    <option value="scroll">scroll</option>
+                    <option value="fixed">fixed</option>
+                    <option value="local">local</option>
                   </select>
                 </label>
               </div>
               <div class="flex items-center gap-3">
-                <div class="text-[11px] text-slate-400">é€æ˜åº¦</div>
+                <div class="text-[11px] text-slate-400">³z©ú«×</div>
                 <input v-model.number="activePaint.image.opacity" type="range" min="0" max="1" step="0.05" class="w-full accent-rose-400" />
                 <span class="w-10 text-right text-[11px] text-slate-400">{{ Math.round(activePaint.image.opacity * 100) }}%</span>
               </div>
             </div>
           </div>
-        </div>
-
-        <div v-if="creatorState.statusMessage" class="text-xs text-rose-300">
-          {{ creatorState.statusMessage }}
         </div>
       </div>
     </div>
@@ -166,35 +171,62 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
-import { RouterLink } from "vue-router";
+import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import GradientEditor from "../components/GradientEditor.vue";
 import {
+  activePaint,
   creatorState,
   designTokens,
-  setActiveSection,
-  setPaintMode,
-  activePaint,
-  sectionOptions,
-  paintModes,
-  revenueOptions,
   onImageUpload,
   onPreviewUpload,
+  paintModes,
   previewStyle,
-  saveDraft,
-  setPreviewBridge,
   publishTheme,
+  revenueOptions,
+  saveDraft,
+  sectionOptions,
+  selectAsset,
+  setActiveSection,
+  setPaintMode,
+  setPreviewBridge,
 } from "../store/creatorStore";
 
+const route = useRoute();
+const router = useRouter();
 const previewFrame = ref<HTMLIFrameElement | null>(null);
-const previewOrigin = ((import.meta as { env?: Record<string, string> }).env?.VITE_PREVIEW_ORIGIN ??
-  window.location.origin).replace(/\/$/, "");
+const previewOrigin = ((import.meta as { env?: Record<string, string> }).env?.VITE_PREVIEW_ORIGIN ?? window.location.origin).replace(/\/$/, "");
 const previewSrc = computed(() => `${previewOrigin}/preview/`);
+const previewLoadError = ref("");
+const isBusy = computed(() => creatorState.pendingAction !== "idle");
+const headerTitle = computed(() => creatorState.form.name.trim() || (creatorState.editingId ? "½s¿è¥DÃD" : "·s¼W¥DÃD"));
+const currentStatusLabel = computed(() => {
+  if (!creatorState.editingId) return "¥¼Àx¦s";
+  const current = creatorState.assets.find((asset) => asset.id === creatorState.editingId);
+  return current?.is_public ? "¤w¤W¬[" : "¯ó½Z";
+});
+const statusBadgeClass = computed(() => {
+  if (currentStatusLabel.value === "¤w¤W¬[") return "bg-emerald-500/15 text-emerald-400";
+  if (currentStatusLabel.value === "¯ó½Z") return "bg-amber-500/15 text-amber-400";
+  return "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
+});
+const previewRoute = computed(() => (creatorState.editingId ? `/preview/${creatorState.editingId}` : "/preview"));
+let readyListener: ((event: MessageEvent) => void) | null = null;
+let previewTimeoutId: number | null = null;
+
+watchEffect(() => {
+  const id = route.params.id as string | undefined;
+  if (!id) return;
+  const asset = creatorState.assets.find((item) => item.id === id);
+  if (asset) {
+    selectAsset(asset);
+  }
+});
 
 const sectionPreview = (key: string) => {
   const paint = creatorState.draftEditor.sections[key];
   return paint.mode === "gradient"
-    ? `linear-gradient(${paint.gradient.angle}deg, ${paint.gradient.stops[0].color}, ${paint.gradient.stops[1].color})`
+    ? `linear-gradient(${paint.gradient.angle}deg, ${paint.gradient.stops[0]?.color ?? '#0f172a'}, ${paint.gradient.stops[1]?.color ?? '#111827'})`
     : paint.color;
 };
 
@@ -214,27 +246,62 @@ const sendPreviewTokens = () => {
 const onPreviewLoad = () => {
   const frame = previewFrame.value?.contentWindow;
   if (!frame) return;
+  previewLoadError.value = "";
+  if (previewTimeoutId) {
+    window.clearTimeout(previewTimeoutId);
+    previewTimeoutId = null;
+  }
   setPreviewBridge(frame, previewOrigin);
   sendPreviewTokens();
 };
 
+const syncRouteToAsset = async () => {
+  if (!creatorState.editingId) return;
+  const currentId = route.params.id as string | undefined;
+  if (currentId === creatorState.editingId) return;
+  await router.replace(`/design/${creatorState.editingId}`);
+};
+
+const persistDraft = async () => {
+  const asset = await saveDraft();
+  if (asset?.id) {
+    await syncRouteToAsset();
+  }
+};
+
+const persistPublic = async () => {
+  const asset = await publishTheme();
+  if (asset?.id) {
+    await syncRouteToAsset();
+  }
+};
+
 onMounted(() => {
-  const handleReady = (event: MessageEvent) => {
+  readyListener = (event: MessageEvent) => {
     if (event.origin !== previewOrigin) return;
     const payload = event.data as { type?: string };
     if (payload?.type !== "TABOARD_PREVIEW_READY") return;
     sendPreviewTokens();
   };
-  window.addEventListener("message", handleReady);
-  setTimeout(sendPreviewTokens, 600);
-  return () => window.removeEventListener("message", handleReady);
+  window.addEventListener("message", readyListener);
+  previewTimeoutId = window.setTimeout(() => {
+    previewLoadError.value = "¹wÄı iframe ¸ü¤J¶W®É¡A½Ğ­«·s¾ã²z©Î½T»{ preview ³¡¸p¬O§_¥¿±`¡C";
+  }, 8000);
+  window.setTimeout(sendPreviewTokens, 600);
+});
+
+onUnmounted(() => {
+  if (readyListener) {
+    window.removeEventListener("message", readyListener);
+    readyListener = null;
+  }
+  if (previewTimeoutId) {
+    window.clearTimeout(previewTimeoutId);
+    previewTimeoutId = null;
+  }
 });
 
 watch([designTokens, () => creatorState.theme], () => {
   sendPreviewTokens();
 }, { deep: true });
-
-const previewRoute = computed(() => {
-  return creatorState.editingId ? `/preview/${creatorState.editingId}` : "/preview";
-});
 </script>
